@@ -13,8 +13,8 @@ WORKDIR /app
 
 RUN python -m venv /opt/venv
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY requirements.txt requirements-legacy.txt ./
+RUN pip install -r requirements.txt && pip install --no-deps -r requirements-legacy.txt
 
 COPY app ./app
 COPY web ./web

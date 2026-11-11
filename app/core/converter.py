@@ -108,7 +108,7 @@ def convert(inputs, target_id: str, fmt: str, options) -> Dict:
             bundle = "\n".join(x for x in parts if x)
         except Exception as exc:
             bundle_error = str(exc)
-    return _response(target, fmt, results, bundle, bundle_error, [])
+    return _response(target, fmt, results, bundle, bundle_error, list(target.notes))
 
 
 def _convert_correlation(target, items, parsed, fmt) -> List[str]:

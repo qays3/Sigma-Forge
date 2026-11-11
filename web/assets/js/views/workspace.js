@@ -67,9 +67,9 @@ export async function workspaceView(root) {
         ${logo(150, "hero__logo")}
         <div>
           <h1 class="hero__title">Sigma <span>Forge</span></h1>
-          <p class="hero__text">Load your Sigma rules, convert them to Splunk, Elastic, Microsoft KQL and Wazuh, check them for problems, and see which MITRE ATT&amp;CK techniques they cover.</p>
+          <p class="hero__text">Load your Sigma rules, convert them to 31 SIEM, EDR and log platforms, check them for problems, and see which MITRE ATT&amp;CK techniques they cover.</p>
           <div class="hero__chips">
-            <span class="chip chip--accent">Sigma</span><span class="chip">SPL</span><span class="chip">Lucene</span><span class="chip">ES|QL</span><span class="chip">EQL</span><span class="chip">KQL</span><span class="chip">Wazuh XML</span><span class="chip">ATT&amp;CK</span>
+            <span class="chip chip--accent">Sigma</span><span class="chip">SPL</span><span class="chip">ES|QL</span><span class="chip">KQL</span><span class="chip">LogScale</span><span class="chip">XQL</span><span class="chip">YARA-L</span><span class="chip">AQL</span><span class="chip">LogQL</span><span class="chip">SQL</span><span class="chip">and more</span><span class="chip chip--accent">ATT&amp;CK</span>
           </div>
         </div>
       </div>

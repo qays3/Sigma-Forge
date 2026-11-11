@@ -1971,3 +1971,25 @@ pre,
 .sk-matrix .sk-cell {
   height: 28px;
 }
+
+.convert-bar__info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+}
+
+.convert-bar__desc {
+  color: var(--text);
+}
+
+.convert-bar__meta {
+  font-family: var(--mono);
+  font-size: var(--fs-3xs);
+  color: var(--mut);
+}
+
+.convert-bar__targets {
+  gap: var(--sp-3) var(--sp-5);
+}

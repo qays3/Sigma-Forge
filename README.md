@@ -6,7 +6,7 @@
   <img src="web/assets/img/banner-light.png" alt="Sigma Forge" width="720">
 </picture>
 
-Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh, check them for problems, and see which MITRE ATT&CK techniques they cover.
+Convert Sigma rules to 31 SIEM, EDR and log platforms, check them for problems, and see which MITRE ATT&CK techniques they cover.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-B06CFF?style=flat-square&logo=python&logoColor=white&labelColor=0A1120)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-B06CFF?style=flat-square&logo=fastapi&logoColor=white&labelColor=0A1120)
@@ -26,24 +26,22 @@ Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh, check them for 
 5. [Setup script options](#setup-script-options)
 6. [How to use it](#how-to-use-it)
 7. [Sample pack](#sample-pack)
-8. [Supported targets](#supported-targets)
+8. [Supported targets](#supported-targets) and [target guide](#target-guide)
 9. [Correlation rules](#correlation-rules)
-10. [The Wazuh backend](#the-wazuh-backend)
-11. [Testing Wazuh rules on a real manager](#testing-wazuh-rules-on-a-real-manager)
-12. [ATT&CK coverage](#attck-coverage)
-13. [API](#api)
-14. [Configuration](#configuration)
-15. [Architecture](#architecture)
-16. [Project layout](#project-layout)
-17. [Development](#development)
-18. [Known limits](#known-limits)
-19. [Credits](#credits)
+10. [ATT&CK coverage](#attck-coverage)
+11. [API](#api)
+12. [Configuration](#configuration)
+13. [Architecture](#architecture)
+14. [Project layout](#project-layout)
+15. [Development](#development)
+16. [Known limits](#known-limits)
+17. [Credits](#credits)
 
 ## What is Sigma Forge
 
 [Sigma](https://github.com/SigmaHQ/sigma) is an open format for writing detection rules once and running them on any SIEM (Security Information and Event Management) platform. Sigma Forge is a local web app that takes a folder of Sigma rules and gives you three things:
 
-1. **Conversion** to nine targets across Splunk, Elastic, Microsoft and Wazuh.
+1. **Conversion** to 31 targets across 19 platforms: Splunk, Elastic, OpenSearch, Microsoft, CrowdStrike, SentinelOne, Palo Alto, Google SecOps, Carbon Black, QRadar, Wazuh and more.
 2. **Quality checks** with the pySigma validators, plus checks for revoked or unknown ATT&CK tags.
 3. **Coverage** on a full MITRE ATT&CK (Adversarial Tactics, Techniques and Common Knowledge) Enterprise heat map, with export to ATT&CK Navigator.
 
@@ -54,9 +52,8 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | Area | What you get |
 |---|---|
 | **Load rules** | Drag and drop files or whole folders, pick a folder, paste YAML, or load the built in sample pack. Multi document files and `action: global` collections are supported. |
-| **Correlations** | Sigma correlation rules (`event_count`, `value_count`, `temporal`) are parsed, listed and converted on targets that support them, including Wazuh `frequency` rules for `event_count`. |
-| **Convert** | Splunk SPL (Search Processing Language), Splunk CIM (Common Information Model), Elastic Lucene, ES\|QL and EQL, Microsoft Defender XDR, Sentinel ASIM and Azure Monitor KQL (Kusto Query Language), and Wazuh XML rules. Every output format of each backend is available, such as Splunk `savedsearches` or Elastic `siem_rule_ndjson`. |
-| **Wazuh** | A custom backend written for Sigma Forge. It maps Sysmon and Windows fields to Wazuh `win.*` fields, picks the right parent group and event id, and turns Sigma logic into valid `pcre2` field rules. |
+| **Correlations** | Sigma correlation rules (`event_count`, `value_count`, `temporal`) are parsed, listed and converted on every target whose backend supports them. |
+| **Convert** | 31 targets: Splunk SPL, SPL2 and CIM, Elastic Lucene, ES\|QL, EQL and ElastAlert, OpenSearch Lucene and PPL, Microsoft KQL (Defender XDR, Sentinel ASIM, Azure Monitor), CrowdStrike LogScale, SentinelOne, Cortex XDR, Google SecOps UDM and YARA-L, Carbon Black, QRadar AQL, Logpoint, NetWitness, Sumo Logic, Panther, Trellix Helix, Grafana Loki, Quickwit, ClickHouse, SQLite (Zircolite), SurrealQL and Wazuh. Every output format of each backend is available. See the [target guide](#target-guide). |
 | **Validate** | pySigma validators (dangling detections, wildcard misuse, duplicate tags, bad modifier mixes and more) run offline, plus ATT&CK tag checks against local data. |
 | **Coverage** | ATT&CK v20 Enterprise heat map with every tactic, technique counts that roll up from sub techniques, gap finding, and a Navigator layer export. |
 | **Review** | Sortable and filterable rule table with a detail drawer: metadata, findings, source and a one click convert to any target. |
@@ -71,7 +68,7 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
     <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert to Splunk"><p align="center"><b>Convert</b>: Splunk SPL from the sample pack</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/convert-wazuh.png" alt="Convert to Wazuh"><p align="center"><b>Wazuh backend</b>: XML rules with notes</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/convert-target.png" alt="Convert to CrowdStrike"><p align="center"><b>Targets</b>: 31 platforms with tips for each</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="ATT&CK heat map"><p align="center"><b>Coverage</b>: ATT&amp;CK heat map</p></td>
   </tr>
   <tr>
@@ -79,7 +76,7 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
     <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rules table"><p align="center"><b>Rules</b>: search, filter and sort</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/rule-detail.png" alt="Rule detail"><p align="center"><b>Rule detail</b>: correlation to Wazuh in one click</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/rule-detail.png" alt="Rule detail"><p align="center"><b>Rule detail</b>: convert any rule in one click</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/light.png" alt="Light theme"><p align="center"><b>Light theme</b></p></td>
   </tr>
 </table>
@@ -197,10 +194,10 @@ flowchart LR
 | [`rules/network`](sample/rules/network) | Proxy and firewall rules, with `cidr`. |
 | [`rules/cloud`](sample/rules/cloud) | AWS CloudTrail and Azure sign in rules. Some pipelines do not map these, so you see clear per rule errors. |
 | [`rules/modifiers`](sample/rules/modifiers) | One rule per group of modifiers: `contains`, `all`, `windash`, `re` with flags, `base64`, `wide` with `base64offset`, `cidr`, `gte`, `exists`, `null`, `cased`, wildcards, keywords and `fieldref`. Some fail on purpose on targets that cannot do them. |
-| [`rules/correlation`](sample/rules/correlation) | An `event_count` brute force rule (works on Splunk, ES\|QL and Wazuh) and a `value_count` password spray rule. |
+| [`rules/correlation`](sample/rules/correlation) | An `event_count` brute force rule and a `value_count` password spray rule. See [correlation rules](#correlation-rules) for the targets that convert them. |
 | [`rules/collections`](sample/rules/collections) | A file with three rules, and an `action: global` file that shares one log source and selection between two rules. |
 | [`rules/broken`](sample/rules/broken) | A YAML error, a missing detection, an unknown modifier, revoked and unknown ATT&CK tags, validator findings and a rule with no id or level. They show how errors and findings look. |
-| [`wazuh/events.jsonl`](sample/wazuh/events.jsonl) | 20 test events for `wazuh_check.py`, including ten failed logons from one address that should fire the brute force correlation on the tenth. |
+| [`wazuh/events.jsonl`](sample/wazuh/events.jsonl) | Test events for the Wazuh target's `wazuh_check.py` tool. |
 | [`api`](sample/api) | Ready request bodies for every endpoint, plus `run_examples.sh` and `run_examples.ps1` that call them and save the answers in `sample/api/output`. |
 
 Try the API samples while the server runs:
@@ -215,48 +212,847 @@ Try the API samples while the server runs:
 
 ## Supported targets
 
-| Target | Backend | Pipelines | Formats |
-|---|---|---|---|
-| Splunk SPL (Sysmon and Windows) | `splunk` | `sysmon`, `splunk_windows` | `default`, `savedsearches`, `data_model` |
-| Splunk CIM data models | `splunk` | `splunk_cim` | `data_model` |
-| Elastic Lucene (ECS) | `lucene` | `ecs_windows` | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` |
-| Elastic ES\|QL (ECS) | `esql` | `ecs_windows` | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` |
-| Elastic EQL (ECS) | `eql` | `ecs_windows` | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` |
-| Microsoft Defender XDR (KQL) | `kusto` | `microsoft_xdr` | `default` |
-| Microsoft Sentinel ASIM (KQL) | `kusto` | `sentinel_asim` | `default` |
-| Azure Monitor (KQL) | `kusto` | `azure_monitor` | `default` |
-| Wazuh rules (XML) | Sigma Forge | built in field mapping | `default` |
+Sigma Forge converts to **31 targets** across 19 platforms. Each one runs on a pySigma backend or on a backend that ships with Sigma Forge.
 
-ECS means Elastic Common Schema. ASIM means Advanced Security Information Model.
+| Target | Language | Formats | Sample pack | Correlations |
+|---|---|---|---|---|
+| [Splunk SPL](#splunk) | spl | `default`, `savedsearches` | 40 of 44 | yes |
+| [Splunk CIM](#splunk-cim) | spl | `default`, `savedsearches`, `data_model` | 19 of 44 | no |
+| [Splunk SPL2](#splunk-spl2) | spl2 | `default`, `module` | 39 of 44 | no |
+| [Elastic Lucene](#elastic-lucene) | lucene | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` | 38 of 44 | no |
+| [Elastic ES\|QL](#elastic-esql) | esql | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` | 39 of 44 | yes |
+| [Elastic EQL](#elastic-eql) | eql | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` | 40 of 44 | yes |
+| [ElastAlert](#elastalert) | yaml | `default` | 40 of 44 | yes |
+| [OpenSearch Lucene](#opensearch-lucene) | lucene | `default`, `dashboards_ndjson`, `monitor_rule`, `dsl_lucene` | 38 of 44 | no |
+| [OpenSearch PPL](#opensearch-ppl) | ppl | `default` | 42 of 44 | yes |
+| [Defender XDR (KQL)](#defender-xdr) | kql | `default` | 22 of 44 | no |
+| [Sentinel ASIM (KQL)](#sentinel-asim) | kql | `default` | 19 of 44 | no |
+| [Azure Monitor (KQL)](#azure-monitor) | kql | `default` | 17 of 44 | no |
+| [CrowdStrike LogScale (Falcon)](#crowdstrike-falcon) | logscale | `default` | 35 of 44 | no |
+| [CrowdStrike LogScale (FDR)](#crowdstrike-fdr) | logscale | `default` | 35 of 44 | no |
+| [SentinelOne Deep Visibility](#sentinelone) | s1ql | `default`, `json` | 18 of 44 | no |
+| [SentinelOne PowerQuery](#sentinelone-pq) | powerquery | `default`, `json` | 19 of 44 | no |
+| [Cortex XDR (XQL)](#cortex-xdr) | xql | `default`, `json` | 19 of 44 | no |
+| [Google SecOps (UDM)](#secops) | udm | `default`, `yara_l` | 25 of 44 | no |
+| [Carbon Black Cloud](#carbon-black) | cbc | `default`, `json` | 18 of 44 | no |
+| [IBM QRadar AQL](#qradar) | aql | `default` | 31 of 44 | no |
+| [Logpoint](#logpoint) | lpql | `default` | 38 of 44 | no |
+| [RSA NetWitness](#netwitness) | netwitness | `default` | 39 of 44 | no |
+| [Sumo Logic CSE](#sumologic-cse) | json | `default`, `cse_rule` | 37 of 44 | no |
+| [Panther (Python)](#panther) | python | `default`, `sdyaml`, `python`, `pantherflow` | 38 of 44 | no |
+| [Trellix Helix (TQL)](#trellix-helix) | tql | `default` | 18 of 44 | no |
+| [Grafana Loki (LogQL)](#loki) | logql | `default`, `ruler`, `grafana_alerting` | 42 of 44 | yes |
+| [Quickwit](#quickwit) | quickwit | `default` | 34 of 44 | no |
+| [ClickHouse SQL](#clickhouse) | sql | `default`, `clickdetect` | 42 of 44 | yes |
+| [SQLite (Zircolite)](#sqlite) | sql | `default`, `zircolite` | 40 of 44 | yes |
+| [SurrealDB (SurrealQL)](#surrealql) | surrealql | `default` | 37 of 44 | no |
+| [Wazuh rules (XML)](#wazuh) | xml | `default` | 41 of 44 | yes |
 
-Some pipelines only support some log sources. For example, the Splunk CIM pipeline does not map network connection or DNS rules, and the KQL pipelines need a known table for each log source. When a rule cannot be converted, its card shows the reason from pySigma instead of failing the whole run.
+Three backends (IBM QRadar, Trellix Helix and SurrealQL) were built for older pySigma versions. They still convert with pySigma 1.5, so the setup scripts install them from `requirements-legacy.txt` without their old version pins. A few other community backends (Datadog, InsightIDR, QRadar AQL and uberAgent) cannot load on pySigma 1.x and are left out.
 
-To add a target, install another pySigma backend with pip and add one line to `TARGETS` in [`app/core/targets.py`](app/core/targets.py).
+To add another target, `pip install` its pySigma backend and add one `Target(...)` line to [`app/core/targets.py`](app/core/targets.py).
 
-## Correlation rules
+## Target guide
 
-Sigma correlation rules join events from other rules, like "ten failed logons from one address in five minutes". Sigma Forge reads them from the same file as the rules they use.
+Every target below was tested with the 44 working rules of the [sample pack](#sample-pack). "Sample pack" shows how many converted. Rules fail when a platform has no field for them or cannot do a feature (for example `fieldref` or case sensitive matching), and the card in the app tells you why.
 
-| Target | Correlation support |
+### Splunk
+
+<details id="splunk">
+<summary><b>Splunk SPL</b>: Splunk Search Processing Language for Windows Event Log and Sysmon data</summary>
+
+| | |
 |---|---|
-| Splunk SPL | `event_count`, `value_count`, `temporal` |
-| Elastic ES\|QL | `event_count`, `value_count`, `temporal` |
-| Wazuh | `event_count` with `gte` or `gt`, as a `frequency` rule |
-| Others | Not supported. The card shows the reason |
+| Target id | `splunk` |
+| Engine | pySigma backend `splunk` |
+| Pipelines | `sysmon`, `splunk_windows` |
+| Formats | `default`, `savedsearches` |
+| Sample pack | 40 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | Case-sensitive string matching is not supported by backend. (1); ORing FieldRef matching is not yet supported by Splunk backend (1) |
 
-A base rule that is only used by a correlation has no query of its own, so it is shown as **skipped**. Add `generate: true` to the base rule if you also want it alone.
+**Tips:** Paste the query in Search, or pick the savedsearches format to get a savedsearches.conf stanza.
 
-For Wazuh, every converted rule gets a group like `sigma_ref_<name>`. The correlation becomes a rule with `frequency`, `timeframe`, `<if_matched_group>` and `<same_field>` for each `group-by` field:
+Example for `windows/proc_creation_whoami_recon.yml`:
 
-```xml
-<rule id="100101" level="12" frequency="10" timeframe="300">
-  <if_matched_group>sigma_ref_sf_failed_logon</if_matched_group>
-  <same_field>win.eventdata.ipAddress</same_field>
-  <description>Sigma correlation: Brute Force From One Source Address</description>
-</rule>
+```spl
+source="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 Image="*\\whoami.exe" OR OriginalFileName="whoami.exe" CommandLine="* -priv*" OR CommandLine="* /priv*" OR CommandLine="* –priv*" OR CommandLine="* —priv*" OR CommandLine="* ―priv*" OR CommandLine="* -groups*" OR CommandLine="* /groups*" OR CommandLine="* –groups*" OR CommandLine="* —groups*" OR CommandLine="* ―groups*" OR CommandLine="* -all*" OR ...
 ```
 
-## The Wazuh backend
+</details>
+
+<details id="splunk-cim">
+<summary><b>Splunk CIM</b>: tstats searches over the Common Information Model data models</summary>
+
+| | |
+|---|---|
+| Target id | `splunk_cim` |
+| Engine | pySigma backend `splunk` |
+| Pipelines | `splunk_cim` |
+| Formats | `default`, `savedsearches`, `data_model` |
+| Sample pack | 19 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Rule type not yet supported by the Splunk data model CIM pipeline! (22); The Splunk Data Model Sigma backend supports only the following fields for process_creation log source: Comman (2); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Use the data_model format. Needs accelerated CIM data models such as Endpoint.Processes.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```spl
+| tstats summariesonly=false allow_old_summaries=true fillnull_value="null" count min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes where Processes.process_path="*\\whoami.exe" OR Processes.original_file_name="whoami.exe" Processes.process="* -priv*" OR Processes.process="* /priv*" OR Processes.process="* –priv*" OR Processes.process="* —priv*" OR Processes.process="* ―priv*" OR Process ...
+```
+
+</details>
+
+<details id="splunk-spl2">
+<summary><b>Splunk SPL2</b>: Next generation SPL2 syntax for Splunk Cloud and Edge Processor</summary>
+
+| | |
+|---|---|
+| Target id | `splunk_spl2` |
+| Engine | pySigma backend `splunk_spl2` |
+| Pipelines | `sysmon`, `splunk_windows` |
+| Formats | `default`, `module` |
+| Sample pack | 39 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** SPL2 starts with FROM main. Change the index name to yours.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+FROM main WHERE source="WinEventLog:Microsoft-Windows-Sysmon/Operational" AND EventCode=1 AND Image LIKE "%\whoami.exe" OR OriginalFileName="whoami.exe" AND CommandLine LIKE "% -priv%" OR CommandLine LIKE "% /priv%" OR CommandLine LIKE "% –priv%" OR CommandLine LIKE "% —priv%" OR CommandLine LIKE "% ―priv%" OR CommandLine LIKE "% -groups%" OR CommandLine LIKE "% /groups%" OR CommandLine LIKE "% –groups%" OR CommandLi ...
+```
+
+</details>
+
+### Elastic
+
+<details id="elastic-lucene">
+<summary><b>Elastic Lucene</b>: Kibana query bar and detection rules with Elastic Common Schema (ECS) fields</summary>
+
+| | |
+|---|---|
+| Target id | `elastic_lucene` |
+| Engine | pySigma backend `lucene` |
+| Pipelines | `ecs_windows` |
+| Formats | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` |
+| Sample pack | 38 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+
+**Tips:** Pick siem_rule_ndjson to import straight into Elastic Security rules.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+(process.executable.caseless:*\\whoami.exe OR process.pe.original_file_name:whoami.exe) AND (process.command_line:(*\ \-priv* OR *\ \/priv* OR *\ –priv* OR *\ —priv* OR *\ ―priv*) OR process.command_line:(*\ \-groups* OR *\ \/groups* OR *\ –groups* OR *\ —groups* OR *\ ―groups*) OR process.command_line:(*\ \-all* OR *\ \/all* OR *\ –all* OR *\ —all* OR *\ ―all*))
+```
+
+</details>
+
+<details id="elastic-esql">
+<summary><b>Elastic ES|QL</b>: Elasticsearch Query Language with ECS fields, supports correlations</summary>
+
+| | |
+|---|---|
+| Target id | `elastic_esql` |
+| Engine | pySigma backend `esql` |
+| Pipelines | `ecs_windows` |
+| Formats | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` |
+| Sample pack | 39 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | String value expressions are not supported by the backend. (2); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Replace 'from *' with your index pattern, for example logs-*.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+from * metadata _id, _index, _version | where (ends_with(process.executable.caseless, "\\whoami.exe") or process.pe.original_file_name=="whoami.exe") and (process.command_line like "* -priv*" or process.command_line like "* /priv*" or process.command_line like "* –priv*" or process.command_line like "* —priv*" or process.command_line like "* ―priv*" or process.command_line like "* -groups*" or process.command_line li ...
+```
+
+</details>
+
+<details id="elastic-eql">
+<summary><b>Elastic EQL</b>: Event Query Language with ECS fields</summary>
+
+| | |
+|---|---|
+| Target id | `elastic_eql` |
+| Engine | pySigma backend `eql` |
+| Pipelines | `ecs_windows` |
+| Formats | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` |
+| Sample pack | 40 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | Field exists expressions are not supported by the backend. (1); ES Lucene backend can't handle field references. (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+any where (process.executable.caseless:"*\\whoami.exe" or process.pe.original_file_name:"whoami.exe") and (process.command_line like~ ("* -priv*", "* /priv*", "* –priv*", "* —priv*", "* ―priv*") or process.command_line like~ ("* -groups*", "* /groups*", "* –groups*", "* —groups*", "* ―groups*") or process.command_line like~ ("* -all*", "* /all*", "* –all*", "* —all*", "* ―all*"))
+```
+
+</details>
+
+<details id="elastalert">
+<summary><b>ElastAlert</b>: ElastAlert 2 rule files with ECS fields</summary>
+
+| | |
+|---|---|
+| Target id | `elastalert` |
+| Engine | pySigma backend `elastalert` |
+| Pipelines | `ecs_windows` |
+| Formats | `default` |
+| Sample pack | 40 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+
+**Tips:** Add index, alert and other required keys to each rule before loading it in ElastAlert 2.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```yaml
+description: Detects whoami used to list privileges or groups, often run right after
+  initial access.
+filter:
+- query:
+    query_string:
+      query: "(process.executable.caseless:*\\\\whoami.exe OR process.pe.original_file_name:whoami.exe)
+        AND (process.command_line:(*\\ \\-priv* OR *\\ \\/priv* OR *\\ \u2013priv*
+        OR *\\ \u2014priv* OR *\\ \u2015priv*) OR process.command_line:(*\\ \\-groups* ...
+```
+
+</details>
+
+### OpenSearch
+
+<details id="opensearch-lucene">
+<summary><b>OpenSearch Lucene</b>: OpenSearch Dashboards queries and monitor rules with ECS fields</summary>
+
+| | |
+|---|---|
+| Target id | `opensearch_lucene` |
+| Engine | pySigma backend `opensearch_lucene` |
+| Pipelines | `ecs_windows` |
+| Formats | `default`, `dashboards_ndjson`, `monitor_rule`, `dsl_lucene` |
+| Sample pack | 38 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+
+**Tips:** Pick monitor_rule to get OpenSearch Alerting monitors.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+(process.executable.caseless:*\\whoami.exe OR process.pe.original_file_name:whoami.exe) AND (process.command_line:(*\ \-priv* OR *\ \/priv* OR *\ –priv* OR *\ —priv* OR *\ ―priv*) OR process.command_line:(*\ \-groups* OR *\ \/groups* OR *\ –groups* OR *\ —groups* OR *\ ―groups*) OR process.command_line:(*\ \-all* OR *\ \/all* OR *\ –all* OR *\ —all* OR *\ ―all*))
+```
+
+</details>
+
+<details id="opensearch-ppl">
+<summary><b>OpenSearch PPL</b>: OpenSearch Piped Processing Language</summary>
+
+| | |
+|---|---|
+| Target id | `opensearch_ppl` |
+| Engine | pySigma backend `open_search_ppl` |
+| Pipelines | built in to the backend |
+| Formats | `default` |
+| Sample pack | 42 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | none |
+
+**Tips:** The source index is named after the log source, like windows-process_creation-*. Change it to your index.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+source=windows-process_creation-* | where (LIKE(Image, "%whoami.exe") OR OriginalFileName="whoami.exe") AND (LIKE(CommandLine, "% -priv%") OR LIKE(CommandLine, "% /priv%") OR LIKE(CommandLine, "% –priv%") OR LIKE(CommandLine, "% —priv%") OR LIKE(CommandLine, "% ―priv%") OR LIKE(CommandLine, "% -groups%") OR LIKE(CommandLine, "% /groups%") OR LIKE(CommandLine, "% –groups%") OR LIKE(CommandLine, "% —groups%") OR LIKE(C ...
+```
+
+</details>
+
+### Microsoft
+
+<details id="defender-xdr">
+<summary><b>Defender XDR (KQL)</b>: Kusto Query Language (KQL) for advanced hunting tables like DeviceProcessEvents</summary>
+
+| | |
+|---|---|
+| Target id | `defender_xdr` |
+| Engine | pySigma backend `kusto` |
+| Pipelines | `microsoft_xdr` |
+| Formats | `default` |
+| Sample pack | 22 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
+  (16); Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```kql
+DeviceProcessEvents
+| where (FolderPath endswith "\\whoami.exe" or ProcessVersionInfoOriginalFileName =~ "whoami.exe") and (ProcessCommandLine contains " -priv" or ProcessCommandLine contains " /priv" or ProcessCommandLine contains " –priv" or ProcessCommandLine contains " —priv" or ProcessCommandLine contains " ―priv" or ProcessCommandLine contains " -groups" or ProcessCommandLine contains " /groups" or ProcessComma ...
+```
+
+</details>
+
+<details id="sentinel-asim">
+<summary><b>Sentinel ASIM (KQL)</b>: KQL over Advanced Security Information Model parsers like imProcessCreate</summary>
+
+| | |
+|---|---|
+| Target id | `sentinel_asim` |
+| Engine | pySigma backend `kusto` |
+| Pipelines | `sentinel_asim` |
+| Formats | `default` |
+| Sample pack | 19 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
+  (16); Backend does not support correlation rules. (2); Invalid SigmaDetectionItem field name encountered: TargetProcessFilename. Invalid SigmaDetectionItem field nam (2) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```kql
+ERROR Invalid SigmaDetectionItem field name encountered: TargetProcessFilename. Please use valid fields for the imProcessCreate table, or the following fields that have fieldmappings in this pipeline:
+ActingProcessCommandLine, ActingProcessCreationTime, ActingProcessFileCompany, ActingProcessFileDescription, ActingProcessFileInternalName, ActingProcessFileOriginalName, ActingProcessFileProduct, ActingProcessFileSize, ...
+```
+
+</details>
+
+<details id="azure-monitor">
+<summary><b>Azure Monitor (KQL)</b>: KQL for Log Analytics tables like SecurityEvent</summary>
+
+| | |
+|---|---|
+| Target id | `azure_monitor` |
+| Engine | pySigma backend `kusto` |
+| Pipelines | `azure_monitor` |
+| Formats | `default` |
+| Sample pack | 17 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
+  (16); Backend does not support correlation rules. (2); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (2) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```kql
+ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Please use valid fields for the SecurityEvent table, or the following fields that have fieldmappings in this pipeline:
+AccessList, AccessMask, Account, AccountDomain, AccountExpires, AccountName, AccountSessionIdentifier, AccountType, Activity, AdditionalInfo, AdditionalInfo2, AllowedToDelegateTo, Attributes, AuditPolicyChanges, AuditsDiscarde ...
+```
+
+</details>
+
+### CrowdStrike
+
+<details id="crowdstrike-falcon">
+<summary><b>CrowdStrike LogScale (Falcon)</b>: Falcon LogScale (Humio) queries over Falcon sensor events like ProcessRollup2</summary>
+
+| | |
+|---|---|
+| Target id | `crowdstrike_falcon` |
+| Engine | pySigma backend `log_scale` |
+| Pipelines | `crowdstrike_falcon` |
+| Formats | `default` |
+| Sample pack | 35 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Only file name of parent image is available in CrowdStrike Query Language events. (2); ORing CIDR matching is not yet supported by LogScale backend (2) |
+
+**Tips:** Run it in Falcon Next-Gen SIEM or Event Search. CIDR lists joined with OR are not supported yet.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+event_platform=/^Win$/i #event_simpleName=/^ProcessRollup2$/i or #event_simpleName=/^SyntheticProcessRollup2$/i ImageFileName=/\\whoami\.exe$/i or OriginalFilename=/^whoami\.exe$/i CommandLine=/ -priv/i or CommandLine=/ \/priv/i or CommandLine=/ –priv/i or CommandLine=/ —priv/i or CommandLine=/ ―priv/i or CommandLine=/ -groups/i or CommandLine=/ \/groups/i or CommandLine=/ –groups/i or CommandLine=/ —groups/i or Comm ...
+```
+
+</details>
+
+<details id="crowdstrike-fdr">
+<summary><b>CrowdStrike LogScale (FDR)</b>: LogScale queries over Falcon Data Replicator field names</summary>
+
+| | |
+|---|---|
+| Target id | `crowdstrike_fdr` |
+| Engine | pySigma backend `log_scale` |
+| Pipelines | `crowdstrike_fdr` |
+| Formats | `default` |
+| Sample pack | 35 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Only file name of parent image is available in CrowdStrike Query Language events. (2); ORing CIDR matching is not yet supported by LogScale backend (2) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+event_platform=/^Win$/i event_simpleName=/^ProcessRollup2$/i or event_simpleName=/^SyntheticProcessRollup2$/i ImageFileName=/\\whoami\.exe$/i or OriginalFilename=/^whoami\.exe$/i CommandLine=/ -priv/i or CommandLine=/ \/priv/i or CommandLine=/ –priv/i or CommandLine=/ —priv/i or CommandLine=/ ―priv/i or CommandLine=/ -groups/i or CommandLine=/ \/groups/i or CommandLine=/ –groups/i or CommandLine=/ —groups/i or Comman ...
+```
+
+</details>
+
+### SentinelOne
+
+<details id="sentinelone">
+<summary><b>SentinelOne Deep Visibility</b>: SentinelOne Deep Visibility queries (S1QL)</summary>
+
+| | |
+|---|---|
+| Target id | `sentinelone` |
+| Engine | pySigma backend `sentinel_one` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `json` |
+| Sample pack | 18 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (7); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (3); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+
+**Tips:** Only Windows, Linux and macOS endpoint log sources are mapped.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: Provider_Name. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: ScriptBlockText. Invalid SigmaDetectionItem fiel ...
+```
+
+</details>
+
+<details id="sentinelone-pq">
+<summary><b>SentinelOne PowerQuery</b>: SentinelOne Singularity Data Lake PowerQuery</summary>
+
+| | |
+|---|---|
+| Target id | `sentinelone_pq` |
+| Engine | pySigma backend `sentinel_one_pq` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `json` |
+| Sample pack | 19 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (7); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (3); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: Provider_Name. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: ScriptBlockText. Invalid SigmaDetectionItem fiel ...
+```
+
+</details>
+
+### Palo Alto
+
+<details id="cortex-xdr">
+<summary><b>Cortex XDR (XQL)</b>: Palo Alto Networks Cortex XDR Query Language over xdr_data</summary>
+
+| | |
+|---|---|
+| Target id | `cortex_xdr` |
+| Engine | pySigma backend `cortex_xdr` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `json` |
+| Sample pack | 19 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Rule type not yet supported by the Cortex XDR Sigma backend (19); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (2); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Only endpoint log sources are mapped. Network and cloud rules show an error.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name encountered: None. Invalid SigmaDetectionItem field name encountered: OriginalFileName. This pipeline only supports the following fields for process activity:
+{User}, {C ...
+```
+
+</details>
+
+### Google
+
+<details id="secops">
+<summary><b>Google SecOps (UDM)</b>: Google Security Operations (Chronicle) Unified Data Model search</summary>
+
+| | |
+|---|---|
+| Target id | `secops` |
+| Engine | pySigma backend `secops` |
+| Pipelines | `secops_udm` |
+| Formats | `default`, `yara_l` |
+| Sample pack | 25 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Invalid UDM field: Field TargetImage is not a valid UDM field (2); Invalid UDM field: Field ImageLoaded is not a valid UDM field (2) |
+
+**Tips:** Pick the yara_l format to get YARA-L 2.0 detection rules.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+(metadata.event_type = "PROCESS_LAUNCH") AND ((target.process.file.full_path = /\\whoami\.exe$/ nocase OR target.process.file.names = "whoami.exe" nocase) AND (target.process.command_line = / -priv/ nocase OR target.process.command_line = / \/priv/ nocase OR target.process.command_line = / –priv/ nocase OR target.process.command_line = / —priv/ nocase OR target.process.command_line = / ―priv/ nocase OR target.process ...
+```
+
+</details>
+
+### Broadcom
+
+<details id="carbon-black">
+<summary><b>Carbon Black Cloud</b>: Carbon Black Cloud Enterprise EDR process search</summary>
+
+| | |
+|---|---|
+| Target id | `carbon_black` |
+| Engine | pySigma backend `carbon_black` |
+| Pipelines | `carbonblack` |
+| Formats | `default`, `json` |
+| Sample pack | 18 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (5); Invalid SigmaDetectionItem field name encountered: EventID. The supported fields are: {CommandLine}, {Company} (2); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+device_os:WINDOWS ((process_name:\\whoami.exe OR process_original_filename:whoami.exe) (process_cmdline:\ \-priv* OR process_cmdline:\ \/priv* OR process_cmdline:\ –priv* OR process_cmdline:\ —priv* OR process_cmdline:\ ―priv* OR process_cmdline:\ \-groups* OR process_cmdline:\ \/groups* OR process_cmdline:\ –groups* OR process_cmdline:\ —groups* OR process_cmdline:\ ―groups* OR process_cmdline:\ \-all* OR process_cm ...
+```
+
+</details>
+
+### IBM
+
+<details id="qradar">
+<summary><b>IBM QRadar AQL</b>: Ariel Query Language (AQL) searches for QRadar</summary>
+
+| | |
+|---|---|
+| Target id | `qradar` |
+| Engine | pySigma backend `qradar` |
+| Pipelines | built in to the backend |
+| Formats | `default` |
+| Sample pack | 31 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | The QRadar savedsearches Sigma backend supports only the following fields for process_creation log source (8); Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Uses the legacy QRadar backend (installed from requirements-legacy.txt). Field names follow QRadar default properties.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+SELECT UTF8(payload) as search_payload from events where ("Image" ILIKE '%\whoami.exe' OR "ImageName"='whoami.exe') AND ("Process CommandLine" ILIKE '% -priv%' OR "Process CommandLine" ILIKE '% /priv%' OR "Process CommandLine" ILIKE '% –priv%' OR "Process CommandLine" ILIKE '% —priv%' OR "Process CommandLine" ILIKE '% ―priv%' OR "Process CommandLine" ILIKE '% -groups%' OR "Process CommandLine" ILIKE '% /groups%' OR " ...
+```
+
+</details>
+
+### Logpoint
+
+<details id="logpoint">
+<summary><b>Logpoint</b>: Logpoint Query Language with Logpoint Windows taxonomy</summary>
+
+| | |
+|---|---|
+| Target id | `logpoint` |
+| Engine | pySigma backend `logpoint` |
+| Pipelines | `logpoint_windows` |
+| Formats | `default` |
+| Sample pack | 38 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); Field reference expression is not supported by backend. (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+label="Create" label="Process" "process"="*\whoami.exe" OR file="whoami.exe" command="* -priv*" OR command="* /priv*" OR command="* –priv*" OR command="* —priv*" OR command="* ―priv*" OR command="* -groups*" OR command="* /groups*" OR command="* –groups*" OR command="* —groups*" OR command="* ―groups*" OR command="* -all*" OR command="* /all*" OR command="* –all*" OR command="* —all*" OR command="* ―all*"
+```
+
+</details>
+
+### RSA
+
+<details id="netwitness">
+<summary><b>RSA NetWitness</b>: NetWitness query syntax for Windows log sources</summary>
+
+| | |
+|---|---|
+| Target id | `netwitness` |
+| Engine | pySigma backend `net_witness` |
+| Pipelines | `netwitness_windows` |
+| Formats | `default` |
+| Sample pack | 39 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Field reference expression is not supported by backend. (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+device.type = 'windows' && (reference.id = '4688' && ((process ends '\whoami.exe' || OriginalFileName = 'whoami.exe') && (param contains ' -priv',' /priv',' –priv',' —priv',' ―priv',' -groups',' /groups',' –groups',' —groups',' ―groups',' -all',' /all',' –all',' —all',' ―all')))
+```
+
+</details>
+
+### Sumo Logic
+
+<details id="sumologic-cse">
+<summary><b>Sumo Logic CSE</b>: Sumo Logic Cloud SIEM rule JSON</summary>
+
+| | |
+|---|---|
+| Target id | `sumologic_cse` |
+| Engine | pySigma backend `sumologic_cse` |
+| Pipelines | `sumologic_cse` |
+| Formats | `default`, `cse_rule` |
+| Sample pack | 37 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Conversion failed: Unbound value expressions (keywords) are not supported.
+
+Unsupported Sigma pattern:
+  detec (1); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Import the JSON with the Cloud SIEM API. Keyword only rules are not supported.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```json
+{
+    "content_type": "RULE",
+    "enabled": true,
+    "is_prototype": false,
+    "name": "Whoami With Privilege Or Group Flags",
+    "name_expression": "Whoami With Privilege Or Group Flags",
+    "rule_source": "user",
+    "summary_expression": "",
+    "pattern_type": "templated_match",
+    "stream": "record",
+    "description_expression": "Detects whoami used to list privileges or groups, often run right after init ...
+```
+
+</details>
+
+### Panther
+
+<details id="panther">
+<summary><b>Panther (Python)</b>: Panther detections as Python rule functions</summary>
+
+| | |
+|---|---|
+| Target id | `panther` |
+| Engine | pySigma backend `panther` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `sdyaml`, `python`, `pantherflow` |
+| Sample pack | 38 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Cased string value expressions are not supported right now (1); Conversion of numeric comparison operations into queries is not supported right now (1) |
+
+**Tips:** Pick sdyaml for Panther simple detections or pantherflow for PantherFlow queries.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```python
+def rule(event):
+    if all(
+        [
+            any(
+                [
+                    event.deep_get("Image", default="").endswith("\\whoami.exe"),
+                    event.deep_get("OriginalFileName", default="") == "whoami.exe",
+                ]
+            ),
+            any(
+                [
+                    any(
+                        [
+                            " -priv" in event.deep_get("Comma ...
+```
+
+</details>
+
+### Trellix
+
+<details id="trellix-helix">
+<summary><b>Trellix Helix (TQL)</b>: Trellix Helix Query Language</summary>
+
+| | |
+|---|---|
+| Target id | `trellix_helix` |
+| Engine | pySigma backend `tql` |
+| Pipelines | built in to the backend |
+| Formats | `default` |
+| Sample pack | 18 of 44 converted, 0 skipped |
+| Correlations | not supported |
+| Most common failures | Rule type not yet supported by the Helix Sigma backend (6); Invalid fieldname encounter: eventSource.This pipeline only supports the following fields:
+{AccountDomain}, {A (1); Invalid fieldname encounter: ResultType.Invalid fieldname encounter: eventSource.This pipeline only supports t (1) |
+
+**Tips:** Uses a legacy backend (requirements-legacy.txt). Only a set of Helix fields is mapped.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+(category : ["process create (rule: processcreate)","process creation"]) AND (metaclass:"windows" AND ((process:"*\\whoami.exe" OR original_file_name:"whoami.exe") AND (args : " -priv" OR args : " /priv" OR args : " –priv" OR args : " —priv" OR args : " ―priv" OR args : " -groups" OR args : " /groups" OR args : " –groups" OR args : " —groups" OR args : " ―groups" OR args : " -all" OR args : " /all" OR args : " –all" ...
+```
+
+</details>
+
+### Grafana
+
+<details id="loki">
+<summary><b>Grafana Loki (LogQL)</b>: LogQL queries for Grafana Loki</summary>
+
+| | |
+|---|---|
+| Target id | `loki` |
+| Engine | pySigma backend `loki` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `ruler`, `grafana_alerting` |
+| Sample pack | 42 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | none |
+
+**Tips:** Pick ruler to get Loki ruler alert files. Change the stream selector to your labels.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+{job=~"eventlog|winlog|windows|fluentbit.*"} | json | (Image=~`(?i).*\\whoami\.exe$` or OriginalFileName=~`(?i)^whoami\.exe$`) and (CommandLine=~`(?i).*\ \-priv.*` or CommandLine=~`(?i).*\ /priv.*` or CommandLine=~`(?i).*\ –priv.*` or CommandLine=~`(?i).*\ —priv.*` or CommandLine=~`(?i).*\ ―priv.*` or CommandLine=~`(?i).*\ \-groups.*` or CommandLine=~`(?i).*\ /groups.*` or CommandLine=~`(?i).*\ –groups.*` or CommandL ...
+```
+
+</details>
+
+### Quickwit
+
+<details id="quickwit">
+<summary><b>Quickwit</b>: Quickwit search queries</summary>
+
+| | |
+|---|---|
+| Target id | `quickwit` |
+| Engine | pySigma backend `quickwit` |
+| Pipelines | `quickwit_windows` |
+| Formats | `default` |
+| Sample pack | 34 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | 'SigmaNumber' object has no attribute 'convert' (3); Backend does not support correlation rules. (2); String value expressions are not supported by the backend. (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```text
+EventID:1 AND Image:"*\\whoami.exe" OR OriginalFileName:"whoami.exe" AND CommandLine:"* -priv*" OR CommandLine:"* /priv*" OR CommandLine:"* –priv*" OR CommandLine:"* —priv*" OR CommandLine:"* ―priv*" OR CommandLine:"* -groups*" OR CommandLine:"* /groups*" OR CommandLine:"* –groups*" OR CommandLine:"* —groups*" OR CommandLine:"* ―groups*" OR CommandLine:"* -all*" OR CommandLine:"* /all*" OR CommandLine:"* –all*" OR Co ...
+```
+
+</details>
+
+### Databases
+
+<details id="clickhouse">
+<summary><b>ClickHouse SQL</b>: SQL for logs stored in ClickHouse</summary>
+
+| | |
+|---|---|
+| Target id | `clickhouse` |
+| Engine | pySigma backend `clickhouse` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `clickdetect` |
+| Sample pack | 42 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | none |
+
+**Tips:** The table is named logs. Change it to your table.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+SELECT * FROM logs WHERE (Image ILIKE '%\\\\whoami.exe' OR OriginalFileName='whoami.exe') AND (CommandLine ILIKE '% -priv%' OR CommandLine ILIKE '% /priv%' OR CommandLine ILIKE '% –priv%' OR CommandLine ILIKE '% —priv%' OR CommandLine ILIKE '% ―priv%' OR CommandLine ILIKE '% -groups%' OR CommandLine ILIKE '% /groups%' OR CommandLine ILIKE '% –groups%' OR CommandLine ILIKE '% —groups%' OR CommandLine ILIKE '% ―groups% ...
+```
+
+</details>
+
+<details id="sqlite">
+<summary><b>SQLite (Zircolite)</b>: SQLite queries, and Zircolite rule packs for offline EVTX hunting</summary>
+
+| | |
+|---|---|
+| Target id | `sqlite` |
+| Engine | pySigma backend `sqlite` |
+| Pipelines | built in to the backend |
+| Formats | `default`, `zircolite` |
+| Sample pack | 40 of 44 converted, 2 skipped |
+| Correlations | supported |
+| Most common failures | Value-only string expressions (i.e Full Text Search or 'keywords' search) are not supported by the backend. (2) |
+
+**Tips:** Pick the zircolite format to build a rule pack for Zircolite.
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+SELECT * FROM logs WHERE (Image LIKE '%\\whoami.exe' ESCAPE '\' OR OriginalFileName='whoami.exe') AND (CommandLine LIKE '% -priv%' ESCAPE '\' OR CommandLine LIKE '% /priv%' ESCAPE '\' OR CommandLine LIKE '% –priv%' ESCAPE '\' OR CommandLine LIKE '% —priv%' ESCAPE '\' OR CommandLine LIKE '% ―priv%' ESCAPE '\' OR CommandLine LIKE '% -groups%' ESCAPE '\' OR CommandLine LIKE '% /groups%' ESCAPE '\' OR CommandLine LIKE '% ...
+```
+
+</details>
+
+<details id="surrealql">
+<summary><b>SurrealDB (SurrealQL)</b>: SurrealQL queries for SurrealDB</summary>
+
+| | |
+|---|---|
+| Target id | `surrealql` |
+| Engine | pySigma backend `surreal_ql` |
+| Pipelines | built in to the backend |
+| Formats | `default` |
+| Sample pack | 37 of 44 converted, 2 skipped |
+| Correlations | not supported |
+| Most common failures | Backend does not support correlation rules. (2); Value-only string expressions (i.e Full Text Search or 'keywords' search) are not supported by the backend. (1); Case-sensitive string matching is not supported by backend. (1) |
+
+**Tips:** Replace <TABLE_NAME> with your table. Uses a legacy backend (requirements-legacy.txt).
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```sql
+SELECT * FROM <TABLE_NAME> WHERE ((Image IS NOT NONE AND string::ends_with(Image,'\\whoami.exe')) OR OriginalFileName='whoami.exe') AND ((CommandLine IS NOT NONE AND string::contains(CommandLine,' -priv')) OR (CommandLine IS NOT NONE AND string::contains(CommandLine,' /priv')) OR (CommandLine IS NOT NONE AND string::contains(CommandLine,' –priv')) OR (CommandLine IS NOT NONE AND string::contains(CommandLine,' —priv') ...
+```
+
+</details>
+
+### Wazuh
+
+<details id="wazuh">
+<summary><b>Wazuh rules (XML)</b>: Wazuh XML rules for Windows eventchannel and Sysmon data</summary>
+
+| | |
+|---|---|
+| Target id | `wazuh` |
+| Engine | Sigma Forge Wazuh backend |
+| Pipelines | built in to the backend |
+| Formats | `default` |
+| Sample pack | 41 of 44 converted, 0 skipped |
+| Correlations | supported |
+| Most common failures | Wazuh only supports event_count correlations, not value_count (1); Number compare modifiers (lt, lte, gt, gte) are not supported by Wazuh field matching (1); Field reference modifier (fieldref) is not supported by Wazuh (1) |
+
+
+
+Example for `windows/proc_creation_whoami_recon.yml`:
+
+```xml
+<group name="sigma,">
+  <rule id="100100" level="3">
+    <if_group>sysmon</if_group>
+    <field name="win.system.eventID" type="pcre2">(?s)^1$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?is)(?:(?: -priv| /priv| –priv| —priv| ―priv)|(?: -groups| /groups| –groups| —groups| ―groups)|(?: -all| /all| –all| —all| ―all))</field>
+    <field name="win.eventdata.image" type="pcre2">(?is)\\\\whoami\.exe$< ...
+```
+
+
+#### How the Wazuh backend works
 
 There is no maintained pySigma backend for Wazuh, so Sigma Forge ships its own in [`app/core/wazuh`](app/core/wazuh). It reads the condition tree that pySigma builds and writes Wazuh XML rules.
 
@@ -326,7 +1122,19 @@ sudo chown wazuh:wazuh /var/ossec/etc/rules/sigma_forge_rules.xml
 sudo systemctl restart wazuh-manager
 ```
 
-## Testing Wazuh rules on a real manager
+#### Correlations in Wazuh
+
+For Wazuh, every converted rule gets a group like `sigma_ref_<name>`. The correlation becomes a rule with `frequency`, `timeframe`, `<if_matched_group>` and `<same_field>` for each `group-by` field:
+
+```xml
+<rule id="100101" level="12" frequency="10" timeframe="300">
+  <if_matched_group>sigma_ref_sf_failed_logon</if_matched_group>
+  <same_field>win.eventdata.ipAddress</same_field>
+  <description>Sigma correlation: Brute Force From One Source Address</description>
+</rule>
+```
+
+#### Test the rules on a real manager
 
 [`tools/wazuh_check.py`](tools/wazuh_check.py) uploads the rules through the Wazuh API (Application Programming Interface), restarts the manager and runs test events through the `logtest` endpoint.
 
@@ -348,6 +1156,27 @@ Each line of the events file is one test:
 ```
 
 `expect` can be a rule id (`100104`), part of the rule title, or `none` for events that must not fire a Sigma rule. The tool prints PASS or FAIL for each line and exits with code 1 if any test fails, so you can use it in a pipeline.
+
+</details>
+
+## Correlation rules
+
+Sigma correlation rules join events from other rules, like "ten failed logons from one address in five minutes". Sigma Forge reads them from the same file as the rules they use.
+
+| Target | Correlation support |
+|---|---|
+| Splunk SPL | Supported (tested with `event_count` and `value_count`) |
+| Elastic ES\|QL | Supported (tested with `event_count` and `value_count`) |
+| Elastic EQL | Supported (tested with `event_count` and `value_count`) |
+| ElastAlert | Supported (tested with `event_count` and `value_count`) |
+| OpenSearch PPL | Supported (tested with `event_count` and `value_count`) |
+| Grafana Loki (LogQL) | Supported (tested with `event_count` and `value_count`) |
+| ClickHouse SQL | Supported (tested with `event_count` and `value_count`) |
+| SQLite (Zircolite) | Supported (tested with `event_count` and `value_count`) |
+| Wazuh | `event_count` with `gte` or `gt`, as a `frequency` rule |
+| Others | Not supported by their backend. The card shows the reason |
+
+A base rule that is only used by a correlation has no query of its own, so it is shown as **skipped**. Add `generate: true` to the base rule if you also want it alone.
 
 ## ATT&CK coverage
 
@@ -395,7 +1224,7 @@ curl -s http://127.0.0.1:8000/api/convert \
       }'
 ```
 
-Wazuh options go in `options`:
+Targets with extra settings take them in `options`:
 
 ```json
 {"target": "wazuh", "rules": [], "options": {"wazuh_rule_id_start": 110000, "wazuh_double_backslash": false, "wazuh_parent_group": true}}
@@ -430,7 +1259,7 @@ flowchart LR
         R[API routes]
         P[Parser and validators<br/>pySigma]
         C[Converter]
-        W[Wazuh backend]
+        W[Sigma Forge backends]
         V[Coverage engine]
         A[(ATT&CK data<br/>attack.json)]
         R --> P
@@ -460,7 +1289,7 @@ Sigma-Forge/
 │   └── core/
 │       ├── parsing.py           Load YAML into pySigma rules
 │       ├── analyzer.py          Metadata and validators
-│       ├── converter.py         Run pySigma or Wazuh conversion
+│       ├── converter.py         Run every conversion
 │       ├── targets.py           Target list, backends and pipelines
 │       ├── coverage.py          ATT&CK coverage and Navigator layer
 │       ├── attack.py            ATT&CK data and tag helpers
@@ -496,7 +1325,8 @@ Sigma-Forge/
 ├── setup.ps1                    Windows setup
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
+├── requirements.txt             Core packages and 20 pySigma backends
+├── requirements-legacy.txt      Older backends installed with --no-deps
 └── requirements-dev.txt
 ```
 
@@ -508,14 +1338,14 @@ Sigma-Forge/
 .venv/bin/python -m uvicorn app.main:app --reload
 ```
 
-The tests cover the API, every target, error handling, coverage, and the Wazuh backend. The Wazuh tests compile the generated regex and check it against real looking field values, so they catch broken escaping and wrong logic, not only bad XML.
+The tests cover the API, every target, error handling, correlations and coverage. The backend tests compile the generated regex and check it against real looking field values, so they catch broken escaping and wrong logic, not only bad XML.
 
 Adding a sample rule is as simple as dropping a `.yml` file anywhere under `sample/rules/`. It shows up under **Load samples** right away.
 
 ## Known limits
 
-* **Wazuh** has no number compare for normal fields, so the `lt`, `lte`, `gt` and `gte` modifiers fail with a clear message. `cidr` is turned into a text prefix match. The `fieldref` modifier is not supported. Always test the rules with `wazuh_check.py` before production.
-* **Correlation rules** only convert on Splunk, ES\|QL and Wazuh (`event_count` only). Base rules must be in the same file.
+* **Feature support differs per target.** Some backends cannot do number compare, `fieldref`, `cidr`, case sensitive matching or keyword search. Those rules show the reason on their card. The [target guide](#target-guide) lists the most common failures for each target.
+* **Correlation rules** only convert on targets whose backend supports them (see [correlation rules](#correlation-rules)). Base rules must be in the same file.
 * **Elastic SIEM rule formats** (`siem_rule`, `siem_rule_ndjson`) make pySigma download ATT&CK data the first time, so they need internet once.
 * **Pipelines** only know the log sources their authors mapped. Rules for other log sources show the pySigma error on their card.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
@@ -524,7 +1354,7 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 
 * [SigmaHQ](https://github.com/SigmaHQ) for the Sigma format and [pySigma](https://github.com/SigmaHQ/pySigma) with its backends and pipelines.
 * [MITRE ATT&CK®](https://attack.mitre.org/). © The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.
-* [Wazuh](https://wazuh.com/), [Splunk](https://www.splunk.com/), [Elastic](https://www.elastic.co/) and [Microsoft](https://learn.microsoft.com/en-us/kusto/query/) are trademarks of their owners. Sigma Forge is not tied to any of them.
+* Splunk, Elastic, OpenSearch, Microsoft, CrowdStrike, SentinelOne, Palo Alto Networks, Google, Broadcom, IBM, Logpoint, RSA, Sumo Logic, Panther, Trellix, Grafana, Quickwit, ClickHouse, SurrealDB and Wazuh are trademarks of their owners. Sigma Forge is not tied to any of them.
 
 <div align="center">
 <sub>Built by <a href="https://qayssarayra.com">Qays Sarayra</a></sub>

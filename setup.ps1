@@ -94,6 +94,8 @@ Write-Info "Installing dependencies"
 & $VPy -m pip install --upgrade pip | Out-Null
 if ($Dev) { & $VPy -m pip install -r requirements-dev.txt } else { & $VPy -m pip install -r requirements.txt }
 if ($LASTEXITCODE -ne 0) { Stop-Setup "pip install failed" }
+& $VPy -m pip install --no-deps -r requirements-legacy.txt
+if ($LASTEXITCODE -ne 0) { Write-Warn "Legacy backends (QRadar, Trellix Helix, SurrealQL) could not be installed" }
 Write-Ok "Dependencies installed"
 
 $AttackFile = Join-Path $Root "data\attack\attack.json"

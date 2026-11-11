@@ -3,8 +3,8 @@ import { state } from "../state.js";
 import { $, $$, copyText, debounce, download, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const PREF_KEY = "sigma-forge-convert";
-const EXT = { spl: "spl", lucene: "txt", esql: "esql", eql: "eql", kql: "kql", xml: "xml" };
-const FORMAT_EXT = { savedsearches: "conf", kibana_ndjson: "ndjson", siem_rule_ndjson: "ndjson", siem_rule: "json", dsl_lucene: "json", eqlapi: "json" };
+const EXT = { spl: "spl", spl2: "spl2", lucene: "txt", esql: "esql", eql: "eql", kql: "kql", xml: "xml", yaml: "yml", ppl: "ppl", logscale: "txt", s1ql: "txt", powerquery: "txt", xql: "xql", udm: "txt", cbc: "txt", aql: "aql", lpql: "txt", netwitness: "txt", json: "json", python: "py", tql: "txt", logql: "logql", quickwit: "txt", sql: "sql", surrealql: "surql" };
+const FORMAT_EXT = { savedsearches: "conf", kibana_ndjson: "ndjson", siem_rule_ndjson: "ndjson", siem_rule: "json", dsl_lucene: "json", eqlapi: "json", dashboards_ndjson: "ndjson", monitor_rule: "json", module: "spl2", yara_l: "yaral", zircolite: "json", ruler: "yml", grafana_alerting: "json", sdyaml: "yml", pantherflow: "txt", python: "py", cse_rule: "json", clickdetect: "yml", json: "json", data_model: "spl" };
 
 function loadPrefs() {
   try {
@@ -33,7 +33,7 @@ export async function convertView(root, route) {
         <div>
           <div class="page-head__eyebrow">Convert</div>
           <h1>Turn Sigma into queries</h1>
-          <p>Pick a target platform and Sigma Forge converts every rule with pySigma, or with its own Wazuh backend.</p>
+          <p>Pick one of 31 target platforms and Sigma Forge converts every rule into its query language.</p>
         </div>
       </div>
       <div id="controls">${skeleton.card(3)}</div>
@@ -76,6 +76,7 @@ export async function convertView(root, route) {
           )
           .join("")}
       </div>
+      <div class="convert-bar__info" id="targetInfo"></div>
       <div class="convert-bar__row">
         <label class="inline-field">
           <span class="field__label">Format</span>
@@ -109,6 +110,11 @@ export async function convertView(root, route) {
     const wanted = prefs.formats?.[targetId] || (t?.id === "splunk_cim" ? "data_model" : "default");
     formatSelect.innerHTML = formats.map(([k, label]) => `<option value="${esc(k)}" ${k === wanted ? "selected" : ""}>${esc(k)}: ${esc(label)}</option>`).join("");
     $("#wazuhOptions", root).hidden = targetId !== "wazuh";
+    if (t) {
+      const engine = t.backend === "sigma-forge-wazuh" ? "Sigma Forge backend" : `pySigma backend ${t.backend}`;
+      const pipes = t.pipelines.length ? ` · pipelines ${t.pipelines.join(", ")}` : "";
+      $("#targetInfo", root).innerHTML = `<span class="badge badge--accent">${esc(t.language)}</span><span class="convert-bar__desc">${esc(t.description)}</span><span class="convert-bar__meta">${esc(engine + pipes)}</span>`;
+    }
   }
 
   function updateCount() {

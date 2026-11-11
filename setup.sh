@@ -106,6 +106,7 @@ if [[ "$DEV" -eq 1 ]]; then
 else
   "$VPY" -m pip install -r requirements.txt
 fi
+"$VPY" -m pip install --no-deps -r requirements-legacy.txt || warn "Legacy backends (QRadar, Trellix Helix, SurrealQL) could not be installed"
 ok "Dependencies installed"
 
 if [[ "$UPDATE_ATTACK" -eq 1 || ! -f "$ROOT/data/attack/attack.json" ]]; then

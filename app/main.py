@@ -9,7 +9,7 @@ from app.config import APP_NAME, APP_VERSION, HOST, PORT, WEB_DIR
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
-    description="Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh, and map them to MITRE ATT&CK.",
+    description="Convert Sigma rules to 31 SIEM, EDR and log platforms and map them to MITRE ATT&CK.",
     docs_url="/api/docs",
     redoc_url=None,
     openapi_url="/api/openapi.json",

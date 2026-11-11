@@ -17,7 +17,8 @@ def test_health():
 
 def test_targets_listed():
     ids = {t["id"] for t in client.get("/api/targets").json()["targets"]}
-    assert {"splunk", "elastic_lucene", "defender_xdr", "wazuh"} <= ids
+    assert {"splunk", "elastic_lucene", "defender_xdr", "crowdstrike_falcon", "secops", "sentinelone", "cortex_xdr", "qradar", "loki", "wazuh"} <= ids
+    assert len(ids) >= 30
 
 
 def good_rules():
