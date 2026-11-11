@@ -27,15 +27,16 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, check them for problems, 
 6. [How to use it](#how-to-use-it)
 7. [Sample pack](#sample-pack)
 8. [Supported targets](#supported-targets) and [target guide](#target-guide)
-9. [Correlation rules](#correlation-rules)
-10. [ATT&CK coverage](#attck-coverage)
-11. [API](#api)
-12. [Configuration](#configuration)
-13. [Architecture](#architecture)
-14. [Project layout](#project-layout)
-15. [Development](#development)
-16. [Known limits](#known-limits)
-17. [Credits](#credits)
+9. [Automatic fallbacks](#automatic-fallbacks)
+10. [Correlation rules](#correlation-rules)
+11. [ATT&CK coverage](#attck-coverage)
+12. [API](#api)
+13. [Configuration](#configuration)
+14. [Architecture](#architecture)
+15. [Project layout](#project-layout)
+16. [Development](#development)
+17. [Known limits](#known-limits)
+18. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -163,14 +164,14 @@ flowchart LR
     D --> G[Export Navigator layer]
 ```
 
-1. **Workspace.** Drop rule files or a folder on the drop zone, or click **Load samples**. You see how many rules parsed, how many have errors or findings, and a breakdown by level and log source.
-2. **Convert.** Pick a target on the left, choose an output format, select the rules, and press **Convert**. Each rule gets its own card with the query, any warnings and a copy button. **Download** saves all converted rules as one file.
+1. **Workspace.** Drop rule files or a folder on the drop zone, or click **Load samples** (and **Load error samples** to see how problems are reported). You see how many rules parsed, how many have errors or findings, and a breakdown by level and log source.
+2. **Convert.** Pick a target on the left, choose an output format, select the rules, and press **Convert**. Each rule gets its own card with the query, any notes and a copy button. Tabs above the cards filter them by Converted, Skipped and Failed. **Download** saves all converted rules as one file.
 3. **Coverage.** The heat map shows every ATT&CK Enterprise tactic and technique. Darker purple means more rules. Click a technique to see its sub techniques and the rules that cover it. Use **Covered only** to hide gaps, or keep them visible to find what to write next. **Navigator layer** downloads a JSON layer for [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).
 4. **Rules.** Search and filter by level, status, product, tactic or check state. Click a row to open the detail drawer with metadata, validator findings, the rule source and a quick convert to any target.
 
 ## Sample pack
 
-The [`sample`](sample) folder has rules, test events and API requests that touch every feature. **Load samples** in the Workspace loads all of `sample/rules` (45 files, 50 rules).
+The [`sample`](sample) folder has rules, test events and API requests that touch every feature. **Load samples** in the Workspace loads every working rule (39 files). **Load error samples** adds the six files in `sample/rules/broken`, which show how errors and findings look.
 
 ```mermaid
 flowchart LR
@@ -193,7 +194,7 @@ flowchart LR
 | [`rules/linux`](sample/rules/linux) | Process creation and auditd rules, including a keyword search. |
 | [`rules/network`](sample/rules/network) | Proxy and firewall rules, with `cidr`. |
 | [`rules/cloud`](sample/rules/cloud) | AWS CloudTrail and Azure sign in rules. Some pipelines do not map these, so you see clear per rule errors. |
-| [`rules/modifiers`](sample/rules/modifiers) | One rule per group of modifiers: `contains`, `all`, `windash`, `re` with flags, `base64`, `wide` with `base64offset`, `cidr`, `gte`, `exists`, `null`, `cased`, wildcards, keywords and `fieldref`. Some fail on purpose on targets that cannot do them. |
+| [`rules/modifiers`](sample/rules/modifiers) | One rule per group of modifiers: `contains`, `all`, `windash`, `re` with flags, `base64`, `wide` with `base64offset`, `cidr`, `exists`, `null`, `cased`, wildcards and keyword search. When a target cannot do one of them, Sigma Forge rewrites it to the closest thing the target can do and says so on the card. |
 | [`rules/correlation`](sample/rules/correlation) | An `event_count` brute force rule and a `value_count` password spray rule. See [correlation rules](#correlation-rules) for the targets that convert them. |
 | [`rules/collections`](sample/rules/collections) | A file with three rules, and an `action: global` file that shares one log source and selection between two rules. |
 | [`rules/broken`](sample/rules/broken) | A YAML error, a missing detection, an unknown modifier, revoked and unknown ATT&CK tags, validator findings and a rule with no id or level. They show how errors and findings look. |
@@ -216,37 +217,37 @@ Sigma Forge converts to **31 targets** across 19 platforms. Each one runs on a p
 
 | Target | Language | Formats | Sample pack | Correlations |
 |---|---|---|---|---|
-| [Splunk SPL](#splunk) | spl | `default`, `savedsearches` | 40 of 44 | yes |
-| [Splunk CIM](#splunk-cim) | spl | `default`, `savedsearches`, `data_model` | 19 of 44 | no |
-| [Splunk SPL2](#splunk-spl2) | spl2 | `default`, `module` | 39 of 44 | no |
-| [Elastic Lucene](#elastic-lucene) | lucene | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` | 38 of 44 | no |
-| [Elastic ES\|QL](#elastic-esql) | esql | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` | 39 of 44 | yes |
-| [Elastic EQL](#elastic-eql) | eql | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` | 40 of 44 | yes |
-| [ElastAlert](#elastalert) | yaml | `default` | 40 of 44 | yes |
-| [OpenSearch Lucene](#opensearch-lucene) | lucene | `default`, `dashboards_ndjson`, `monitor_rule`, `dsl_lucene` | 38 of 44 | no |
+| [Splunk SPL](#splunk) | spl | `default`, `savedsearches` | 42 of 44 | yes |
+| [Splunk CIM](#splunk-cim) | spl | `default`, `savedsearches`, `data_model` | 40 of 44 | no |
+| [Splunk SPL2](#splunk-spl2) | spl2 | `default`, `module` | 40 of 44 | no |
+| [Elastic Lucene](#elastic-lucene) | lucene | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` | 40 of 44 | no |
+| [Elastic ES\|QL](#elastic-esql) | esql | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` | 42 of 44 | yes |
+| [Elastic EQL](#elastic-eql) | eql | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` | 42 of 44 | yes |
+| [ElastAlert](#elastalert) | yaml | `default` | 42 of 44 | yes |
+| [OpenSearch Lucene](#opensearch-lucene) | lucene | `default`, `dashboards_ndjson`, `monitor_rule`, `dsl_lucene` | 40 of 44 | no |
 | [OpenSearch PPL](#opensearch-ppl) | ppl | `default` | 42 of 44 | yes |
-| [Defender XDR (KQL)](#defender-xdr) | kql | `default` | 22 of 44 | no |
-| [Sentinel ASIM (KQL)](#sentinel-asim) | kql | `default` | 19 of 44 | no |
-| [Azure Monitor (KQL)](#azure-monitor) | kql | `default` | 17 of 44 | no |
-| [CrowdStrike LogScale (Falcon)](#crowdstrike-falcon) | logscale | `default` | 35 of 44 | no |
-| [CrowdStrike LogScale (FDR)](#crowdstrike-fdr) | logscale | `default` | 35 of 44 | no |
-| [SentinelOne Deep Visibility](#sentinelone) | s1ql | `default`, `json` | 18 of 44 | no |
-| [SentinelOne PowerQuery](#sentinelone-pq) | powerquery | `default`, `json` | 19 of 44 | no |
-| [Cortex XDR (XQL)](#cortex-xdr) | xql | `default`, `json` | 19 of 44 | no |
-| [Google SecOps (UDM)](#secops) | udm | `default`, `yara_l` | 25 of 44 | no |
-| [Carbon Black Cloud](#carbon-black) | cbc | `default`, `json` | 18 of 44 | no |
-| [IBM QRadar AQL](#qradar) | aql | `default` | 31 of 44 | no |
-| [Logpoint](#logpoint) | lpql | `default` | 38 of 44 | no |
-| [RSA NetWitness](#netwitness) | netwitness | `default` | 39 of 44 | no |
-| [Sumo Logic CSE](#sumologic-cse) | json | `default`, `cse_rule` | 37 of 44 | no |
-| [Panther (Python)](#panther) | python | `default`, `sdyaml`, `python`, `pantherflow` | 38 of 44 | no |
-| [Trellix Helix (TQL)](#trellix-helix) | tql | `default` | 18 of 44 | no |
+| [Defender XDR (KQL)](#defender-xdr) | kql | `default` | 40 of 44 | no |
+| [Sentinel ASIM (KQL)](#sentinel-asim) | kql | `default` | 40 of 44 | no |
+| [Azure Monitor (KQL)](#azure-monitor) | kql | `default` | 40 of 44 | no |
+| [CrowdStrike LogScale (Falcon)](#crowdstrike-falcon) | logscale | `default` | 40 of 44 | no |
+| [CrowdStrike LogScale (FDR)](#crowdstrike-fdr) | logscale | `default` | 40 of 44 | no |
+| [SentinelOne Deep Visibility](#sentinelone) | s1ql | `default`, `json` | 40 of 44 | no |
+| [SentinelOne PowerQuery](#sentinelone-pq) | powerquery | `default`, `json` | 40 of 44 | no |
+| [Cortex XDR (XQL)](#cortex-xdr) | xql | `default`, `json` | 40 of 44 | no |
+| [Google SecOps (UDM)](#secops) | udm | `default`, `yara_l` | 40 of 44 | no |
+| [Carbon Black Cloud](#carbon-black) | cbc | `default`, `json` | 40 of 44 | no |
+| [IBM QRadar AQL](#qradar) | aql | `default` | 32 of 44 | no |
+| [Logpoint](#logpoint) | lpql | `default` | 40 of 44 | no |
+| [RSA NetWitness](#netwitness) | netwitness | `default` | 40 of 44 | no |
+| [Sumo Logic CSE](#sumologic-cse) | json | `default`, `cse_rule` | 40 of 44 | no |
+| [Panther (Python)](#panther) | python | `default`, `sdyaml`, `python`, `pantherflow` | 42 of 44 | no |
+| [Trellix Helix (TQL)](#trellix-helix) | tql | `default` | 40 of 44 | no |
 | [Grafana Loki (LogQL)](#loki) | logql | `default`, `ruler`, `grafana_alerting` | 42 of 44 | yes |
-| [Quickwit](#quickwit) | quickwit | `default` | 34 of 44 | no |
+| [Quickwit](#quickwit) | quickwit | `default` | 40 of 44 | no |
 | [ClickHouse SQL](#clickhouse) | sql | `default`, `clickdetect` | 42 of 44 | yes |
-| [SQLite (Zircolite)](#sqlite) | sql | `default`, `zircolite` | 40 of 44 | yes |
-| [SurrealDB (SurrealQL)](#surrealql) | surrealql | `default` | 37 of 44 | no |
-| [Wazuh rules (XML)](#wazuh) | xml | `default` | 41 of 44 | yes |
+| [SQLite (Zircolite)](#sqlite) | sql | `default`, `zircolite` | 42 of 44 | yes |
+| [SurrealDB (SurrealQL)](#surrealql) | surrealql | `default` | 39 of 44 | no |
+| [Wazuh rules (XML)](#wazuh) | xml | `default` | 43 of 44 | yes |
 
 Three backends (IBM QRadar, Trellix Helix and SurrealQL) were built for older pySigma versions. They still convert with pySigma 1.5, so the setup scripts install them from `requirements-legacy.txt` without their old version pins. A few other community backends (Datadog, InsightIDR, QRadar AQL and uberAgent) cannot load on pySigma 1.x and are left out.
 
@@ -254,7 +255,7 @@ To add another target, `pip install` its pySigma backend and add one `Target(...
 
 ## Target guide
 
-Every target below was tested with the 44 working rules of the [sample pack](#sample-pack). "Sample pack" shows how many converted. Rules fail when a platform has no field for them or cannot do a feature (for example `fieldref` or case sensitive matching), and the card in the app tells you why.
+Every target below was tested with the working rules of the [sample pack](#sample-pack). "Sample pack" shows how many converted. Rules fail when a platform has no field for them or cannot do a feature (for example `fieldref` or case sensitive matching), and the card in the app tells you why.
 
 ### Splunk
 
@@ -267,9 +268,9 @@ Every target below was tested with the 44 working rules of the [sample pack](#sa
 | Engine | pySigma backend `splunk` |
 | Pipelines | `sysmon`, `splunk_windows` |
 | Formats | `default`, `savedsearches` |
-| Sample pack | 40 of 44 converted, 2 skipped |
+| Sample pack | 42 of 44 converted, 2 skipped |
 | Correlations | supported |
-| Most common failures | Case-sensitive string matching is not supported by backend. (1); ORing FieldRef matching is not yet supported by Splunk backend (1) |
+| Most common failures | none |
 
 **Tips:** Paste the query in Search, or pick the savedsearches format to get a savedsearches.conf stanza.
 
@@ -290,9 +291,9 @@ source="WinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 Image="*\\
 | Engine | pySigma backend `splunk` |
 | Pipelines | `splunk_cim` |
 | Formats | `default`, `savedsearches`, `data_model` |
-| Sample pack | 19 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Rule type not yet supported by the Splunk data model CIM pipeline! (22); The Splunk Data Model Sigma backend supports only the following fields for process_creation log source: Comman (2); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | Rule type not yet supported by the Splunk data model CIM pipeline! (4) |
 
 **Tips:** Use the data_model format. Needs accelerated CIM data models such as Endpoint.Processes.
 
@@ -313,9 +314,9 @@ Example for `windows/proc_creation_whoami_recon.yml`:
 | Engine | pySigma backend `splunk_spl2` |
 | Pipelines | `sysmon`, `splunk_windows` |
 | Formats | `default`, `module` |
-| Sample pack | 39 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | Splunk SPL2 cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, Graf (2) |
 
 **Tips:** SPL2 starts with FROM main. Change the index name to yours.
 
@@ -338,9 +339,9 @@ FROM main WHERE source="WinEventLog:Microsoft-Windows-Sysmon/Operational" AND Ev
 | Engine | pySigma backend `lucene` |
 | Pipelines | `ecs_windows` |
 | Formats | `default`, `kibana_ndjson`, `dsl_lucene`, `siem_rule`, `siem_rule_ndjson` |
-| Sample pack | 38 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+| Most common failures | Elastic Lucene cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, G (2) |
 
 **Tips:** Pick siem_rule_ndjson to import straight into Elastic Security rules.
 
@@ -361,9 +362,9 @@ Example for `windows/proc_creation_whoami_recon.yml`:
 | Engine | pySigma backend `esql` |
 | Pipelines | `ecs_windows` |
 | Formats | `default`, `kibana_ndjson`, `siem_rule`, `siem_rule_ndjson` |
-| Sample pack | 39 of 44 converted, 2 skipped |
+| Sample pack | 42 of 44 converted, 2 skipped |
 | Correlations | supported |
-| Most common failures | String value expressions are not supported by the backend. (2); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | none |
 
 **Tips:** Replace 'from *' with your index pattern, for example logs-*.
 
@@ -384,9 +385,9 @@ from * metadata _id, _index, _version | where (ends_with(process.executable.case
 | Engine | pySigma backend `eql` |
 | Pipelines | `ecs_windows` |
 | Formats | `default`, `eqlapi`, `siem_rule`, `siem_rule_ndjson` |
-| Sample pack | 40 of 44 converted, 2 skipped |
+| Sample pack | 42 of 44 converted, 2 skipped |
 | Correlations | supported |
-| Most common failures | Field exists expressions are not supported by the backend. (1); ES Lucene backend can't handle field references. (1) |
+| Most common failures | none |
 
 
 
@@ -407,9 +408,9 @@ any where (process.executable.caseless:"*\\whoami.exe" or process.pe.original_fi
 | Engine | pySigma backend `elastalert` |
 | Pipelines | `ecs_windows` |
 | Formats | `default` |
-| Sample pack | 40 of 44 converted, 2 skipped |
+| Sample pack | 42 of 44 converted, 2 skipped |
 | Correlations | supported |
-| Most common failures | Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+| Most common failures | none |
 
 **Tips:** Add index, alert and other required keys to each rule before loading it in ElastAlert 2.
 
@@ -439,9 +440,9 @@ filter:
 | Engine | pySigma backend `opensearch_lucene` |
 | Pipelines | `ecs_windows` |
 | Formats | `default`, `dashboards_ndjson`, `monitor_rule`, `dsl_lucene` |
-| Sample pack | 38 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); ES Lucene backend can't handle field references. (1) |
+| Most common failures | OpenSearch Lucene cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL (2) |
 
 **Tips:** Pick monitor_rule to get OpenSearch Alerting monitors.
 
@@ -487,7 +488,7 @@ source=windows-process_creation-* | where (LIKE(Image, "%whoami.exe") OR Origina
 | Engine | pySigma backend `kusto` |
 | Pipelines | `microsoft_xdr` |
 | Formats | `default` |
-| Sample pack | 22 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
 | Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
   (16); Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
@@ -512,7 +513,7 @@ DeviceProcessEvents
 | Engine | pySigma backend `kusto` |
 | Pipelines | `sentinel_asim` |
 | Formats | `default` |
-| Sample pack | 19 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
 | Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
   (16); Backend does not support correlation rules. (2); Invalid SigmaDetectionItem field name encountered: TargetProcessFilename. Invalid SigmaDetectionItem field nam (2) |
@@ -537,7 +538,7 @@ ActingProcessCommandLine, ActingProcessCreationTime, ActingProcessFileCompany, A
 | Engine | pySigma backend `kusto` |
 | Pipelines | `azure_monitor` |
 | Formats | `default` |
-| Sample pack | 17 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
 | Most common failures | Unable to determine table name from rule.  The query table is determined in the following order of priority:
   (16); Backend does not support correlation rules. (2); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (2) |
@@ -564,9 +565,9 @@ AccessList, AccessMask, Account, AccountDomain, AccountExpires, AccountName, Acc
 | Engine | pySigma backend `log_scale` |
 | Pipelines | `crowdstrike_falcon` |
 | Formats | `default` |
-| Sample pack | 35 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Only file name of parent image is available in CrowdStrike Query Language events. (2); ORing CIDR matching is not yet supported by LogScale backend (2) |
+| Most common failures | CrowdStrike LogScale (Falcon) cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, Op (2) |
 
 **Tips:** Run it in Falcon Next-Gen SIEM or Event Search. CIDR lists joined with OR are not supported yet.
 
@@ -587,9 +588,9 @@ event_platform=/^Win$/i #event_simpleName=/^ProcessRollup2$/i or #event_simpleNa
 | Engine | pySigma backend `log_scale` |
 | Pipelines | `crowdstrike_fdr` |
 | Formats | `default` |
-| Sample pack | 35 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Only file name of parent image is available in CrowdStrike Query Language events. (2); ORing CIDR matching is not yet supported by LogScale backend (2) |
+| Most common failures | CrowdStrike LogScale (FDR) cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenS (2) |
 
 
 
@@ -612,9 +613,9 @@ event_platform=/^Win$/i event_simpleName=/^ProcessRollup2$/i or event_simpleName
 | Engine | pySigma backend `sentinel_one` |
 | Pipelines | built in to the backend |
 | Formats | `default`, `json` |
-| Sample pack | 18 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (7); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (3); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (4) |
 
 **Tips:** Only Windows, Linux and macOS endpoint log sources are mapped.
 
@@ -635,9 +636,9 @@ ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Inval
 | Engine | pySigma backend `sentinel_one_pq` |
 | Pipelines | built in to the backend |
 | Formats | `default`, `json` |
-| Sample pack | 19 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (7); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (3); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (4) |
 
 
 
@@ -660,9 +661,9 @@ ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Inval
 | Engine | pySigma backend `cortex_xdr` |
 | Pipelines | built in to the backend |
 | Formats | `default`, `json` |
-| Sample pack | 19 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Rule type not yet supported by the Cortex XDR Sigma backend (19); Invalid SigmaDetectionItem field name encountered: OriginalFileName. Invalid SigmaDetectionItem field name enc (2); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | Rule type not yet supported by the Cortex XDR Sigma backend (4) |
 
 **Tips:** Only endpoint log sources are mapped. Network and cloud rules show an error.
 
@@ -686,9 +687,9 @@ ERROR Invalid SigmaDetectionItem field name encountered: OriginalFileName. Inval
 | Engine | pySigma backend `secops` |
 | Pipelines | `secops_udm` |
 | Formats | `default`, `yara_l` |
-| Sample pack | 25 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Invalid UDM field: Field TargetImage is not a valid UDM field (2); Invalid UDM field: Field ImageLoaded is not a valid UDM field (2) |
+| Most common failures | Google SecOps (UDM) cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch P (2) |
 
 **Tips:** Pick the yara_l format to get YARA-L 2.0 detection rules.
 
@@ -711,9 +712,9 @@ Example for `windows/proc_creation_whoami_recon.yml`:
 | Engine | pySigma backend `carbon_black` |
 | Pipelines | `carbonblack` |
 | Formats | `default`, `json` |
-| Sample pack | 18 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (5); Invalid SigmaDetectionItem field name encountered: EventID. The supported fields are: {CommandLine}, {Company} (2); Invalid SigmaDetectionItem field name encountered: Initiated. Invalid SigmaDetectionItem field name encountere (2) |
+| Most common failures | Invalid SigmaDetectionItem field name encountered: EventID. Invalid SigmaDetectionItem field name encountered: (2); Invalid SigmaDetectionItem field name encountered: EventID. The supported fields are: {CommandLine}, {Company} (2) |
 
 
 
@@ -736,9 +737,9 @@ device_os:WINDOWS ((process_name:\\whoami.exe OR process_original_filename:whoam
 | Engine | pySigma backend `qradar` |
 | Pipelines | built in to the backend |
 | Formats | `default` |
-| Sample pack | 31 of 44 converted, 2 skipped |
+| Sample pack | 32 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | The QRadar savedsearches Sigma backend supports only the following fields for process_creation log source (8); Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | The QRadar savedsearches Sigma backend supports only the following fields for process_creation log source (8); IBM QRadar AQL cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, G (2) |
 
 **Tips:** Uses the legacy QRadar backend (installed from requirements-legacy.txt). Field names follow QRadar default properties.
 
@@ -761,9 +762,9 @@ SELECT UTF8(payload) as search_payload from events where ("Image" ILIKE '%\whoam
 | Engine | pySigma backend `logpoint` |
 | Pipelines | `logpoint_windows` |
 | Formats | `default` |
-| Sample pack | 38 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Case-sensitive string matching is not supported by backend. (1); Field reference expression is not supported by backend. (1) |
+| Most common failures | Logpoint cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, Grafana (2) |
 
 
 
@@ -786,9 +787,9 @@ label="Create" label="Process" "process"="*\whoami.exe" OR file="whoami.exe" com
 | Engine | pySigma backend `net_witness` |
 | Pipelines | `netwitness_windows` |
 | Formats | `default` |
-| Sample pack | 39 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Field reference expression is not supported by backend. (1) |
+| Most common failures | RSA NetWitness cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, G (2) |
 
 
 
@@ -811,7 +812,7 @@ device.type = 'windows' && (reference.id = '4688' && ((process ends '\whoami.exe
 | Engine | pySigma backend `sumologic_cse` |
 | Pipelines | `sumologic_cse` |
 | Formats | `default`, `cse_rule` |
-| Sample pack | 37 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
 | Most common failures | Backend does not support correlation rules. (2); Conversion failed: Unbound value expressions (keywords) are not supported.
 
@@ -849,9 +850,9 @@ Example for `windows/proc_creation_whoami_recon.yml`:
 | Engine | pySigma backend `panther` |
 | Pipelines | built in to the backend |
 | Formats | `default`, `sdyaml`, `python`, `pantherflow` |
-| Sample pack | 38 of 44 converted, 0 skipped |
+| Sample pack | 42 of 44 converted, 0 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Cased string value expressions are not supported right now (1); Conversion of numeric comparison operations into queries is not supported right now (1) |
+| Most common failures | Panther (Python) cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, (2) |
 
 **Tips:** Pick sdyaml for Panther simple detections or pantherflow for PantherFlow queries.
 
@@ -887,7 +888,7 @@ def rule(event):
 | Engine | pySigma backend `tql` |
 | Pipelines | built in to the backend |
 | Formats | `default` |
-| Sample pack | 18 of 44 converted, 0 skipped |
+| Sample pack | 40 of 44 converted, 0 skipped |
 | Correlations | not supported |
 | Most common failures | Rule type not yet supported by the Helix Sigma backend (6); Invalid fieldname encounter: eventSource.This pipeline only supports the following fields:
 {AccountDomain}, {A (1); Invalid fieldname encounter: ResultType.Invalid fieldname encounter: eventSource.This pipeline only supports t (1) |
@@ -938,9 +939,9 @@ Example for `windows/proc_creation_whoami_recon.yml`:
 | Engine | pySigma backend `quickwit` |
 | Pipelines | `quickwit_windows` |
 | Formats | `default` |
-| Sample pack | 34 of 44 converted, 2 skipped |
+| Sample pack | 40 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | 'SigmaNumber' object has no attribute 'convert' (3); Backend does not support correlation rules. (2); String value expressions are not supported by the backend. (1) |
+| Most common failures | Quickwit cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch PPL, Grafana (2) |
 
 
 
@@ -986,9 +987,9 @@ SELECT * FROM logs WHERE (Image ILIKE '%\\\\whoami.exe' OR OriginalFileName='who
 | Engine | pySigma backend `sqlite` |
 | Pipelines | built in to the backend |
 | Formats | `default`, `zircolite` |
-| Sample pack | 40 of 44 converted, 2 skipped |
+| Sample pack | 42 of 44 converted, 2 skipped |
 | Correlations | supported |
-| Most common failures | Value-only string expressions (i.e Full Text Search or 'keywords' search) are not supported by the backend. (2) |
+| Most common failures | none |
 
 **Tips:** Pick the zircolite format to build a rule pack for Zircolite.
 
@@ -1009,9 +1010,9 @@ SELECT * FROM logs WHERE (Image LIKE '%\\whoami.exe' ESCAPE '\' OR OriginalFileN
 | Engine | pySigma backend `surreal_ql` |
 | Pipelines | built in to the backend |
 | Formats | `default` |
-| Sample pack | 37 of 44 converted, 2 skipped |
+| Sample pack | 39 of 44 converted, 2 skipped |
 | Correlations | not supported |
-| Most common failures | Backend does not support correlation rules. (2); Value-only string expressions (i.e Full Text Search or 'keywords' search) are not supported by the backend. (1); Case-sensitive string matching is not supported by backend. (1) |
+| Most common failures | SurrealDB (SurrealQL) cannot convert correlation rules. Splunk SPL, Elastic ES\|QL, EQL, ElastAlert, OpenSearch (2); Case-sensitive string matching is not supported by backend. (1) |
 
 **Tips:** Replace <TABLE_NAME> with your table. Uses a legacy backend (requirements-legacy.txt).
 
@@ -1034,9 +1035,9 @@ SELECT * FROM <TABLE_NAME> WHERE ((Image IS NOT NONE AND string::ends_with(Image
 | Engine | Sigma Forge Wazuh backend |
 | Pipelines | built in to the backend |
 | Formats | `default` |
-| Sample pack | 41 of 44 converted, 0 skipped |
+| Sample pack | 43 of 44 converted, 0 skipped |
 | Correlations | supported |
-| Most common failures | Wazuh only supports event_count correlations, not value_count (1); Number compare modifiers (lt, lte, gt, gte) are not supported by Wazuh field matching (1); Field reference modifier (fieldref) is not supported by Wazuh (1) |
+| Most common failures | Wazuh only supports event_count correlations, not value_count (1) |
 
 
 
@@ -1159,6 +1160,22 @@ Each line of the events file is one test:
 
 </details>
 
+## Automatic fallbacks
+
+Many platforms cannot do every Sigma feature, or have no field mapping for some log sources. Instead of failing, Sigma Forge tries again with the closest thing the platform can do, and puts a note on the rule's card so you know what changed:
+
+| Problem | What Sigma Forge does |
+|---|---|
+| No field or table mapping for the log source | Converts with the original Sigma field names, so you only need to rename fields |
+| `cased` not supported | Drops it, so the query matches any case |
+| CIDR lists not supported | Turns each range into an IP prefix match |
+| Keyword (full text) search not supported | Matches the words against a `message` field |
+| `exists` or `null` not supported | Uses a match on any value, or on an empty string |
+| Number values break the backend | Sends them as text |
+| No Splunk CIM data model for the log source | Falls back to a plain SPL search |
+
+Rules that still fail show the reason on their card. Most of these are platform limits, like QRadar's field list for some log sources.
+
 ## Correlation rules
 
 Sigma correlation rules join events from other rules, like "ten failed logons from one address in five minutes". Sigma Forge reads them from the same file as the rules they use.
@@ -1199,7 +1216,7 @@ How tags are read:
 
 ## API
 
-The server has interactive docs at **http://127.0.0.1:8000/api/docs**.
+All endpoints take and return JSON.
 
 | Method | Path | What it does |
 |---|---|---|

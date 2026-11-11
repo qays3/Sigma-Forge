@@ -198,12 +198,18 @@ export async function convertView(root, route) {
     const t = currentTarget();
     const ext = fileExt(t, result.format);
     const s = result.summary;
+    const stateOf = (r) => (r.error ? "failed" : r.queries.length ? "ok" : "skipped");
+    const order = { ok: 0, skipped: 1, failed: 2 };
+    const counts = { all: result.results.length, ok: 0, skipped: 0, failed: 0 };
+    result.results.forEach((r) => (counts[stateOf(r)] += 1));
     const cards = result.results
-      .map((r, i) => {
+      .map((r, i) => ({ r, i }))
+      .sort((a, b) => order[stateOf(a.r)] - order[stateOf(b.r)])
+      .map(({ r, i }) => {
         const body = r.queries.length ? r.queries.map((q) => `<pre class="code">${esc(q)}</pre>`).join("") : "";
         const warn = (r.warnings || []).map((w) => `<div class="notice notice--warn">${esc(w)}</div>`).join("");
         const err = r.error ? `<div class="notice notice--bad">${esc(r.error)}</div>` : "";
-        return `<article class="card result">
+        return `<article class="card result" data-state="${stateOf(r)}">
           <div class="result__head">
             <div class="result__title" title="${esc(r.title)}">${esc(r.title)}<div class="result__file">${esc(r.key)}</div></div>
             ${levelBadge(r.level)}
@@ -220,15 +226,26 @@ export async function convertView(root, route) {
         <div class="stat"><div class="stat__label">Target</div><div class="stat__value stat__value--accent stat__value--sm">${esc(result.target.name)}</div><div class="stat__hint">format ${esc(result.format)}</div></div>
         <div class="stat"><div class="stat__label">Converted</div><div class="stat__value stat__value--ok">${s.converted}</div><div class="stat__hint">of ${plural(s.total, "rule")}</div></div>
         <div class="stat"><div class="stat__label">Skipped</div><div class="stat__value ${s.skipped ? "stat__value--warn" : ""}">${s.skipped || 0}</div><div class="stat__hint">used by correlations</div></div>
-        <div class="stat"><div class="stat__label">Failed</div><div class="stat__value ${s.failed ? "stat__value--bad" : ""}">${s.failed}</div><div class="stat__hint">see the reasons below</div></div>
+        <div class="stat"><div class="stat__label">Failed</div><div class="stat__value ${s.failed ? "stat__value--bad" : ""}">${s.failed}</div><div class="stat__hint">${s.failed ? "see the Failed tab" : "nothing failed"}</div></div>
       </div>
       ${(result.notes || []).length ? `<div class="card result">${result.notes.map((n) => `<div class="notice notice--info">${esc(n)}</div>`).join("")}</div>` : ""}
       <div class="toolbar">
-        <div class="toolbar__grow muted">${result.bundle_error ? `Bundle failed: ${esc(result.bundle_error)}` : "Each card shows one Sigma rule. The bundle holds every converted rule in one file."}</div>
+        <div class="tabs tabs--inline" role="tablist" id="resultFilter">
+          ${[["all", "All"], ["ok", "Converted"], ["skipped", "Skipped"], ["failed", "Failed"]].map(([k, label]) => `<button class="tab ${k === "all" ? "is-active" : ""}" type="button" data-filter="${k}" ${counts[k] ? "" : k === "all" ? "" : "disabled"}>${label} <span class="tab__count">${counts[k]}</span></button>`).join("")}
+        </div>
+        <div class="toolbar__grow muted">${result.bundle_error ? `Bundle failed: ${esc(result.bundle_error)}` : ""}</div>
         <button class="btn btn--sm" type="button" id="copyBundle" ${result.bundle ? "" : "disabled"}>${icons.copy} Copy bundle</button>
         <button class="btn btn--sm btn--primary" type="button" id="dlBundle" ${result.bundle ? "" : "disabled"}>${icons.download} Download .${esc(ext)}</button>
       </div>
       ${cards}`;
+    $("#resultFilter", root)?.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-filter]");
+      if (!tab || tab.disabled) return;
+      $$("#resultFilter .tab", root).forEach((t) => t.classList.toggle("is-active", t === tab));
+      $$(".result[data-state]", root).forEach((card) => {
+        card.hidden = tab.dataset.filter !== "all" && card.dataset.state !== tab.dataset.filter;
+      });
+    });
     $("#copyBundle", root)?.addEventListener("click", () => copyText(result.bundle, "Bundle copied"));
     $("#dlBundle", root)?.addEventListener("click", () => download(`sigma-forge_${result.target.id}.${ext}`, result.bundle));
   }

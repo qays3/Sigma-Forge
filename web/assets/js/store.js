@@ -69,26 +69,44 @@ export const store = {
       return memory;
     }
     const items = await wrap(tx(db, "readonly").getAll());
-    memory = items.sort((a, b) => a.name.localeCompare(b.name));
+    const byContent = new Map();
+    const dropped = [];
+    for (const item of items.sort((a, b) => (b.added || 0) - (a.added || 0))) {
+      if (byContent.has(item.content)) dropped.push(item.id);
+      else byContent.set(item.content, item);
+    }
+    if (dropped.length) {
+      const os = tx(db, "readwrite");
+      await Promise.all(dropped.map((id) => wrap(os.delete(id))));
+    }
+    memory = Array.from(byContent.values()).sort((a, b) => a.name.localeCompare(b.name));
     return memory;
   },
 
   async add(files) {
     const current = await this.all();
     const byId = new Map(current.map((r) => [r.id, r]));
+    const byContent = new Map(current.map((r) => [r.content, r]));
+    const replaced = [];
     let added = 0;
     for (const file of files) {
       const id = await hash(`${file.name}\n${file.content}`);
       if (byId.has(id)) continue;
+      const same = byContent.get(file.content);
+      if (same) {
+        byId.delete(same.id);
+        replaced.push(same.id);
+      }
       const item = { id, name: file.name, content: file.content, size: file.content.length, added: Date.now() };
       byId.set(id, item);
-      added += 1;
+      byContent.set(file.content, item);
+      if (!same) added += 1;
     }
     const items = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
     const db = await openDb();
     if (db) {
       const os = tx(db, "readwrite");
-      await Promise.all(items.map((item) => wrap(os.put(item))));
+      await Promise.all([...replaced.map((rid) => wrap(os.delete(rid))), ...items.map((item) => wrap(os.put(item)))]);
     }
     memory = items;
     emit();

@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { animateFavicon } from "./favicon.js";
 import { route, startRouter } from "./router.js";
 import { store } from "./store.js";
 import { $, hideSplash, initDrawer, plural, splashText } from "./ui.js";
@@ -82,3 +83,4 @@ initHeader();
 initDrawer();
 store.onChange(updateCount);
 boot();
+animateFavicon();

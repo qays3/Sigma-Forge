@@ -10,9 +10,9 @@ app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
     description="Convert Sigma rules to 31 SIEM, EDR and log platforms and map them to MITRE ATT&CK.",
-    docs_url="/api/docs",
+    docs_url=None,
     redoc_url=None,
-    openapi_url="/api/openapi.json",
+    openapi_url=None,
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)

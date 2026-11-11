@@ -1993,3 +1993,33 @@ pre,
 .convert-bar__targets {
   gap: var(--sp-3) var(--sp-5);
 }
+
+.tabs--inline {
+  margin-bottom: 0;
+  flex: none;
+}
+
+.tabs--inline .tab {
+  flex: none;
+  white-space: nowrap;
+}
+
+.tabs--inline .tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tab__count {
+  font-family: var(--mono);
+  font-size: var(--fs-3xs);
+  color: var(--mut);
+  margin-left: var(--sp-1);
+}
+
+.tab.is-active .tab__count {
+  color: var(--amber);
+}
+
+.result[hidden] {
+  display: none;
+}

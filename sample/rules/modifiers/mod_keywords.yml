@@ -1,0 +1,20 @@
+title: Modifier Demo Keyword Search
+id: 594ee431-cc69-4335-b100-bc4f0d85f45b
+status: test
+description: Shows keyword search, which looks for words anywhere in the event instead of in one field.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1036.003
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  keywords:
+    - 'masquerade'
+    - 'svch0st.exe'
+  condition: keywords
+falsepositives:
+  - Documents that mention these words
+level: low

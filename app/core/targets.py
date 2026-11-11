@@ -179,9 +179,46 @@ def available_targets() -> List[Dict]:
     return out
 
 
+SQL_LIKE_PRECEDENCE = {"splunk_spl2"}
+
+
+@lru_cache(maxsize=None)
+def safe_backend_class(target_id: str):
+    from sigma.conditions import ConditionAND, ConditionNOT, ConditionOR
+    from sigma.conversion.base import TextQueryBackend
+
+    target = TARGET_MAP[target_id]
+    base = backend_class(target)
+    if base is None or not issubclass(base, TextQueryBackend):
+        return base
+    attrs = {}
+    if not getattr(base, "parenthesize", False):
+        attrs["parenthesize"] = True
+    if target.backend in SQL_LIKE_PRECEDENCE:
+        attrs["precedence"] = (ConditionNOT, ConditionAND, ConditionOR)
+    return type(base.__name__, (base,), attrs) if attrs else base
+
+
 def build_backend(target: Target):
-    cls = backend_class(target)
+    cls = safe_backend_class(target.id)
     if cls is None:
         raise ValueError(f"Backend for {target.name} is not installed")
     pipeline = resolver().resolve(target.pipelines) if target.pipelines else None
     return cls(processing_pipeline=pipeline) if pipeline is not None else cls()
+
+
+@lru_cache(maxsize=None)
+def relaxed_backend_class(target_id: str):
+    from sigma.processing.pipeline import ProcessingPipeline
+
+    base = safe_backend_class(target_id)
+    if base is None:
+        return None
+    return type(base.__name__, (base,), {"backend_processing_pipeline": ProcessingPipeline()})
+
+
+def build_relaxed_backend(target: Target):
+    cls = relaxed_backend_class(target.id)
+    if cls is None:
+        raise ValueError(f"Backend for {target.name} is not installed")
+    return cls()

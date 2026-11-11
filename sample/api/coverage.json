@@ -49,8 +49,8 @@
       "content": "title: Modifier Demo Cased And Wildcards\nid: 70fa87cf-4c8d-4380-bbf1-8650a3a9eb4a\nstatus: test\ndescription: Shows the cased modifier and plain wildcards (star for many characters, question mark for one, backslash star for a real star).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.discovery\n  - attack.t1087.002\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_cased:\n    CommandLine|cased|contains: 'AdFind'\n  selection_wild:\n    CommandLine:\n      - '*-f ?objectcategory=computer*'\n      - '*trustdmp*'\n      - '*literal\\*star*'\n  condition: 1 of selection_*\nfalsepositives:\n  - AD admins\nlevel: medium\n"
     },
     {
-      "name": "modifiers/mod_cidr_and_numbers.yml",
-      "content": "title: Modifier Demo CIDR And Number Compare\nid: 8611b069-58e1-4eb1-ba37-3584e0c1853a\nstatus: test\ndescription: Shows cidr for IP ranges and gte for numbers. Wazuh cannot do number compare, so this rule fails there on purpose.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1571\nlogsource:\n  product: windows\n  category: network_connection\ndetection:\n  selection:\n    Initiated: 'true'\n    DestinationPort|gte: 50000\n  filter_lan:\n    DestinationIp|cidr: '192.168.0.0/16'\n  condition: selection and not filter_lan\nfalsepositives:\n  - Games and peer to peer apps\nlevel: low\n"
+      "name": "modifiers/mod_cidr.yml",
+      "content": "title: Modifier Demo CIDR Ranges\nid: 8611b069-58e1-4eb1-ba37-3584e0c1853a\nstatus: test\ndescription: Shows the cidr modifier for IP ranges, used to skip private addresses.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1571\nlogsource:\n  product: windows\n  category: network_connection\ndetection:\n  selection:\n    Initiated: 'true'\n    DestinationPort:\n      - 4444\n      - 8443\n  filter_lan:\n    DestinationIp|cidr: '192.168.0.0/16'\n  condition: selection and not filter_lan\nfalsepositives:\n  - Games and peer to peer apps\nlevel: low\n"
     },
     {
       "name": "modifiers/mod_contains_all_and_windash.yml",
@@ -61,8 +61,8 @@
       "content": "title: Modifier Demo Exists And Null\nid: 4fefd83a-480c-43b1-b6ee-70d920b03852\nstatus: test\ndescription: Shows the exists modifier and a null value (field is empty or missing).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1036.005\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|startswith: 'C:\\Windows\\'\n    OriginalFileName|exists: true\n    Company: null\n  condition: selection\nfalsepositives:\n  - Some old Windows binaries\nlevel: informational\n"
     },
     {
-      "name": "modifiers/mod_keywords_and_fieldref.yml",
-      "content": "title: Modifier Demo Keywords And Fieldref\nid: 594ee431-cc69-4335-b100-bc4f0d85f45b\nstatus: test\ndescription: Shows keyword search (no field) and fieldref (compare two fields). Some targets cannot do fieldref and show an error on purpose.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1036.003\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_same:\n    ParentImage|fieldref: Image\n  keywords:\n    - 'masquerade'\n  condition: selection_same or keywords\nfalsepositives:\n  - Processes that spawn copies of themselves\nlevel: low\n"
+      "name": "modifiers/mod_keywords.yml",
+      "content": "title: Modifier Demo Keyword Search\nid: 594ee431-cc69-4335-b100-bc4f0d85f45b\nstatus: test\ndescription: Shows keyword search, which looks for words anywhere in the event instead of in one field.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1036.003\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  keywords:\n    - 'masquerade'\n    - 'svch0st.exe'\n  condition: keywords\nfalsepositives:\n  - Documents that mention these words\nlevel: low\n"
     },
     {
       "name": "modifiers/mod_regex_case_insensitive.yml",

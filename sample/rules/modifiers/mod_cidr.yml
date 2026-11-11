@@ -1,7 +1,7 @@
-title: Modifier Demo CIDR And Number Compare
+title: Modifier Demo CIDR Ranges
 id: 8611b069-58e1-4eb1-ba37-3584e0c1853a
 status: test
-description: Shows cidr for IP ranges and gte for numbers. Wazuh cannot do number compare, so this rule fails there on purpose.
+description: Shows the cidr modifier for IP ranges, used to skip private addresses.
 author: Sigma Forge samples
 date: 2026-11-11
 tags:
@@ -13,7 +13,9 @@ logsource:
 detection:
   selection:
     Initiated: 'true'
-    DestinationPort|gte: 50000
+    DestinationPort:
+      - 4444
+      - 8443
   filter_lan:
     DestinationIp|cidr: '192.168.0.0/16'
   condition: selection and not filter_lan

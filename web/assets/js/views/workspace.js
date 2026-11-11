@@ -93,6 +93,7 @@ export async function workspaceView(root) {
                   <button class="btn btn--sm" type="button" id="pickFiles">${icons.file} Choose files</button>
                   <button class="btn btn--sm" type="button" id="pickFolder">${icons.folder} Choose folder</button>
                   <button class="btn btn--sm btn--primary" type="button" id="loadSamples">${icons.spark} Load samples</button>
+                  <button class="btn btn--sm btn--ghost" type="button" id="loadBroken" title="Rules with errors on purpose, to see how problems are reported">Load error samples</button>
                 </div>
               </div>
               <input class="hidden-input" type="file" id="fileInput" accept=".yml,.yaml" multiple>
@@ -185,19 +186,23 @@ export async function workspaceView(root) {
     await addFiles(await readDrop(e.dataTransfer));
   });
 
-  $("#loadSamples", root).addEventListener("click", async (e) => {
+  async function loadSamples(e, broken) {
     e.stopPropagation();
     const btn = e.currentTarget;
     btn.disabled = true;
     try {
       const data = await api.samples();
-      await addFiles(data.rules.map((r) => ({ name: `sample/${r.name}`, content: r.content })));
+      const picked = data.rules.filter((r) => r.name.startsWith("broken/") === broken);
+      await addFiles(picked.map((r) => ({ name: `sample/${r.name}`, content: r.content })));
     } catch (err) {
       toast(err.message, "bad");
     } finally {
       btn.disabled = false;
     }
-  });
+  }
+
+  $("#loadSamples", root).addEventListener("click", (e) => loadSamples(e, false));
+  $("#loadBroken", root).addEventListener("click", (e) => loadSamples(e, true));
 
   $("#addPaste", root).addEventListener("click", async () => {
     const name = $("#pasteName", root).value.trim() || "pasted_rule.yml";
