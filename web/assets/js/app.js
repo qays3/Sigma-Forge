@@ -54,20 +54,18 @@ async function updateCount() {
   $("#ruleCount").textContent = plural(rules.length, "rule");
 }
 
-async function loadFooter() {
+async function checkEngine() {
   try {
     splashText("Checking the engine");
-    const info = await api.health();
-    const attack = info.attack_loaded ? `ATT&CK v${info.attack_version}` : "ATT&CK data missing";
-    $("#footerMeta").textContent = `v${info.version} · pySigma ${info.pysigma} · ${attack}`;
+    await api.health();
   } catch {
-    $("#footerMeta").textContent = "Server offline";
+    splashText("Server offline");
   }
 }
 
 async function boot() {
   const started = Date.now();
-  await Promise.all([loadFooter(), updateCount()]);
+  await Promise.all([checkEngine(), updateCount()]);
   startRouter($("#main"));
   const wait = Math.max(0, 900 - (Date.now() - started));
   setTimeout(hideSplash, wait);

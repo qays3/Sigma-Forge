@@ -22,27 +22,25 @@ function rulesFor(tid, attack, coverage) {
 
 export async function coverageView(root, route) {
   root.innerHTML = `
-    <section class="view">
-      <div class="page-head">
-        <div>
+    <section class="view cov">
+      <div class="cov__top">
+        <div class="cov__title">
           <div class="page-head__eyebrow">Coverage</div>
           <h1>MITRE ATT&amp;CK heat map</h1>
-          <p>Each cell is an Enterprise technique. The color shows how many of your rules are tagged with it or with one of its sub techniques.</p>
+          <div class="cov__kpis" id="covStats">${forging("Mapping rules to ATT&CK")}</div>
         </div>
-        <div class="page-head__actions">
-          <button class="btn btn--primary" type="button" id="exportLayer" disabled>${icons.download} Navigator layer</button>
-        </div>
+        <button class="btn btn--primary" type="button" id="exportLayer" disabled>${icons.download} Navigator layer</button>
       </div>
-      <div id="covStats">${forging("Mapping rules to ATT&CK")}${skeleton.stats(4)}</div>
-      <div class="toolbar">
-        <input class="input toolbar__grow" type="search" id="techFilter" placeholder="Find a technique by name or id" aria-label="Find technique">
+      <div class="cov__bar">
+        <input class="input cov__search" type="search" id="techFilter" placeholder="Find a technique by name or id" aria-label="Find technique">
         <label class="check mb-0"><input type="checkbox" id="coveredOnly"> <span>Covered only</span></label>
+        <div class="cov__notes" id="covNotes"></div>
         <div class="legend" aria-hidden="true">
           <span>0</span><span class="legend__swatch"></span>
-          <span class="legend__swatch cell--h1"></span><span class="legend__swatch cell--h2"></span><span class="legend__swatch cell--h3"></span><span class="legend__swatch cell--h4"></span><span class="legend__swatch cell--h5"></span><span>8+</span>
+          <span class="legend__swatch cell--h1"></span><span class="legend__swatch cell--h2"></span><span class="legend__swatch cell--h3"></span><span class="legend__swatch cell--h4"></span><span class="legend__swatch cell--h5"></span><span>8+ rules</span>
         </div>
       </div>
-      <div class="card"><div class="card__body" id="matrix">${skeleton.matrix()}</div></div>
+      <div class="card cov__map" id="matrix">${skeleton.matrix(15, 14)}</div>
     </section>`;
 
   const rules = await state.rules();
@@ -67,14 +65,13 @@ export async function coverageView(root, route) {
   const revoked = Object.entries(coverage.revoked || {});
   const unknown = Object.keys(coverage.unknown || {});
   $("#covStats", root).innerHTML = `
-    <div class="stats">
-      <div class="stat"><div class="stat__label">Tagged rules</div><div class="stat__value">${coverage.rules_tagged}</div><div class="stat__hint">of ${plural(coverage.rules_total, "valid rule")}</div></div>
-      <div class="stat"><div class="stat__label">Techniques covered</div><div class="stat__value stat__value--accent">${coverage.parents_covered}</div><div class="stat__hint">of ${coverage.parents_total} (${pct}%)</div></div>
-      <div class="stat"><div class="stat__label">Sub techniques</div><div class="stat__value">${subCount}</div><div class="stat__hint">tagged directly</div></div>
-      <div class="stat"><div class="stat__label">ATT&amp;CK data</div><div class="stat__value">v${esc(coverage.attack_version || "?")}</div><div class="stat__hint">Enterprise matrix</div></div>
-    </div>
-    ${revoked.length ? `<div class="card mb-0"><div class="notice notice--warn">Revoked tags were mapped to their new ids: ${revoked.map(([o, n]) => `${esc(o)} to ${esc(n)}`).join(", ")}</div></div>` : ""}
-    ${unknown.length ? `<div class="card mt-4"><div class="notice notice--bad">Unknown technique tags: ${unknown.map(esc).join(", ")}</div></div>` : ""}`;
+    <div class="kpi"><span class="kpi__label">Tagged rules</span><span class="kpi__value">${coverage.rules_tagged}<small> of ${coverage.rules_total}</small></span></div>
+    <div class="kpi"><span class="kpi__label">Techniques covered</span><span class="kpi__value kpi__value--accent">${coverage.parents_covered}<small> of ${coverage.parents_total} · ${pct}%</small></span></div>
+    <div class="kpi"><span class="kpi__label">Sub techniques</span><span class="kpi__value">${subCount}</span></div>
+    <div class="kpi"><span class="kpi__label">ATT&amp;CK data</span><span class="kpi__value">v${esc(coverage.attack_version || "?")}<small> Enterprise</small></span></div>`;
+  $("#covNotes", root).innerHTML = `
+    ${revoked.length ? `<span class="badge badge--warn" title="Revoked tags were mapped to their new ids">${revoked.map(([o, n]) => `${esc(o)} to ${esc(n)}`).join(", ")}</span>` : ""}
+    ${unknown.length ? `<span class="badge badge--bad" title="Unknown technique tags">Unknown: ${unknown.map(esc).join(", ")}</span>` : ""}`;
 
   function renderMatrix() {
     const filter = $("#techFilter", root).value.trim().toLowerCase();
@@ -96,12 +93,13 @@ export async function coverageView(root, route) {
         return `<div class="matrix__col">
           <div class="matrix__head">
             <div class="matrix__tactic">${esc(tactic.name)}</div>
-            <div class="matrix__count">${cov.covered} / ${cov.total} covered</div>
+            <div class="matrix__count">${cov.covered}/${cov.total}</div>
             <div class="matrix__progress"><span data-width="${width}"></span></div>
-          </div>${cells || '<div class="matrix__count">No match</div>'}</div>`;
+          </div>${cells || '<div class="matrix__empty">None</div>'}</div>`;
       })
       .join("");
-    $("#matrix", root).innerHTML = `<div class="matrix-wrap"><div class="matrix">${cols}</div></div>`;
+    $("#matrix", root).innerHTML = `<div class="matrix-wrap"><div class="matrix matrix--fit">${cols}</div></div>`;
+    $(".matrix--fit", root).style.setProperty("--cols", attack.tactics.length);
     root.querySelectorAll(".matrix__progress span").forEach((el) => el.style.setProperty("width", `${el.dataset.width}%`));
   }
 

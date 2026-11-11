@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { $, $$, copyText, debounce, download, emptyState, esc, forging, icons, levelBadge, plural, skeleton, toast } from "../ui.js";
+import { $, $$, copyText, debounce, download, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const PREF_KEY = "sigma-forge-convert";
 const EXT = { spl: "spl", lucene: "txt", esql: "esql", eql: "eql", kql: "kql", xml: "xml" };
@@ -36,10 +36,8 @@ export async function convertView(root, route) {
           <p>Pick a target platform and Sigma Forge converts every rule with pySigma, or with its own Wazuh backend.</p>
         </div>
       </div>
-      <div class="grid grid--side">
-        <div class="sticky" id="controls">${skeleton.card(8)}</div>
-        <div id="output">${forging("Loading targets")}${skeleton.blocks(3)}</div>
-      </div>
+      <div id="controls">${skeleton.card(3)}</div>
+      <div class="mt-5" id="output">${forging("Loading targets")}${skeleton.blocks(3)}</div>
     </section>`;
 
   let rules;
@@ -54,7 +52,7 @@ export async function convertView(root, route) {
 
   if (!rules.length) {
     $("#controls", root).innerHTML = "";
-    root.querySelector(".grid").outerHTML = `<div class="card">${emptyState("No rules to convert", "Add Sigma rules in the workspace first.", '<a class="btn btn--primary" href="/" data-link>Go to workspace</a>')}</div>`;
+    $("#output", root).outerHTML = `<div class="card">${emptyState("No rules to convert", "Add Sigma rules in the workspace first.", '<a class="btn btn--primary" href="/" data-link>Go to workspace</a>')}</div>`;
     return null;
   }
 
@@ -67,42 +65,33 @@ export async function convertView(root, route) {
 
   const families = [...new Set(targets.map((t) => t.family))];
   $("#controls", root).innerHTML = `
-    <div class="card">
-      <div class="card__head"><h2 class="card__title">Target</h2></div>
-      <div class="card__body">
+    <div class="card convert-bar">
+      <div class="convert-bar__targets" role="radiogroup" aria-label="Target">
         ${families
           .map(
-            (fam) => `<div class="target-group"><div class="target-group__name">${esc(fam)}</div>${targets
+            (fam) => `<div class="tgroup"><span class="tgroup__name">${esc(fam)}</span><div class="tgroup__items">${targets
               .filter((t) => t.family === fam)
-              .map((t) => `<button class="target" type="button" data-target="${esc(t.id)}" ${t.available ? "" : "disabled"}><div class="target__name">${esc(t.name)}</div><div class="target__desc">${esc(t.available ? t.description : "Backend or pipeline not installed")}</div></button>`)
-              .join("")}</div>`
+              .map((t) => `<button class="pill" type="button" role="radio" data-target="${esc(t.id)}" title="${esc(t.available ? t.description : "Backend or pipeline not installed")}" ${t.available ? "" : "disabled"}>${esc(t.name)}</button>`)
+              .join("")}</div></div>`
           )
           .join("")}
-        <label class="field">
-          <span class="field__label">Output format</span>
+      </div>
+      <div class="convert-bar__row">
+        <label class="inline-field">
+          <span class="field__label">Format</span>
           <select class="select" id="formatSelect"></select>
         </label>
-        <div id="wazuhOptions" hidden>
-          <label class="field">
-            <span class="field__label">First Wazuh rule id</span>
-            <input class="input" type="number" id="wazuhStart" min="1" max="999999" value="${esc(prefs.wazuhStart || 100100)}">
-            <span class="field__hint">Custom rules should use 100000 and up.</span>
+        <div class="convert-bar__wazuh" id="wazuhOptions" hidden>
+          <label class="inline-field">
+            <span class="field__label">First id</span>
+            <input class="input input--sm" type="number" id="wazuhStart" min="1" max="999999" value="${esc(prefs.wazuhStart || 100100)}" title="Custom Wazuh rules should use 100000 and up">
           </label>
-          <label class="check"><input type="checkbox" id="wazuhDouble" ${prefs.wazuhDouble === false ? "" : "checked"}> <span>Match doubled backslashes (eventchannel data)</span></label>
-          <label class="check"><input type="checkbox" id="wazuhParent" ${prefs.wazuhParent === false ? "" : "checked"}> <span>Add if_group parent (sysmon or windows)</span></label>
+          <label class="check mb-0" title="Wazuh eventchannel fields keep escaped backslashes"><input type="checkbox" id="wazuhDouble" ${prefs.wazuhDouble === false ? "" : "checked"}> <span>Double backslashes</span></label>
+          <label class="check mb-0" title="Add if_group sysmon or windows"><input type="checkbox" id="wazuhParent" ${prefs.wazuhParent === false ? "" : "checked"}> <span>Parent group</span></label>
         </div>
-      </div>
-      <div class="card__head"><h2 class="card__title">Rules</h2><span class="card__sub" id="selCount"></span></div>
-      <div class="card__body">
-        <input class="input" type="search" id="ruleFilter" placeholder="Filter files" aria-label="Filter files">
-        <div class="row mt-4">
-          <button class="btn btn--sm" type="button" id="selAll">Select all</button>
-          <button class="btn btn--sm" type="button" id="selNone">Select none</button>
-        </div>
-        <div class="scroll mt-4" id="ruleChecks"></div>
-      </div>
-      <div class="card__body">
-        <button class="btn btn--primary btn--block" type="button" id="runConvert">${icons.play} Convert</button>
+        <div class="spacer"></div>
+        <button class="btn" type="button" id="pickRules">${icons.file} Rules <span class="badge badge--accent" id="selCount"></span></button>
+        <button class="btn btn--primary" type="button" id="runConvert">${icons.play} Convert</button>
       </div>
     </div>`;
 
@@ -110,7 +99,11 @@ export async function convertView(root, route) {
   const currentTarget = () => targets.find((t) => t.id === targetId);
 
   function renderTargets() {
-    $$(".target", root).forEach((b) => b.classList.toggle("is-active", b.dataset.target === targetId));
+    $$(".pill", root).forEach((b) => {
+      const on = b.dataset.target === targetId;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-checked", String(on));
+    });
     const t = currentTarget();
     const formats = Object.entries(t?.formats || {});
     const wanted = prefs.formats?.[targetId] || (t?.id === "splunk_cim" ? "data_model" : "default");
@@ -118,13 +111,57 @@ export async function convertView(root, route) {
     $("#wazuhOptions", root).hidden = targetId !== "wazuh";
   }
 
+  function updateCount() {
+    $("#selCount", root).textContent = `${selected.size} / ${rules.length}`;
+    const drawerCount = document.getElementById("drawerSelCount");
+    if (drawerCount) drawerCount.textContent = `${selected.size} of ${rules.length} selected`;
+  }
+
   function renderChecks(filter = "") {
-    const f = filter.toLowerCase();
-    $("#ruleChecks", root).innerHTML = rules
-      .filter((r) => !f || r.name.toLowerCase().includes(f))
-      .map((r) => `<label class="check"><input type="checkbox" data-id="${esc(r.id)}" ${selected.has(r.id) ? "checked" : ""}> <span title="${esc(r.name)}">${esc(r.name.split("/").pop())}</span></label>`)
-      .join("");
-    $("#selCount", root).textContent = `${selected.size} of ${rules.length}`;
+    const box = document.getElementById("ruleChecks");
+    if (box) {
+      const f = filter.toLowerCase();
+      box.innerHTML = rules
+        .filter((r) => !f || r.name.toLowerCase().includes(f))
+        .map((r) => `<label class="check"><input type="checkbox" data-id="${esc(r.id)}" ${selected.has(r.id) ? "checked" : ""}> <span title="${esc(r.name)}">${esc(r.name)}</span></label>`)
+        .join("");
+    }
+    updateCount();
+  }
+
+  function openRulePicker() {
+    const body = `
+      <div class="row">
+        <input class="input toolbar__grow" type="search" id="ruleFilter" placeholder="Filter files" aria-label="Filter files">
+        <button class="btn btn--sm" type="button" id="selAll">Select all</button>
+        <button class="btn btn--sm" type="button" id="selNone">Select none</button>
+      </div>
+      <p class="muted" id="drawerSelCount"></p>
+      <div id="ruleChecks"></div>
+      <div class="row mt-4"><button class="btn btn--primary" type="button" id="pickDone">${icons.play} Convert selected</button></div>`;
+    openDrawer("Choose rules", body, (panel) => {
+      renderChecks();
+      $("#ruleChecks", panel).addEventListener("change", (e) => {
+        const box = e.target.closest("[data-id]");
+        if (!box) return;
+        if (box.checked) selected.add(box.dataset.id);
+        else selected.delete(box.dataset.id);
+        updateCount();
+      });
+      $("#ruleFilter", panel).addEventListener("input", debounce((e) => renderChecks(e.target.value), 120));
+      $("#selAll", panel).addEventListener("click", () => {
+        selected = new Set(rules.map((r) => r.id));
+        renderChecks($("#ruleFilter", panel).value);
+      });
+      $("#selNone", panel).addEventListener("click", () => {
+        selected = new Set();
+        renderChecks($("#ruleFilter", panel).value);
+      });
+      $("#pickDone", panel).addEventListener("click", () => {
+        document.querySelector("#drawer [data-close]")?.click();
+        run();
+      });
+    });
   }
 
   function persist() {
@@ -142,25 +179,14 @@ export async function convertView(root, route) {
       targetId = t.dataset.target;
       renderTargets();
       persist();
+      run();
     }
   });
-  formatSelect.addEventListener("change", persist);
-  $("#ruleChecks", root).addEventListener("change", (e) => {
-    const box = e.target.closest("[data-id]");
-    if (!box) return;
-    if (box.checked) selected.add(box.dataset.id);
-    else selected.delete(box.dataset.id);
-    $("#selCount", root).textContent = `${selected.size} of ${rules.length}`;
+  formatSelect.addEventListener("change", () => {
+    persist();
+    run();
   });
-  $("#ruleFilter", root).addEventListener("input", debounce((e) => renderChecks(e.target.value), 120));
-  $("#selAll", root).addEventListener("click", () => {
-    selected = new Set(rules.map((r) => r.id));
-    renderChecks($("#ruleFilter", root).value);
-  });
-  $("#selNone", root).addEventListener("click", () => {
-    selected = new Set();
-    renderChecks($("#ruleFilter", root).value);
-  });
+  $("#pickRules", root).addEventListener("click", openRulePicker);
 
   function renderResult(result) {
     const t = currentTarget();

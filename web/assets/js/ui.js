@@ -145,7 +145,7 @@ export const skeleton = {
   },
   matrix(cols = 8, cells = 10) {
     const col = `<div class="matrix__col"><div class="skeleton sk-head"></div>${Array.from({ length: cells }, () => '<div class="skeleton sk-cell"></div>').join("")}</div>`;
-    return `<div class="matrix-wrap"><div class="matrix">${Array.from({ length: cols }, () => col).join("")}</div></div>`;
+    return `<div class="matrix-wrap"><div class="matrix matrix--fit sk-matrix">${Array.from({ length: cols }, () => col).join("")}</div></div>`;
   },
 };
 

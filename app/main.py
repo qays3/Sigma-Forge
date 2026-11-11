@@ -27,6 +27,9 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
+    path = request.url.path
+    if path.endswith((".css", ".js", ".html")) or path == "/" or not path.startswith(("/assets", "/api")):
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 
