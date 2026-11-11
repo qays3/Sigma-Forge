@@ -87,9 +87,11 @@ export function download(filename, text, type = "text/plain") {
 }
 
 let lastFocus = null;
+let onDrawerClose = null;
 
-export function openDrawer(title, bodyHtml, onReady) {
+export function openDrawer(title, bodyHtml, onReady, onClose) {
   const drawer = $("#drawer");
+  onDrawerClose = onClose || null;
   lastFocus = document.activeElement;
   $("#drawerTitle").textContent = title;
   $("#drawerBody").innerHTML = bodyHtml;
@@ -113,6 +115,9 @@ export function closeDrawer() {
   drawer.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
   if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  const done = onDrawerClose;
+  onDrawerClose = null;
+  if (done) done();
 }
 
 export function initDrawer() {

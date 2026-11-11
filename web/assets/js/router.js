@@ -27,15 +27,29 @@ async function render() {
   document.getElementById("mainNav")?.classList.remove("is-open");
   document.getElementById("navToggle")?.setAttribute("aria-expanded", "false");
   outlet.innerHTML = "";
-  const params = new URLSearchParams(location.search);
-  current = (await entry.view(outlet, params)) || null;
+  current = (await entry.view(outlet, routeState())) || null;
   document.title = entry.name === "workspace" ? "Sigma Forge" : `${entry.name[0].toUpperCase()}${entry.name.slice(1)} | Sigma Forge`;
   window.scrollTo({ top: 0 });
 }
 
-export function navigate(path) {
-  if (path === location.pathname + location.search) return;
-  history.pushState({}, "", path);
+function cleanPath(path) {
+  return (path.split(/[?#]/)[0].replace(/\/+$/, "")) || "/";
+}
+
+export function routeState() {
+  return { ...(history.state || {}) };
+}
+
+export function trackState(patch) {
+  const next = { ...(history.state || {}), ...patch };
+  Object.keys(next).forEach((k) => next[k] === undefined && delete next[k]);
+  history.replaceState(next, "", location.pathname);
+}
+
+export function navigate(path, state = {}) {
+  const target = cleanPath(path);
+  if (target === location.pathname && !Object.keys(state).length) return;
+  history.pushState(state, "", target);
   render();
 }
 
@@ -48,5 +62,6 @@ export function startRouter(target) {
     navigate(link.getAttribute("href"));
   });
   window.addEventListener("popstate", render);
+  if (location.search || location.hash) history.replaceState(history.state || {}, "", cleanPath(location.pathname));
   render();
 }

@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { navigate } from "../router.js";
+import { navigate, trackState } from "../router.js";
 import { state } from "../state.js";
 import { $, cssVar, debounce, download, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
@@ -20,7 +20,7 @@ function rulesFor(tid, attack, coverage) {
   return Array.from(seen.values());
 }
 
-export async function coverageView(root) {
+export async function coverageView(root, route) {
   root.innerHTML = `
     <section class="view">
       <div class="page-head">
@@ -120,12 +120,13 @@ export async function coverageView(root) {
       ${subs.length ? `<h3 class="section-title">Sub techniques</h3><div class="tags">${subs.map((s) => `<span class="badge ${coverage.techniques[s.id] ? "badge--accent" : ""}" title="${esc(s.name)}">${esc(s.id)} ${esc(s.name)}${coverage.techniques[s.id] ? ` (${coverage.techniques[s.id].count})` : ""}</span>`).join("")}</div>` : ""}
       <h3 class="section-title">Rules</h3>
       ${list.length ? `<div class="card"><ul class="list">${list.map((r) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(r.title)}</div><div class="list__meta">${esc(r.via)} · ${esc(r.key)}</div></div>${levelBadge(r.level)}<button class="btn btn--sm" type="button" data-open="${esc(r.key)}">Open</button></li>`).join("")}</ul></div>` : '<p class="muted">No rules cover this technique yet. This is a gap you could write a rule for.</p>'}`;
+    trackState({ technique: tid });
     openDrawer(`${tech.id} ${tech.name}`, body, (el) => {
       el.addEventListener("click", (e) => {
         const btn = e.target.closest("[data-open]");
-        if (btn) navigate(`/rules?key=${encodeURIComponent(btn.dataset.open)}`);
+        if (btn) navigate("/rules", { key: btn.dataset.open });
       });
-    });
+    }, () => trackState({ technique: undefined }));
   }
 
   $("#matrix", root).addEventListener("click", (e) => {
@@ -152,5 +153,6 @@ export async function coverageView(root) {
   });
 
   renderMatrix();
+  if (route.technique) showTechnique(route.technique);
   return null;
 }

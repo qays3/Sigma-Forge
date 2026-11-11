@@ -6,6 +6,36 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-color: var(--amber-line) var(--bg0);
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-color: var(--amber-line) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--amber-line);
+  border: 2px solid var(--bg0);
+  border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--amber);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg0);
 }
 
 body {

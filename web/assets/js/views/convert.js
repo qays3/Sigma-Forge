@@ -26,7 +26,7 @@ function fileExt(target, format) {
   return FORMAT_EXT[format] || EXT[target.language] || "txt";
 }
 
-export async function convertView(root, params) {
+export async function convertView(root, route) {
   root.innerHTML = `
     <section class="view">
       <div class="page-head">
@@ -59,9 +59,9 @@ export async function convertView(root, params) {
   }
 
   const prefs = loadPrefs();
-  let targetId = params.get("target") || prefs.target || "splunk";
+  let targetId = route.target || prefs.target || "splunk";
   if (!targets.some((t) => t.id === targetId && t.available)) targetId = targets.find((t) => t.available)?.id;
-  const preselect = params.get("file");
+  const preselect = route.file;
   let selected = new Set(preselect ? rules.filter((r) => r.name === preselect).map((r) => r.id) : rules.map((r) => r.id));
   let lastResult = null;
 

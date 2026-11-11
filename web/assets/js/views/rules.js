@@ -1,4 +1,5 @@
 import { api } from "../api.js";
+import { trackState } from "../router.js";
 import { state } from "../state.js";
 import { $, $$, copyText, debounce, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton } from "../ui.js";
 
@@ -16,7 +17,7 @@ function unique(rows, pick) {
   return [...new Set(rows.flatMap(pick).filter(Boolean))].sort();
 }
 
-export async function rulesView(root, params) {
+export async function rulesView(root, route) {
   root.innerHTML = `
     <section class="view">
       <div class="page-head">
@@ -169,10 +170,11 @@ export async function rulesView(root, params) {
       <div class="mt-4" id="qcOut"></div>`}
       <h3 class="section-title">Source <button class="btn btn--sm" type="button" id="copySrc">${icons.copy} Copy</button></h3>
       <pre class="code code--tall">${esc(file?.content || "")}</pre>`;
+    trackState({ key });
     openDrawer(row.title, body, (panel) => {
       $("#copySrc", panel)?.addEventListener("click", () => copyText(file?.content || ""));
       $("#qcRun", panel)?.addEventListener("click", () => quickConvert(panel, row, $("#qcTarget", panel).value));
-    });
+    }, () => trackState({ key: undefined }));
   }
 
   $("#table", root).addEventListener("click", (e) => {
@@ -198,7 +200,6 @@ export async function rulesView(root, params) {
   $$("#filters select", root).forEach((s) => s.addEventListener("change", render));
 
   render();
-  const key = params.get("key");
-  if (key) openRule(key);
+  if (route.key) openRule(route.key);
   return null;
 }
