@@ -21,26 +21,27 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, check them for problems, 
 
 1. [What is Sigma Forge](#what-is-sigma-forge)
 2. [Features](#features)
-3. [Screenshots](#screenshots)
-4. [Quick start](#quick-start)
-5. [Setup script options](#setup-script-options)
-6. [How to use it](#how-to-use-it)
-7. [Sample pack](#sample-pack)
-8. [Supported targets](#supported-targets) and [target guide](#target-guide)
-9. [Automatic fallbacks](#automatic-fallbacks)
-10. [Correlation rules](#correlation-rules)
-11. [ATT&CK coverage](#attck-coverage)
-12. [Testing rules on logs](#testing-rules-on-logs)
-13. [SigmaHQ library](#sigmahq-library)
-14. [Field mapping](#field-mapping)
-15. [Export packages](#export-packages)
-16. [API](#api)
-17. [Configuration](#configuration)
-18. [Architecture](#architecture)
-19. [Project layout](#project-layout)
-20. [Development](#development)
-21. [Known limits](#known-limits)
-22. [Credits](#credits)
+3. [Demo video](#demo-video)
+4. [Screenshots](#screenshots)
+5. [Quick start](#quick-start)
+6. [Setup script options](#setup-script-options)
+7. [How to use it](#how-to-use-it)
+8. [Sample pack](#sample-pack)
+9. [Supported targets](#supported-targets) and [target guide](#target-guide)
+10. [Automatic fallbacks](#automatic-fallbacks)
+11. [Correlation rules](#correlation-rules)
+12. [ATT&CK coverage](#attck-coverage)
+13. [Testing rules on logs](#testing-rules-on-logs)
+14. [SigmaHQ library](#sigmahq-library)
+15. [Field mapping](#field-mapping)
+16. [Export packages](#export-packages)
+17. [API](#api)
+18. [Configuration](#configuration)
+19. [Architecture](#architecture)
+20. [Project layout](#project-layout)
+21. [Development](#development)
+22. [Known limits](#known-limits)
+23. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -71,6 +72,12 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Review** | Sortable and filterable rule table with a detail drawer: metadata, findings, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
+
+## Demo video
+
+<a href="media/sigma-forge-demo.mp4"><img src="media/sigma-forge-demo.jpg" alt="Watch the Sigma Forge demo video" width="100%"></a>
+
+A two minute tour of every page: loading the samples, converting to Sentinel and exporting a package, writing a rule in the editor, testing rules on sample logs, the full ATT&CK coverage map, the SigmaHQ library, comparing platforms, reviewing rules and setting a field mapping. Click the picture to open [`media/sigma-forge-demo.mp4`](media/sigma-forge-demo.mp4) (1080p, 60 fps, with sound).
 
 ## Screenshots
 
@@ -1478,6 +1485,7 @@ Sigma-Forge/
 │       │                        compare, test, library, mappings
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/attack/attack.json      Compact ATT&CK Enterprise data
+├── media/                       Demo video and its preview picture
 ├── sample/
 │   ├── rules/                   Sample pack by feature (windows, linux, network,
 │   │                            cloud, modifiers, correlation, collections, broken)
