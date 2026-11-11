@@ -1,0 +1,28 @@
+title: Browser Spawns Script Host After Page Visit
+id: 9be2f302-eead-5ce6-930c-fe07ea3217ec
+status: experimental
+description: Sample rule for T1189 Drive-by Compromise. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1189
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1189
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \chrome.exe
+    - \msedge.exe
+    - \firefox.exe
+    Image|endswith:
+    - \wscript.exe
+    - \mshta.exe
+    - \cscript.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,23 @@
+title: Access To Threat Intel Paste And Leak Sites
+id: 2f7786b3-65d7-57e6-84af-19be6f5dceae
+status: experimental
+description: Sample rule for T1597 Search Closed Sources. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1597
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1597
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|contains:
+    - breachforums
+    - leakbase
+    - ransomwatch
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

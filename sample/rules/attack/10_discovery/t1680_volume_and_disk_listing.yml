@@ -1,0 +1,25 @@
+title: Volume And Disk Listing
+id: 8f2ff707-6110-5766-a3b4-a85c1fa52acc
+status: experimental
+description: Sample rule for T1680 Local Storage Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1680
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1680
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - wmic logicaldisk get
+    - Get-Volume
+    - fsutil fsinfo drives
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

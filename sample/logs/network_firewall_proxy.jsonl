@@ -1,0 +1,5 @@
+{"logsource": {"category": "firewall"}, "timestamp": "2026-11-03T10:23:20.000000Z", "src_ip": "10.0.4.15", "dst_ip": "198.51.100.80", "dst_port": 445, "action": "allow", "proto": "tcp"}
+{"logsource": {"category": "firewall"}, "timestamp": "2026-11-03T10:23:30.000000Z", "src_ip": "10.0.4.15", "dst_ip": "10.0.0.20", "dst_port": 445, "action": "allow", "proto": "tcp"}
+{"logsource": {"category": "firewall"}, "timestamp": "2026-11-03T10:23:40.000000Z", "src_ip": "10.0.4.15", "dst_ip": "198.51.100.81", "dst_port": 445, "action": "deny", "proto": "tcp"}
+{"logsource": {"category": "proxy"}, "timestamp": "2026-11-03T10:23:50.000000Z", "c-ip": "10.0.4.15", "cs-host": "shop.example.com", "cs-uri": "/item?id=1", "c-useragent": "sqlmap/1.7.2#stable (https://sqlmap.org)", "sc-status": 200}
+{"logsource": {"category": "proxy"}, "timestamp": "2026-11-03T10:24:00.000000Z", "c-ip": "10.0.4.16", "cs-host": "www.example.com", "cs-uri": "/", "c-useragent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "sc-status": 200}

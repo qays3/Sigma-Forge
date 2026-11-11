@@ -1,0 +1,22 @@
+title: Injected Script Tag In HTTP Response From Proxy
+id: 1fe15ac2-d293-530f-8ba7-2b1ad4ff5b90
+status: experimental
+description: Sample rule for T1659 Content Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1659
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.command-and-control
+- attack.t1659
+logsource:
+  category: proxy
+detection:
+  selection:
+    c-uri|contains: /injected.js
+    sc-status: 200
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,28 @@
+title: Process Talks To Paste Site
+id: 638db4db-c99b-5372-b32f-9ca2f16aa8c6
+status: experimental
+description: Sample rule for T1102 Web Service. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1102
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1102
+logsource:
+  category: dns_query
+  product: windows
+detection:
+  selection:
+    QueryName:
+    - pastebin.com
+    - paste.ee
+    - rentry.co
+    Image|endswith:
+    - \powershell.exe
+    - \rundll32.exe
+    - \mshta.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

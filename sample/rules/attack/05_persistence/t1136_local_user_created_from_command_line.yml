@@ -1,0 +1,26 @@
+title: Local User Created From Command Line
+id: 8a089268-6cf5-50c5-a83c-9e6bb5701e68
+status: experimental
+description: Sample rule for T1136 Create Account. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1136
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.t1136
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \net.exe
+    - \net1.exe
+    CommandLine|contains|all:
+    - user
+    - /add
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

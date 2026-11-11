@@ -1,0 +1,26 @@
+title: Offensive Tool Downloaded From GitHub Release
+id: 0cf0db4c-1f9c-55e8-9eb6-c2bb7c8ecbd2
+status: experimental
+description: Sample rule for T1588 Obtain Capabilities. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1588
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1588
+logsource:
+  category: proxy
+detection:
+  selection:
+    c-uri|contains:
+    - /releases/download/
+    c-uri|endswith:
+    - mimikatz.zip
+    - Rubeus.exe
+    - SharpHound.exe
+    - chisel_windows_amd64.gz
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

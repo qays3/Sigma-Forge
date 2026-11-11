@@ -1,0 +1,22 @@
+title: UAC Bypass Through Fodhelper Registry
+id: f7a75a5f-018d-5e72-9bf6-cd9c65c75512
+status: experimental
+description: Sample rule for T1548 Abuse Elevation Control Mechanism. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1548
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.privilege-escalation
+- attack.t1548
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \ms-settings\shell\open\command
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

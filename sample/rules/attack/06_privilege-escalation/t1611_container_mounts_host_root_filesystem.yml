@@ -1,0 +1,26 @@
+title: Container Mounts Host Root Filesystem
+id: aed8d922-71f8-55ed-8fb1-607550073459
+status: experimental
+description: Sample rule for T1611 Escape to Host. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1611
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.privilege-escalation
+- attack.t1611
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+    - /docker
+    - /podman
+    CommandLine|contains:
+    - -v /:/host
+    - --privileged --pid=host
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,25 @@
+title: Long Ping Delay Before Execution
+id: bd63abaa-43ac-5e21-bc9d-adb5d57f5d6d
+status: experimental
+description: Sample rule for T1678 Delay Execution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1678
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1678
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \ping.exe
+    CommandLine|contains:
+    - -n 300
+    - -n 600
+    - -n 999
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

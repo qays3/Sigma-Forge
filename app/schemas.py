@@ -23,12 +23,34 @@ class ConvertRequest(BaseModel):
     target: str
     format: str = "default"
     options: ConvertOptions = ConvertOptions()
+    field_mapping: Dict[str, str] = Field(default_factory=dict)
 
 
 class NavigatorRequest(BaseModel):
     rules: List[RuleInput]
     name: str = Field(default="Sigma Forge coverage", max_length=200)
     colors: List[str] = Field(default_factory=list, max_length=3)
+
+
+class CompareRequest(BaseModel):
+    rules: List[RuleInput]
+    targets: List[str] = Field(min_length=1, max_length=6)
+    options: ConvertOptions = ConvertOptions()
+    field_mapping: Dict[str, str] = Field(default_factory=dict)
+
+
+class ExportRequest(BaseModel):
+    rules: List[RuleInput]
+    target: str
+    format: str = "default"
+    options: ConvertOptions = ConvertOptions()
+    field_mapping: Dict[str, str] = Field(default_factory=dict)
+    package: str = Field(default="auto", max_length=40)
+    name: str = Field(default="sigma-forge", max_length=80)
+
+
+class LibraryAddRequest(BaseModel):
+    paths: List[str] = Field(min_length=1, max_length=500)
 
 
 class ErrorResponse(BaseModel):

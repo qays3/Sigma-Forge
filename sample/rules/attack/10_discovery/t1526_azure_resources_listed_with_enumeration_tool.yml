@@ -1,0 +1,25 @@
+title: Azure Resources Listed With Enumeration Tool
+id: 6cf62129-d93d-5422-9f05-cd1123d9152a
+status: experimental
+description: Sample rule for T1526 Cloud Service Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1526
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1526
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    UserAgent|contains:
+    - ROADtools
+    - AzureHound
+    - MicroBurst
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

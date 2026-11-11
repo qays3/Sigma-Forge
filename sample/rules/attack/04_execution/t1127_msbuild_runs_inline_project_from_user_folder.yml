@@ -1,0 +1,26 @@
+title: MSBuild Runs Inline Project From User Folder
+id: 63434f17-3cad-56ce-92cc-08b70569e9e4
+status: experimental
+description: Sample rule for T1127 Trusted Developer Utilities Proxy Execution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it
+  before production use.
+references:
+- https://attack.mitre.org/techniques/T1127
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.stealth
+- attack.t1127
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \MSBuild.exe
+    CommandLine|contains:
+    - \Users\
+    - \Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

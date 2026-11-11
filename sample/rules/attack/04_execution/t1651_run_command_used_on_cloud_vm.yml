@@ -1,0 +1,22 @@
+title: Run Command Used On Cloud VM
+id: a666c5b6-caba-54b3-a24d-13d3ee660e2b
+status: experimental
+description: Sample rule for T1651 Cloud Administration Command. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1651
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1651
+logsource:
+  product: azure
+  service: activitylogs
+detection:
+  selection:
+    OperationName: Microsoft.Compute/virtualMachines/runCommand/action
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

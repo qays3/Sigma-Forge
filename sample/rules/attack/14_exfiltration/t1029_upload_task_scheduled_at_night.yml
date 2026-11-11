@@ -1,0 +1,24 @@
+title: Upload Task Scheduled At Night
+id: 6b59e899-0bbf-5cb2-824d-c1ff08952be0
+status: experimental
+description: Sample rule for T1029 Scheduled Transfer. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1029
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.exfiltration
+- attack.t1029
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \schtasks.exe
+    CommandLine|contains|all:
+    - '/st 02:'
+    - rclone
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

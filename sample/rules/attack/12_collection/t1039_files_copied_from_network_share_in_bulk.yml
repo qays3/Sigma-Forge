@@ -1,0 +1,23 @@
+title: Files Copied From Network Share In Bulk
+id: fa8d7fb9-966e-59ee-81f6-3e99444f3d8e
+status: experimental
+description: Sample rule for T1039 Data from Network Shared Drive. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1039
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1039
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \xcopy.exe
+    CommandLine|contains: \\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

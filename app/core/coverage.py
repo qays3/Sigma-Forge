@@ -15,6 +15,7 @@ def coverage(parsed_rules: List[ParsedRule]) -> Dict:
     tagged = 0
     unknown: Dict[str, int] = {}
     revoked_used: Dict[str, str] = {}
+    sources: Dict[str, Dict] = {}
 
     for parsed in parsed_rules:
         rule = parsed.rule
@@ -32,6 +33,15 @@ def coverage(parsed_rules: List[ParsedRule]) -> Dict:
             "level": rule.level.name.lower() if rule.level else "",
             "id": str(rule.id) if rule.id else "",
         }
+        label = logsource_label(rule.logsource)
+        src = sources.setdefault(label, {"label": label, "product": rule.logsource.product or "", "category": rule.logsource.category or "",
+                                         "service": rule.logsource.service or "", "rules": 0, "techniques": set(), "tactics": set(), "levels": {}})
+        src["rules"] += 1
+        lvl = ref["level"] or "none"
+        src["levels"][lvl] = src["levels"].get(lvl, 0) + 1
+        src["tactics"].update(tactics)
+        for original in tids:
+            src["techniques"].add(resolve_technique(original))
         for original in tids:
             tid = resolve_technique(original)
             if known and tid not in known:
@@ -68,7 +78,53 @@ def coverage(parsed_rules: List[ParsedRule]) -> Dict:
         "parents_covered": covered_parents,
         "unknown": unknown,
         "revoked": revoked_used,
+        "logsources": sorted(({**v, "techniques": sorted(v["techniques"]), "tactics": sorted(v["tactics"])} for v in sources.values()),
+                             key=lambda x: (-x["rules"], x["label"])),
     }
+
+
+def logsource_label(ls) -> str:
+    parts = [ls.product, ls.category or ls.service] if ls is not None else []
+    if ls is not None and ls.category and ls.service:
+        parts.append(ls.service)
+    label = " / ".join(str(p) for p in parts if p)
+    return label or "any"
+
+
+def gaps(parsed_rules: List[ParsedRule], limit: int = 40) -> Dict:
+    from app.core import library
+
+    cov = coverage(parsed_rules)
+    index = library.load_index()
+    if not index:
+        return {"available": False, "techniques": [], "logsources": []}
+    known = load_attack().get("techniques", {})
+    covered = set(cov["techniques"])
+    covered_parents = set(cov["rollup"])
+    counts = library.technique_counts()
+    missing = [tid for tid in counts if tid not in covered and tid in known]
+    missing.sort(key=lambda t: (-counts[t], t))
+    top = missing[:limit]
+    picks = library.suggestions(top, per_technique=5)
+    techniques = []
+    for tid in top:
+        tactics = [t for t in known[tid].get("tactics", [])] if known.get(tid) else []
+        techniques.append({"id": tid, "name": known[tid]["name"], "library_rules": counts[tid], "parent_covered": tid.split(".")[0] in covered_parents,
+                           "tactics": tactics, "suggestions": picks.get(tid, [])})
+    wanted = set(missing)
+    by_source: Dict[str, Dict] = {}
+    for rule in index["rules"]:
+        hit = [t for t in rule["techniques"] if t in wanted]
+        if not hit:
+            continue
+        parts = [rule["product"], rule["category"] or rule["service"]]
+        label = " / ".join(p for p in parts if p) or "any"
+        entry = by_source.setdefault(label, {"label": label, "product": rule["product"], "category": rule["category"], "service": rule["service"],
+                                             "rules": 0, "techniques": set()})
+        entry["rules"] += 1
+        entry["techniques"].update(hit)
+    sources = sorted(({**v, "techniques": len(v["techniques"])} for v in by_source.values()), key=lambda x: (-x["techniques"], -x["rules"]))[:24]
+    return {"available": True, "release": index.get("release", ""), "missing": len(missing), "techniques": techniques, "logsources": sources}
 
 
 def navigator_layer(parsed_rules: List[ParsedRule], name: str, colors: List[str]) -> Dict:

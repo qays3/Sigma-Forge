@@ -1,0 +1,26 @@
+title: Remote Thread Into Explorer From Script Host
+id: 599f8cec-b5be-5ab8-9586-4d63b82a63e2
+status: experimental
+description: Sample rule for T1055 Process Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1055
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.privilege-escalation
+- attack.stealth
+- attack.t1055
+logsource:
+  category: create_remote_thread
+  product: windows
+detection:
+  selection:
+    SourceImage|endswith:
+    - \wscript.exe
+    - \powershell.exe
+    - \rundll32.exe
+    TargetImage|endswith: \explorer.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

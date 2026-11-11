@@ -1,0 +1,25 @@
+title: AI Assistant Reads Document With Hidden Instructions
+id: fc3c985e-d4c0-5d7c-9315-c08d104cea34
+status: experimental
+description: Sample rule for T1698 Indirect Prompt Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1698
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1698
+logsource:
+  product: openai
+  service: audit
+detection:
+  selection:
+    tool_input|contains:
+    - '<!-- assistant:'
+    - '[system](#'
+    - font-size:0
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,24 @@
+title: Browser Bookmarks Read By Shell
+id: dbb7d0e6-1f92-5abd-8efc-347e756f84f8
+status: experimental
+description: Sample rule for T1217 Browser Information Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1217
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1217
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - \Bookmarks
+    - places.sqlite
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

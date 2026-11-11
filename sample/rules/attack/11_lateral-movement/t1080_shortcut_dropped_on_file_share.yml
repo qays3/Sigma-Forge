@@ -1,0 +1,25 @@
+title: Shortcut Dropped On File Share
+id: 58d27883-6958-5486-b49e-896849e4e902
+status: experimental
+description: Sample rule for T1080 Taint Shared Content. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1080
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.lateral-movement
+- attack.t1080
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|startswith: \\
+    TargetFilename|endswith:
+    - .lnk
+    - .url
+    - .scf
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

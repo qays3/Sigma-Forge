@@ -1,0 +1,24 @@
+title: Firmware Flash Tool Run
+id: 3dbe8a7b-e578-5e4f-ad10-149f6cbab8b9
+status: experimental
+description: Sample rule for T1495 Firmware Corruption. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1495
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1495
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \AFUWINx64.exe
+    - \fptw64.exe
+    - \flashrom.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,24 @@
+title: PowerShell Version Two Requested
+id: b82d9437-ca47-57cb-838a-976a04f49857
+status: experimental
+description: Sample rule for T1689 Downgrade Attack. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1689
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1689
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \powershell.exe
+    CommandLine|contains:
+    - -version 2
+    - '-v 2 '
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,24 @@
+title: ESXi Shell Lists And Kills VMs
+id: 1993d730-79c8-5308-a1f2-3a8ccb695d10
+status: experimental
+description: Sample rule for T1675 ESXi Administration Command. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1675
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1675
+logsource:
+  product: esxi
+  service: shell
+detection:
+  selection:
+    command|contains:
+    - vim-cmd vmsvc/getallvms
+    - esxcli vm process kill
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

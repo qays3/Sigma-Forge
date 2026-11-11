@@ -1,0 +1,25 @@
+title: Port Scanner Run On Host
+id: 568280a2-f972-5206-8c09-73d4b60e1bad
+status: experimental
+description: Sample rule for T1046 Network Service Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1046
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1046
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \nmap.exe
+    - \masscan.exe
+    - \advanced_ip_scanner.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

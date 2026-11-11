@@ -1,0 +1,23 @@
+title: Network Device Firmware Image Changed
+id: 819544d2-53ab-5663-81f2-9ef6f4a77ba4
+status: experimental
+description: Sample rule for T1601 Modify System Image. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1601
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1601
+logsource:
+  category: firewall
+detection:
+  selection:
+    action: config_change
+    message|contains:
+    - boot system flash
+    - 'copy tftp: flash:'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

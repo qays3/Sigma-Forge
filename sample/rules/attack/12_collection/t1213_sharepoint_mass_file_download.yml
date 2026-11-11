@@ -1,0 +1,23 @@
+title: SharePoint Mass File Download
+id: 60f92842-701d-5abe-b729-f5621c5ed5c6
+status: experimental
+description: Sample rule for T1213 Data from Information Repositories. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1213
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1213
+logsource:
+  product: m365
+  service: audit
+detection:
+  selection:
+    Operation: FileDownloaded
+    Workload: SharePoint
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

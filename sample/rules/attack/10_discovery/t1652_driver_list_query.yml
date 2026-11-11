@@ -1,0 +1,22 @@
+title: Driver List Query
+id: 3e406223-8a0b-515d-bf80-02639a7cdca5
+status: experimental
+description: Sample rule for T1652 Device Driver Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1652
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1652
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \driverquery.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

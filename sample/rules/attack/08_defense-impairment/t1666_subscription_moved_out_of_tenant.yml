@@ -1,0 +1,22 @@
+title: Subscription Moved Out Of Tenant
+id: bd2a0336-da02-5e0f-9825-7642820288ef
+status: experimental
+description: Sample rule for T1666 Modify Cloud Resource Hierarchy. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1666
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1666
+logsource:
+  product: azure
+  service: activitylogs
+detection:
+  selection:
+    OperationName: Microsoft.Subscription/subscriptions/changeDirectory/action
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

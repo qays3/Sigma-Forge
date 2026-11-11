@@ -1,0 +1,30 @@
+title: Web Server Process Spawns Shell
+id: 42c409c5-a8bb-580f-98d6-ea2a4329d5d2
+status: experimental
+description: Sample rule for T1190 Exploit Public-Facing Application. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1190
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1190
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \w3wp.exe
+    - \httpd.exe
+    - \tomcat9.exe
+    - \php-cgi.exe
+    Image|endswith:
+    - \cmd.exe
+    - \powershell.exe
+    - \whoami.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

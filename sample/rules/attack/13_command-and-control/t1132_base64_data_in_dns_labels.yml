@@ -1,0 +1,21 @@
+title: Base64 Data In DNS Labels
+id: db25fe40-0d13-575f-b0a5-9bdadcbe8870
+status: experimental
+description: Sample rule for T1132 Data Encoding. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1132
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1132
+logsource:
+  category: dns_query
+  product: windows
+detection:
+  selection:
+    QueryName|re: ^[A-Za-z0-9+/]{40,}\.
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

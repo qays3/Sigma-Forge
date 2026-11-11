@@ -1,0 +1,25 @@
+title: Payload Staged On Public File Share
+id: e813485d-8771-5990-b2a2-9926409234d8
+status: experimental
+description: Sample rule for T1608 Stage Capabilities. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1608
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1608
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|endswith:
+    - transfer.sh
+    - file.io
+    - temp.sh
+    - paste.ee
+    cs-method: PUT
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,24 @@
+title: Debugger Check In PowerShell
+id: bf659dde-683b-5b13-9b94-58c8e38c61b8
+status: experimental
+description: Sample rule for T1622 Debugger Evasion. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1622
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.discovery
+- attack.t1622
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - IsDebuggerPresent
+    - CheckRemoteDebuggerPresent
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

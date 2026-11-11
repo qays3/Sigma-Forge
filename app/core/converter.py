@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from sigma.collection import SigmaCollection
 
 from app.config import WAZUH_MAX_RULES_PER_SIGMA, WAZUH_RULE_ID_START
+from app.core.fieldmap import MappingError, map_inputs
 from app.core.parsing import parse_inputs
 from app.core.targets import TARGET_MAP, build_backend, build_relaxed_backend, target_formats
 from app.core.wazuh.backend import WazuhBackend, WazuhOptions
@@ -23,9 +24,11 @@ def _to_text(item: Any) -> str:
         return str(item)
 
 
-def _bundle_text(output: Any) -> str:
+def _bundle_text(output: Any, fmt: str = "") -> str:
     if isinstance(output, str):
         return output
+    if isinstance(output, list) and fmt.endswith("ndjson"):
+        return "\n".join(x if isinstance(x, str) else json.dumps(x, default=str) for x in output)
     if isinstance(output, list):
         if all(isinstance(x, str) for x in output):
             return "\n".join(output)
@@ -33,7 +36,7 @@ def _bundle_text(output: Any) -> str:
     return _to_text(output)
 
 
-def convert(inputs, target_id: str, fmt: str, options) -> Dict:
+def convert(inputs, target_id: str, fmt: str, options, field_mapping=None) -> Dict:
     target = TARGET_MAP.get(target_id)
     if target is None:
         raise ConversionRequestError(f"Unknown target: {target_id}")
@@ -41,9 +44,13 @@ def convert(inputs, target_id: str, fmt: str, options) -> Dict:
     if fmt not in formats:
         raise ConversionRequestError(f"Format '{fmt}' is not supported by {target.name}. Choose one of: {', '.join(formats)}")
 
-    items = list(inputs)
+    try:
+        items, mapped = map_inputs(inputs, field_mapping or {})
+    except MappingError as exc:
+        raise ConversionRequestError(str(exc))
     parsed = parse_inputs(items)
     results: List[Dict] = []
+    mapping_note = _mapping_note(mapped)
 
     if target.backend is None:
         wazuh = WazuhBackend(WazuhOptions(
@@ -78,7 +85,7 @@ def convert(inputs, target_id: str, fmt: str, options) -> Dict:
         notes = ["Wazuh rules use pcre2 field matching. Test them on your manager with tools/wazuh_check.py before production."]
         if options.wazuh_double_backslash:
             notes.append("Backslashes are matched doubled because Wazuh eventchannel fields keep escaped backslashes. Turn this off if your data has single backslashes.")
-        return _response(target, fmt, results, bundle, None, notes)
+        return _response(target, fmt, results, bundle, None, notes + mapping_note, mapped)
 
     backend = build_backend(target)
     for p in parsed:
@@ -122,17 +129,29 @@ def convert(inputs, target_id: str, fmt: str, options) -> Dict:
                     row["error"] = str(exc)
         results.append(row)
 
-    bundle, bundle_error = "", None
+    bundle, bundle_error, bundle_base = "", None, ""
     ok_keys = {r["key"] for r in results if not r["error"] and r["queries"] and not r["meta"].get("fallback")}
     if ok_keys or any(r["meta"].get("fallback") for r in results):
         try:
             fresh = [p.rule for p in parse_inputs(items) if p.rule is not None and p.key in ok_keys]
-            parts = [_bundle_text(build_backend(target).convert(SigmaCollection(fresh), fmt))] if fresh else []
-            parts += [q for r in results if (r.get("kind") == "correlation" or r["meta"].get("fallback")) and not r["error"] for q in r["queries"]]
+            parts = [_bundle_text(build_backend(target).convert(SigmaCollection(fresh), fmt), fmt)] if fresh else []
+            bundle_base = parts[0] if parts else ""
+            parts += [_compact(q, fmt) for r in results if (r.get("kind") == "correlation" or r["meta"].get("fallback")) and not r["error"] for q in r["queries"]]
             bundle = "\n".join(x for x in parts if x)
         except Exception as exc:
             bundle_error = str(exc)
-    return _response(target, fmt, results, bundle, bundle_error, list(target.notes))
+    response = _response(target, fmt, results, bundle, bundle_error, list(target.notes) + mapping_note, mapped)
+    response["bundle_base"] = bundle_base
+    return response
+
+
+def _compact(text: str, fmt: str) -> str:
+    if not fmt.endswith("ndjson"):
+        return text
+    try:
+        return json.dumps(json.loads(text), default=str)
+    except ValueError:
+        return text
 
 
 def _convert_correlation(target, items, parsed, fmt) -> List[str]:
@@ -146,6 +165,8 @@ def _convert_correlation(target, items, parsed, fmt) -> List[str]:
     sub = SigmaCollection([*refs, corr])
     sub.resolve_rule_references()
     output = build_backend(target).convert(sub, fmt)
+    if fmt != "default" and "{'" in _bundle_text(output, fmt):
+        output = build_backend(target).convert(sub, "default")
     if isinstance(output, list):
         return [_to_text(q) for q in output]
     return [_to_text(output)]
@@ -318,7 +339,14 @@ def _row(p) -> Dict:
     }
 
 
-def _response(target, fmt, results, bundle, bundle_error, notes) -> Dict:
+def _mapping_note(mapped: Dict[str, int]) -> List[str]:
+    if not mapped:
+        return []
+    names = ", ".join(sorted(mapped)[:8]) + (" and more" if len(mapped) > 8 else "")
+    return [f"Your field mapping renamed {len(mapped)} field{'s' if len(mapped) != 1 else ''} before conversion: {names}."]
+
+
+def _response(target, fmt, results, bundle, bundle_error, notes, mapped=None) -> Dict:
     ok = sum(1 for r in results if not r["error"] and r["queries"])
     skipped = sum(1 for r in results if not r["error"] and not r["queries"])
     return {
@@ -329,4 +357,5 @@ def _response(target, fmt, results, bundle, bundle_error, notes) -> Dict:
         "bundle": bundle,
         "bundle_error": bundle_error,
         "notes": notes,
+        "mapped_fields": mapped or {},
     }

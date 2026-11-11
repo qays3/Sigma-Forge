@@ -1,0 +1,24 @@
+title: Vulnerable Driver Service Started By User
+id: 4b51598d-36ac-5249-a3c4-d69546d785a7
+status: experimental
+description: Sample rule for T1068 Exploitation for Privilege Escalation. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1068
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.privilege-escalation
+- attack.t1068
+logsource:
+  category: driver_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|contains:
+    - \Users\
+    - \Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

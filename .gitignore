@@ -13,3 +13,6 @@ Thumbs.db
 .vscode/
 sigma-forge_*.xml
 sample/api/output/
+data/sigmahq/
+data/sigmahq.new/
+data/sigmahq.old/

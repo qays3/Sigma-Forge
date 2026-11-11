@@ -1,0 +1,23 @@
+title: WMIC Process Call Create
+id: bd406b31-75d2-56c4-a643-dc534a62b4cc
+status: experimental
+description: Sample rule for T1047 Windows Management Instrumentation. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1047
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1047
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \wmic.exe
+    CommandLine|contains: process call create
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

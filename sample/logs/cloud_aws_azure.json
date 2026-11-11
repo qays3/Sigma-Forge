@@ -1,0 +1,50 @@
+{
+  "Records": [
+    {
+      "logsource": {
+        "product": "aws",
+        "service": "cloudtrail"
+      },
+      "eventTime": "2026-11-03T10:40:00.000000Z",
+      "eventSource": "cloudtrail.amazonaws.com",
+      "eventName": "StopLogging",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "203.0.113.200",
+      "userIdentity": {
+        "type": "IAMUser",
+        "userName": "ci-deploy",
+        "arn": "arn:aws:iam::111122223333:user/ci-deploy"
+      },
+      "requestParameters": {
+        "name": "org-trail"
+      }
+    },
+    {
+      "logsource": {
+        "product": "aws",
+        "service": "cloudtrail"
+      },
+      "eventTime": "2026-11-03T10:40:10.000000Z",
+      "eventSource": "s3.amazonaws.com",
+      "eventName": "GetObject",
+      "awsRegion": "us-east-1",
+      "sourceIPAddress": "10.1.2.3",
+      "userIdentity": {
+        "type": "AssumedRole",
+        "arn": "arn:aws:sts::111122223333:assumed-role/app/i-0abc"
+      }
+    },
+    {
+      "logsource": {
+        "product": "azure",
+        "service": "signinlogs"
+      },
+      "time": "2026-11-03T10:40:20.000000Z",
+      "UserPrincipalName": "carol@corp.example",
+      "ResultType": 500121,
+      "ResultDescription": "Authentication failed during strong authentication request. MFA denied; user declined the authentication",
+      "IPAddress": "203.0.113.77",
+      "AppDisplayName": "Office 365"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+title: Remote Access Tool Started From Temp
+id: 4abfd86f-8b99-59e5-8119-7841d2368491
+status: experimental
+description: Sample rule for T1219 Remote Access Tools. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1219
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1219
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \AnyDesk.exe
+    - \TeamViewer.exe
+    - \rustdesk.exe
+    Image|contains: \Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

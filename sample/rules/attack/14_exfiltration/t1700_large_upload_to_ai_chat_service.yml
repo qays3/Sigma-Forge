@@ -1,0 +1,28 @@
+title: Large Upload To AI Chat Service
+id: a5e29003-9079-5892-b13c-8efb00d9eedf
+status: experimental
+description: Sample rule for T1700 AI-Enabled Exfiltration. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1700
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.exfiltration
+- attack.t1700
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|endswith:
+    - chat.openai.com
+    - chatgpt.com
+    - gemini.google.com
+    cs-method: POST
+    c-uri|contains:
+    - /backend-api/files
+    - /upload
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

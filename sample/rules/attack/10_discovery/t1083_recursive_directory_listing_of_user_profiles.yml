@@ -1,0 +1,25 @@
+title: Recursive Directory Listing Of User Profiles
+id: cc175107-6631-572e-86b6-b09b7802b395
+status: experimental
+description: Sample rule for T1083 File and Directory Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1083
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1083
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \cmd.exe
+    CommandLine|contains:
+    - dir /s /b C:\Users
+    - tree /f C:\Users
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

@@ -1,0 +1,24 @@
+title: Lookups To Certificate Transparency And Shodan APIs
+id: 5a446a81-f690-57c2-b32b-7ee5a3f425cd
+status: experimental
+description: Sample rule for T1596 Search Open Technical Databases. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1596
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1596
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|endswith:
+    - crt.sh
+    - api.shodan.io
+    - censys.io
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

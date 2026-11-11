@@ -1,0 +1,25 @@
+title: Packet Capture Tool Started
+id: 0f042872-6601-512e-bff7-416348b02afb
+status: experimental
+description: Sample rule for T1040 Network Sniffing. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1040
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.discovery
+- attack.t1040
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \tshark.exe
+    - \windump.exe
+    - \pktmon.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -95,7 +95,7 @@ def map_field(field: str, product: str) -> Tuple[str, bool]:
         return field, False
     if field in WINDOWS_SYSTEM_FIELDS:
         return WINDOWS_SYSTEM_FIELDS[field], True
-    if field.startswith("win."):
+    if field.startswith("win.") or "." in field:
         return field, True
     return f"win.eventdata.{lower_first(field)}", True
 

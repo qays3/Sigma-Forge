@@ -1,0 +1,26 @@
+title: Bulk Queries To Public AI Service From Server
+id: d43cd88a-806e-5fb9-ac34-824a125bc685
+status: experimental
+description: Sample rule for T1682 Query Public AI Services. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1682
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1682
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|endswith:
+    - api.openai.com
+    - generativelanguage.googleapis.com
+    - api.anthropic.com
+    c-ip|cidr:
+    - 10.20.0.0/16
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

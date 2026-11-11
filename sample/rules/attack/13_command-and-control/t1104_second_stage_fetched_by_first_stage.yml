@@ -1,0 +1,26 @@
+title: Second Stage Fetched By First Stage
+id: e4624a71-df84-5b3e-9bc5-d01f398b3caa
+status: experimental
+description: Sample rule for T1104 Multi-Stage Channels. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1104
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1104
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \stage2.exe
+    - \loader.exe
+    - \update_tmp.exe
+    Initiated: 'true'
+    DestinationPort: 443
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

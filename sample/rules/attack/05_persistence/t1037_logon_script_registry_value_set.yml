@@ -1,0 +1,23 @@
+title: Logon Script Registry Value Set
+id: a47d5d04-e9f6-5e5d-afa1-8da0fa808579
+status: experimental
+description: Sample rule for T1037 Boot or Logon Initialization Scripts. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1037
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1037
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|endswith: \Environment\UserInitMprLogonScript
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

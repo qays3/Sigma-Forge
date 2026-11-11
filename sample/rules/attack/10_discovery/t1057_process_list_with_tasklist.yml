@@ -1,0 +1,24 @@
+title: Process List With Tasklist
+id: 0e7f264b-3b02-5fd6-8ca6-1b809a8ff94f
+status: experimental
+description: Sample rule for T1057 Process Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1057
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1057
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \tasklist.exe
+    CommandLine|contains:
+    - /v
+    - /svc
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

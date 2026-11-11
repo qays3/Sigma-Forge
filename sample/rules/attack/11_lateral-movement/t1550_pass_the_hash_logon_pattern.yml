@@ -1,0 +1,24 @@
+title: Pass The Hash Logon Pattern
+id: e8f52235-ea97-5559-a958-8f7808f12974
+status: experimental
+description: Sample rule for T1550 Use Alternate Authentication Material. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1550
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.lateral-movement
+- attack.t1550
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4624
+    LogonType: 9
+    LogonProcessName: seclogo
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

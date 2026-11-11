@@ -1,0 +1,23 @@
+title: Clipboard Read From Script
+id: 41f9229d-b4a5-5b15-a0f7-ce2e28c0c9fb
+status: experimental
+description: Sample rule for T1115 Clipboard Data. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1115
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1115
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Get-Clipboard
+    - Windows.Forms.Clipboard]::GetText
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

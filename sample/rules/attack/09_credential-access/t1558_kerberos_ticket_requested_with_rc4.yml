@@ -1,0 +1,26 @@
+title: Kerberos Ticket Requested With RC4
+id: 6042d50b-d21b-539b-aa21-8f9aaebc1621
+status: experimental
+description: Sample rule for T1558 Steal or Forge Kerberos Tickets. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1558
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1558
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+    Status: '0x0'
+  filter_main:
+    ServiceName|endswith: $
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: medium

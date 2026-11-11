@@ -1,0 +1,24 @@
+title: Payment Details Changed In Finance App
+id: 44cc2067-f464-50b6-bce8-168232776518
+status: experimental
+description: Sample rule for T1657 Financial Theft. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1657
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1657
+logsource:
+  product: m365
+  service: audit
+detection:
+  selection:
+    Operation: Update
+    ObjectId|contains:
+    - /Vendors/
+    - BankAccount
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

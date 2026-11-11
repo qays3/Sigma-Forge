@@ -1,0 +1,27 @@
+title: Outbound Flood From One Host
+id: 1a78275d-2780-506c-8df2-ee9381dca094
+status: experimental
+description: Sample rule for T1498 Network Denial of Service. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1498
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1498
+logsource:
+  category: firewall
+detection:
+  selection:
+    action: allow
+    dst_port:
+    - 53
+    - 123
+    - 1900
+    protocol: udp
+    src_ip|cidr: 10.0.0.0/8
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

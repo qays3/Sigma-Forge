@@ -1,0 +1,25 @@
+title: Beacon Style Requests With Fixed URI
+id: a2a3d775-2015-529e-9c52-981ce26d8219
+status: experimental
+description: Sample rule for T1071 Application Layer Protocol. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1071
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1071
+logsource:
+  category: proxy
+detection:
+  selection:
+    c-uri|endswith:
+    - /submit.php
+    - /pixel.gif
+    - /__utm.gif
+    cs-method: POST
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

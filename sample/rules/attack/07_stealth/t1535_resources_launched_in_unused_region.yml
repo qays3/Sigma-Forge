@@ -1,0 +1,26 @@
+title: Resources Launched In Unused Region
+id: f80205cc-a033-5e5c-b1f6-e140c6c4fad9
+status: experimental
+description: Sample rule for T1535 Unused/Unsupported Cloud Regions. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1535
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1535
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName: RunInstances
+    awsRegion:
+    - ap-east-1
+    - me-south-1
+    - af-south-1
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

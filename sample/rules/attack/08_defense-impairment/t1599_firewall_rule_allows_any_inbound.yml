@@ -1,0 +1,23 @@
+title: Firewall Rule Allows Any Inbound
+id: f771b72c-e970-5193-92c9-46b06cff071d
+status: experimental
+description: Sample rule for T1599 Network Boundary Bridging. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1599
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1599
+logsource:
+  category: firewall
+detection:
+  selection:
+    action: rule_add
+    src_ip: 0.0.0.0/0
+    dst_port: any
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

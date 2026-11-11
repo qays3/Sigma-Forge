@@ -1,0 +1,23 @@
+title: Bulk Download From Storage Bucket
+id: 2ee10fa5-e5e2-5a63-9eb0-ccc2be3cbeef
+status: experimental
+description: Sample rule for T1530 Data from Cloud Storage. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1530
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1530
+logsource:
+  product: gcp
+  service: gcp.audit
+detection:
+  selection:
+    methodName: storage.objects.get
+    authenticationInfo.principalEmail|endswith: .iam.gserviceaccount.com
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

@@ -1,0 +1,28 @@
+title: Package Install Script Downloads Binary
+id: 1e756d73-9752-5a2d-8875-bea7a5dafb3a
+status: experimental
+description: Sample rule for T1195 Supply Chain Compromise. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1195
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1195
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    ParentImage|endswith:
+    - /npm
+    - /pip
+    - /node
+    CommandLine|contains:
+    - 'curl '
+    - 'wget '
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

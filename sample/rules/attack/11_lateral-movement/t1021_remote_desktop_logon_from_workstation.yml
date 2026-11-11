@@ -1,0 +1,22 @@
+title: Remote Desktop Logon From Workstation
+id: 09f3016c-4281-5a50-87c1-31acbe686687
+status: experimental
+description: Sample rule for T1021 Remote Services. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1021
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.lateral-movement
+- attack.t1021
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4624
+    LogonType: 10
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

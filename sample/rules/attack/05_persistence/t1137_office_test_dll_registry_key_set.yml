@@ -1,0 +1,22 @@
+title: Office Test DLL Registry Key Set
+id: 2d8638be-6131-580e-abad-0a9562466d3c
+status: experimental
+description: Sample rule for T1137 Office Application Startup. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1137
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.t1137
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \Software\Microsoft\Office test\Special\Perf
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

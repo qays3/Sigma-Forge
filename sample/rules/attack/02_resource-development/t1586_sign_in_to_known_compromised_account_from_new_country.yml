@@ -1,0 +1,22 @@
+title: Sign In To Known Compromised Account From New Country
+id: e5fd04a2-b81a-530f-85c2-2ccca76c8418
+status: experimental
+description: Sample rule for T1586 Compromise Accounts. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1586
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1586
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    RiskLevelDuringSignIn: high
+    ResultType: 0
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

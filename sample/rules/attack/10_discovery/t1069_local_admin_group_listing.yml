@@ -1,0 +1,23 @@
+title: Local Admin Group Listing
+id: 49c36ab1-7005-5fe4-b9f8-ab3d81a5d28c
+status: experimental
+description: Sample rule for T1069 Permission Groups Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1069
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1069
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \net.exe
+    CommandLine|contains: localgroup administrators
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

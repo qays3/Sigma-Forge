@@ -1,0 +1,26 @@
+title: VM Artifact Check In Script
+id: 8fa4c33c-1f86-5d08-a1f7-14a10f1d62dc
+status: experimental
+description: Sample rule for T1497 Virtualization/Sandbox Evasion. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1497
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.discovery
+- attack.t1497
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Win32_ComputerSystem).Model
+    - VBOX
+    - VMware Virtual Platform
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

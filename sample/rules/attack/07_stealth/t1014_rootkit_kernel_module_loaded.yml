@@ -1,0 +1,26 @@
+title: Rootkit Kernel Module Loaded
+id: a6d0eef9-0f3b-57e4-b594-314b9c870b46
+status: experimental
+description: Sample rule for T1014 Rootkit. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1014
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1014
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+    - /insmod
+    - /modprobe
+    CommandLine|contains:
+    - /tmp/
+    - /dev/shm/
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

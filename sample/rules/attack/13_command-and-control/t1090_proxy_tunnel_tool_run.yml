@@ -1,0 +1,24 @@
+title: Proxy Tunnel Tool Run
+id: 9dea3338-de71-525c-9e52-439904de0b42
+status: experimental
+description: Sample rule for T1090 Proxy. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1090
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1090
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \chisel.exe
+    - \frpc.exe
+    - \ngrok.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

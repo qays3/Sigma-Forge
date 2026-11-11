@@ -25,7 +25,7 @@ COPY tools ./tools
 ARG REFRESH_ATTACK=false
 RUN if [ "$REFRESH_ATTACK" = "true" ]; then python tools/fetch_attack.py; fi
 
-RUN useradd --create-home --uid 10001 forge && chown -R forge:forge /app
+RUN useradd --create-home --uid 10001 forge && mkdir -p /app/library && chown -R forge:forge /app
 USER forge
 
 EXPOSE 8000

@@ -1,0 +1,22 @@
+title: Fork Bomb Run On Linux
+id: 5ddf37d7-2159-5e21-9d4a-f3656eb693c9
+status: experimental
+description: Sample rule for T1499 Endpoint Denial of Service. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1499
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1499
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains: ':(){ :|:& };:'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

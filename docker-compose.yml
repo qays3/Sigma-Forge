@@ -11,10 +11,16 @@ services:
     environment:
       SIGMA_FORGE_MAX_RULES: "5000"
       SIGMA_FORGE_WAZUH_ID_START: "100100"
+      SIGMA_FORGE_SIGMAHQ_DIR: /app/library/sigmahq
     restart: unless-stopped
     read_only: true
     tmpfs:
       - /tmp
       - /home/forge/.cache:uid=10001,gid=10001,mode=0700
+    volumes:
+      - sigmahq:/app/library
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  sigmahq:

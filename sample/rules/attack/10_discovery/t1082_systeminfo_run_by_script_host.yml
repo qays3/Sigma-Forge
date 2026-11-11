@@ -1,0 +1,26 @@
+title: Systeminfo Run By Script Host
+id: b96fd53c-01ba-5814-92cf-e26e415adf7a
+status: experimental
+description: Sample rule for T1082 System Information Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1082
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1082
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \systeminfo.exe
+    ParentImage|endswith:
+    - \wscript.exe
+    - \cscript.exe
+    - \mshta.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

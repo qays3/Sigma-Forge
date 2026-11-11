@@ -1,0 +1,23 @@
+title: Traffic Through CDN Fronting Host
+id: b78811b5-5b57-5408-b861-0164253738e5
+status: experimental
+description: Sample rule for T1665 Hide Infrastructure. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1665
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1665
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-host|endswith:
+    - azureedge.net
+    - cloudfront.net
+    c-uri|contains: /msdownload/update/
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

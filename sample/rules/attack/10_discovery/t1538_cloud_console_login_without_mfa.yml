@@ -1,0 +1,23 @@
+title: Cloud Console Login Without MFA
+id: 439e9039-79da-5cc7-af28-0f3ab9cc807e
+status: experimental
+description: Sample rule for T1538 Cloud Service Dashboard. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1538
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1538
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName: ConsoleLogin
+    additionalEventData.MFAUsed: 'No'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

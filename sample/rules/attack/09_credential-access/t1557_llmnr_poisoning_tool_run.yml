@@ -1,0 +1,26 @@
+title: LLMNR Poisoning Tool Run
+id: 862d0d3c-2093-57dd-b084-5a33784ac2f1
+status: experimental
+description: Sample rule for T1557 Adversary-in-the-Middle. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1557
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.collection
+- attack.t1557
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - Responder.py
+    - Inveigh
+    - Invoke-Inveigh
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

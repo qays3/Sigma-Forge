@@ -1,0 +1,23 @@
+title: CI Runner Executes Script From Pull Request Fork
+id: b2ded924-e113-52e7-9e10-1e3bc46fd4c7
+status: experimental
+description: Sample rule for T1677 Poisoned Pipeline Execution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1677
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1677
+logsource:
+  product: github
+  service: audit
+detection:
+  selection:
+    action: workflows.completed_workflow_run
+    event: pull_request_target
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

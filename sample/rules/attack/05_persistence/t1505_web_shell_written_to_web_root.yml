@@ -1,0 +1,33 @@
+title: Web Shell Written To Web Root
+id: 881a37fb-a265-50ee-99bb-81c6739e0686
+status: experimental
+description: Sample rule for T1505 Server Software Component. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1505
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.t1505
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|contains:
+    - \inetpub\wwwroot\
+    - \webapps\
+    TargetFilename|endswith:
+    - .aspx
+    - .jsp
+    - .php
+    - .ashx
+  filter_main:
+    Image|endswith:
+    - \msdeploy.exe
+    - \TiWorker.exe
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: high

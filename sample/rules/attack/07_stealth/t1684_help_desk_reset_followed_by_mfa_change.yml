@@ -1,0 +1,24 @@
+title: Help Desk Reset Followed By MFA Change
+id: 46ffeff7-394e-5cf9-b13f-452724f5ed88
+status: experimental
+description: Sample rule for T1684 Social Engineering. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1684
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1684
+logsource:
+  product: azure
+  service: activitylogs
+detection:
+  selection:
+    OperationName:
+    - Reset user password
+    - User registered security info
+    InitiatedBy|contains: helpdesk
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

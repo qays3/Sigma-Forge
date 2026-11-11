@@ -1,0 +1,27 @@
+title: DDE Formula In Office Spawns Process
+id: d01ce337-0aa8-5411-946f-7b0af17e4a65
+status: experimental
+description: Sample rule for T1559 Inter-Process Communication. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1559
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1559
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \EXCEL.EXE
+    - \WINWORD.EXE
+    Image|endswith:
+    - \cmd.exe
+    - \msiexec.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

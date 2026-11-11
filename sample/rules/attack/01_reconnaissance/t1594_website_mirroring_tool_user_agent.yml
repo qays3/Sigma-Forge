@@ -1,0 +1,25 @@
+title: Website Mirroring Tool User Agent
+id: 2c5baced-fadb-512e-9474-f3658b6ddaa8
+status: experimental
+description: Sample rule for T1594 Search Victim-Owned Websites. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1594
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1594
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-user-agent|contains:
+    - HTTrack
+    - Wget/
+    - WebCopier
+    - SiteSucker
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

@@ -1,0 +1,25 @@
+title: PowerShell Uses Char Join Obfuscation
+id: 1e1e0285-66a0-57d2-8ad8-d2106526e153
+status: experimental
+description: Sample rule for T1027 Obfuscated Files or Information. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1027
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1027
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - -join [char[]]
+    - '[char]0x'
+    - -bxor
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

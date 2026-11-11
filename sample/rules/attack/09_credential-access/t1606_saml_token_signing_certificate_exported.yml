@@ -1,0 +1,23 @@
+title: SAML Token Signing Certificate Exported
+id: 430c8042-892f-5b04-ae29-3eac2a6bfee4
+status: experimental
+description: Sample rule for T1606 Forge Web Credentials. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1606
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1606
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Export-AADIntADFSSigningCertificate
+    - Get-AdfsCertificate -CertificateType Token-Signing
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: critical

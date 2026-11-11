@@ -1,0 +1,23 @@
+title: TLS Disabled Through Schannel Registry
+id: 6b232f10-3395-519b-aa64-2aec9dfcb255
+status: experimental
+description: Sample rule for T1600 Weaken Encryption. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1600
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1600
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|contains: \SCHANNEL\Protocols\
+    TargetObject|endswith: \Enabled
+    Details: DWORD (0x00000000)
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

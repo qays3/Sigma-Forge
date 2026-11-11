@@ -1,0 +1,25 @@
+title: Wallpaper Changed Through Registry By Script
+id: cb4b1793-5b91-5a7a-951a-87f3dfe1d606
+status: experimental
+description: Sample rule for T1491 Defacement. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1491
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1491
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection:
+    TargetObject|endswith: \Control Panel\Desktop\Wallpaper
+    Image|endswith:
+    - \powershell.exe
+    - \reg.exe
+    - \cmd.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,23 @@
+title: Script Checks Domain Name Before Running
+id: 2c33f5f0-eb9c-54c3-bc26-6f7532a46711
+status: experimental
+description: Sample rule for T1480 Execution Guardrails. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1480
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1480
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains|all:
+    - $env:USERDOMAIN
+    - exit
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

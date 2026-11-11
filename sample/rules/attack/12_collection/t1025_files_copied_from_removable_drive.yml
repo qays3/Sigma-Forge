@@ -1,0 +1,25 @@
+title: Files Copied From Removable Drive
+id: e7e7aee4-c073-50da-b4e7-024584a1bf4c
+status: experimental
+description: Sample rule for T1025 Data from Removable Media. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1025
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1025
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \xcopy.exe
+    - \robocopy.exe
+    CommandLine|re: '[E-H]:\\'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

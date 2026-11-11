@@ -1,0 +1,25 @@
+title: Large Post To Known C2 Path
+id: 1b7d749f-7676-517f-afc5-a12ca0a0a8e4
+status: experimental
+description: Sample rule for T1041 Exfiltration Over C2 Channel. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1041
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.exfiltration
+- attack.t1041
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-method: POST
+    c-uri|endswith: /upload
+    c-useragent|contains:
+    - WinHTTP
+    - Mozilla/4.0 (compatible; MSIE 6.0
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,26 @@
+title: Mailbox Forwarding Rule Created
+id: fe171f45-cb08-5a89-a8ff-e86549dc3f2f
+status: experimental
+description: Sample rule for T1114 Email Collection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1114
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1114
+logsource:
+  product: m365
+  service: audit
+detection:
+  selection:
+    Operation:
+    - New-InboxRule
+    - Set-InboxRule
+    Parameters|contains:
+    - ForwardTo
+    - RedirectTo
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

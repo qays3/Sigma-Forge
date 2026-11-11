@@ -1,0 +1,23 @@
+title: System Time Query From Remote Host
+id: 92d46b05-6baa-5293-94e2-f412befc731f
+status: experimental
+description: Sample rule for T1124 System Time Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1124
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1124
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - net time \\
+    - w32tm /stripchart
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

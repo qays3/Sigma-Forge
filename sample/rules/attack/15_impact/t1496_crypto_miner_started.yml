@@ -1,0 +1,24 @@
+title: Crypto Miner Started
+id: 956d3e49-9336-53c2-905a-eaa505380351
+status: experimental
+description: Sample rule for T1496 Resource Hijacking. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1496
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1496
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - stratum+tcp://
+    - --donate-level
+    - xmrig
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

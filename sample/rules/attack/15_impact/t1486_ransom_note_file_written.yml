@@ -1,0 +1,25 @@
+title: Ransom Note File Written
+id: cb9f6292-46bf-5ef6-ad09-11cfbbd3573a
+status: experimental
+description: Sample rule for T1486 Data Encrypted for Impact. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1486
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1486
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|endswith:
+    - \README_TO_DECRYPT.txt
+    - \HOW_TO_RECOVER.html
+    - \!!!READ_ME!!!.txt
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: critical

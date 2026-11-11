@@ -1,0 +1,25 @@
+title: Recovery Disabled With Bcdedit
+id: 43eaac35-0cda-5d36-a554-4046a6930d0b
+status: experimental
+description: Sample rule for T1490 Inhibit System Recovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1490
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1490
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \bcdedit.exe
+    CommandLine|contains:
+    - recoveryenabled no
+    - bootstatuspolicy ignoreallfailures
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,24 @@
+title: ICMP Tunnel Tool Run
+id: 1850b1ef-66e1-585c-bd15-bddf6a81a148
+status: experimental
+description: Sample rule for T1095 Non-Application Layer Protocol. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1095
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1095
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \icmpsh.exe
+    - \ptunnel.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

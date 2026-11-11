@@ -1,0 +1,24 @@
+title: Registry Query For Installed Software
+id: faae6046-3b0f-5c5a-82ec-89a6c6575f0b
+status: experimental
+description: Sample rule for T1012 Query Registry. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1012
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1012
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \reg.exe
+    CommandLine|contains|all:
+    - query
+    - \Uninstall
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

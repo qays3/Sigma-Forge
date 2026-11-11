@@ -1,0 +1,26 @@
+title: Service Installed With Binary In ProgramData
+id: a1ceb207-a91e-5743-8b7a-d2a978f22ead
+status: experimental
+description: Sample rule for T1543 Create or Modify System Process. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1543
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1543
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID: 7045
+    ImagePath|contains:
+    - \ProgramData\
+    - \Users\Public\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,29 @@
+title: UNC Path To External Host In Office Document
+id: c99e5d0c-b0bd-5d5f-8e29-5737e8387aeb
+status: experimental
+description: Sample rule for T1187 Forced Authentication. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1187
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1187
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \WINWORD.EXE
+    - \OUTLOOK.EXE
+    DestinationPort: 445
+  filter_main:
+    DestinationIp|cidr:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: high

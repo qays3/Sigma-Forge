@@ -1,0 +1,25 @@
+title: Windows Firewall Turned Off
+id: d6d2db89-8f86-5014-9aea-41712a6cda99
+status: experimental
+description: Sample rule for T1686 Disable or Modify System Firewall. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1686
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1686
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \netsh.exe
+    CommandLine|contains:
+    - advfirewall set allprofiles state off
+    - firewall set opmode disable
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

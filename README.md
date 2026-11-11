@@ -30,21 +30,26 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, check them for problems, 
 9. [Automatic fallbacks](#automatic-fallbacks)
 10. [Correlation rules](#correlation-rules)
 11. [ATT&CK coverage](#attck-coverage)
-12. [API](#api)
-13. [Configuration](#configuration)
-14. [Architecture](#architecture)
-15. [Project layout](#project-layout)
-16. [Development](#development)
-17. [Known limits](#known-limits)
-18. [Credits](#credits)
+12. [Testing rules on logs](#testing-rules-on-logs)
+13. [SigmaHQ library](#sigmahq-library)
+14. [Field mapping](#field-mapping)
+15. [Export packages](#export-packages)
+16. [API](#api)
+17. [Configuration](#configuration)
+18. [Architecture](#architecture)
+19. [Project layout](#project-layout)
+20. [Development](#development)
+21. [Known limits](#known-limits)
+22. [Credits](#credits)
 
 ## What is Sigma Forge
 
-[Sigma](https://github.com/SigmaHQ/sigma) is an open format for writing detection rules once and running them on any SIEM (Security Information and Event Management) platform. Sigma Forge is a local web app that takes a folder of Sigma rules and gives you three things:
+[Sigma](https://github.com/SigmaHQ/sigma) is an open format for writing detection rules once and running them on any SIEM (Security Information and Event Management) platform. Sigma Forge is a local web app that takes a folder of Sigma rules and helps you write, check, test, convert and ship them:
 
-1. **Conversion** to 31 targets across 19 platforms: Splunk, Elastic, OpenSearch, Microsoft, CrowdStrike, SentinelOne, Palo Alto, Google SecOps, Carbon Black, QRadar, Wazuh and more.
-2. **Quality checks** with the pySigma validators, plus checks for revoked or unknown ATT&CK tags.
-3. **Coverage** on a full MITRE ATT&CK (Adversarial Tactics, Techniques and Common Knowledge) Enterprise heat map, with export to ATT&CK Navigator.
+1. **Conversion** to 31 targets across 19 platforms: Splunk, Elastic, OpenSearch, Microsoft, CrowdStrike, SentinelOne, Palo Alto, Google SecOps, Carbon Black, QRadar, Wazuh and more, with ready to deploy packages for each.
+2. **Quality checks** with the pySigma validators, plus checks for revoked or unknown ATT&CK tags, live in a rule editor.
+3. **Testing** on your own EVTX or JSON logs, so you see which rules fire before you deploy them.
+4. **Coverage** on a full MITRE ATT&CK (Adversarial Tactics, Techniques and Common Knowledge) Enterprise heat map, by technique and by log source, with gap suggestions from the SigmaHQ library and export to ATT&CK Navigator.
 
 Everything runs on your machine. Rules are kept in your browser (IndexedDB) and are only sent to your own Sigma Forge server when you analyze or convert them.
 
@@ -52,11 +57,17 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 
 | Area | What you get |
 |---|---|
-| **Load rules** | Drag and drop files or whole folders, pick a folder, paste YAML, or load the built in sample pack. Multi document files and `action: global` collections are supported. |
+| **Load rules** | Drag and drop files or whole folders, pick a folder, paste YAML, load the built in sample pack (which includes one rule for every Enterprise technique) or rules from the SigmaHQ library. Multi document files and `action: global` collections are supported. |
+| **Editor** | Write a rule with templates, line numbers and live checks. The query for any target and the ATT&CK mapping update as you type. Save to the workspace with Ctrl+S. |
 | **Correlations** | Sigma correlation rules (`event_count`, `value_count`, `temporal`) are parsed, listed and converted on every target whose backend supports them. |
 | **Convert** | 31 targets: Splunk SPL, SPL2 and CIM, Elastic Lucene, ES\|QL, EQL and ElastAlert, OpenSearch Lucene and PPL, Microsoft KQL (Defender XDR, Sentinel ASIM, Azure Monitor), CrowdStrike LogScale, SentinelOne, Cortex XDR, Google SecOps UDM and YARA-L, Carbon Black, QRadar AQL, Logpoint, NetWitness, Sumo Logic, Panther, Trellix Helix, Grafana Loki, Quickwit, ClickHouse, SQLite (Zircolite), SurrealQL and Wazuh. Every output format of each backend is available. See the [target guide](#target-guide). |
+| **Compare** | One rule, up to four platforms side by side, to see how each writes the same detection. |
+| **Test on logs** | Drop EVTX, JSON or JSON lines files. Events are loaded into SQLite and every rule runs on them, correlations included. See hits, silent rules and the matching events. |
+| **SigmaHQ library** | Sync the full SigmaHQ release (more than 3,000 rules) or upload the zip offline, search by technique, log source, level or status, and add rules to the workspace. |
+| **Field mapping** | Profiles that rename Sigma fields to your own field names, with ECS, Wazuh and Splunk CIM presets. Used by Convert, Compare, Test, the editor and exports. |
+| **Export packages** | A zip per platform ready to deploy: a Splunk app, Kibana detection rules, a Sentinel ARM template, a Wazuh rules file, a Loki ruler file, YARA-L rules, a Zircolite pack and more, each with a README and a manifest. |
 | **Validate** | pySigma validators (dangling detections, wildcard misuse, duplicate tags, bad modifier mixes and more) run offline, plus ATT&CK tag checks against local data. |
-| **Coverage** | ATT&CK v20 Enterprise heat map with every tactic, technique counts that roll up from sub techniques, gap finding, and a Navigator layer export. |
+| **Coverage** | ATT&CK v20 Enterprise heat map with every tactic, technique counts that roll up from sub techniques, coverage by log source, the biggest gaps compared with SigmaHQ, and a Navigator layer export. |
 | **Review** | Sortable and filterable rule table with a detail drawer: metadata, findings, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
@@ -69,12 +80,28 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
     <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert to Splunk"><p align="center"><b>Convert</b>: Splunk SPL from the sample pack</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/convert-target.png" alt="Convert to CrowdStrike"><p align="center"><b>Targets</b>: 31 platforms with tips for each</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/convert-target.png" alt="Convert to Sentinel"><p align="center"><b>Targets</b>: 31 platforms with tips for each</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="ATT&CK heat map"><p align="center"><b>Coverage</b>: ATT&amp;CK heat map</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/coverage-technique.png" alt="Technique detail"><p align="center"><b>Technique</b>: sub techniques and rules</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rules table"><p align="center"><b>Rules</b>: search, filter and sort</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage-sources.png" alt="Coverage by log source"><p align="center"><b>Log sources and gaps</b>: what SigmaHQ covers that you do not</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/editor.png" alt="Rule editor"><p align="center"><b>Editor</b>: live checks and queries as you type</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/compare.png" alt="Compare targets"><p align="center"><b>Compare</b>: one rule on four platforms</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/test.png" alt="Test on logs"><p align="center"><b>Test</b>: run rules on EVTX and JSON logs</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/test-detail.png" alt="Test hit detail"><p align="center"><b>Hits</b>: the events a rule matched</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/library.png" alt="SigmaHQ library"><p align="center"><b>Library</b>: search and import SigmaHQ rules</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/mappings.png" alt="Field mapping"><p align="center"><b>Mappings</b>: rename fields to match your data</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/export.png" alt="Export package"><p align="center"><b>Export</b>: ready to deploy packages</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/rule-detail.png" alt="Rule detail"><p align="center"><b>Rule detail</b>: convert any rule in one click</p></td>
@@ -156,27 +183,44 @@ Examples:
 
 ```mermaid
 flowchart LR
-    A[Load rules<br/>files, folder, paste] --> B[Workspace<br/>overview and checks]
+    L[SigmaHQ library] --> A
+    A[Load rules<br/>files, folder, paste, packs] --> B[Workspace<br/>overview and checks]
+    ED[Editor<br/>write and check live] --> B
+    B --> T[Test<br/>run on EVTX and JSON logs]
     B --> C[Convert<br/>pick a target and format]
-    B --> D[Coverage<br/>ATT&CK heat map]
+    B --> CP[Compare<br/>four targets side by side]
+    B --> D[Coverage<br/>ATT&CK heat map and gaps]
     B --> E[Rules<br/>review and quick convert]
-    C --> F[Copy or download<br/>.spl .kql .xml .ndjson]
+    M[Mappings<br/>your field names] -.-> C
+    M -.-> T
+    C --> F[Copy, download<br/>or export a package]
     D --> G[Export Navigator layer]
+    D -.-> L
 ```
 
 1. **Workspace.** Drop rule files or a folder on the drop zone, or click **Load samples** (and **Load error samples** to see how problems are reported). You see how many rules parsed, how many have errors or findings, and a breakdown by level and log source.
 2. **Convert.** Pick a target on the left, choose an output format, select the rules, and press **Convert**. Each rule gets its own card with the query, any notes and a copy button. Tabs above the cards filter them by Converted, Skipped and Failed. **Download** saves all converted rules as one file.
 3. **Coverage.** The heat map shows every ATT&CK Enterprise tactic and technique. Darker purple means more rules. Click a technique to see its sub techniques and the rules that cover it. Use **Covered only** to hide gaps, or keep them visible to find what to write next. **Navigator layer** downloads a JSON layer for [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).
 4. **Rules.** Search and filter by level, status, product, tactic or check state. Click a row to open the detail drawer with metadata, validator findings, the rule source and a quick convert to any target.
+5. **Editor.** Start from a template or open a workspace rule. Checks, the query for the chosen target and the ATT&CK tags refresh as you type. **Save to workspace** (or Ctrl+S) stores it. Your draft is kept in the browser between visits.
+6. **Compare.** Pick one rule and up to four platforms to see their queries next to each other.
+7. **Test.** Drop log files or click **Load sample logs**, choose how strictly log sources must match, and press **Run test**. Tabs split the rules into Fired, Silent, Errors and Skipped. **Details** shows the matching events, correlation alerts and the SQLite query that ran.
+8. **Library.** Click **Sync now** to download the latest SigmaHQ release, then search and add rules. The Coverage page uses it to suggest rules for the techniques you miss.
+9. **Mappings.** Make a profile of field renames, or start from a preset, and press **Save and use**. Convert, Compare and Test also let you pick a profile per run.
+10. **Export.** On the Convert page, **Export package** builds a zip for the selected target with install steps.
 
 ## Sample pack
 
-The [`sample`](sample) folder has rules, test events and API requests that touch every feature. **Load samples** in the Workspace loads every working rule (39 files). **Load error samples** adds the six files in `sample/rules/broken`, which show how errors and findings look.
+The [`sample`](sample) folder has rules, logs, test events and API requests that touch every feature. In the Workspace:
+
+* **Load samples** loads 266 rule files: the 39 feature samples that show every modifier, log source and rule type, plus the ATT&CK pack with one rule for every ATT&CK Enterprise technique across all 15 tactics, so the heat map lights up end to end.
+* **Load error samples** adds the six files in `sample/rules/broken`, which show how errors and findings look.
 
 ```mermaid
 flowchart LR
     S[sample] --> R[rules]
     S --> W[wazuh<br/>events.jsonl]
+    S --> LG[logs<br/>EVTX style JSON, auditd, cloud]
     S --> A[api<br/>request bodies and scripts]
     R --> R1[windows]
     R --> R2[linux]
@@ -186,6 +230,7 @@ flowchart LR
     R --> R6[correlation]
     R --> R7[collections]
     R --> R8[broken]
+    R --> R9[attack<br/>227 rules, 15 tactics]
 ```
 
 | Folder | What it shows |
@@ -198,6 +243,8 @@ flowchart LR
 | [`rules/correlation`](sample/rules/correlation) | An `event_count` brute force rule and a `value_count` password spray rule. See [correlation rules](#correlation-rules) for the targets that convert them. |
 | [`rules/collections`](sample/rules/collections) | A file with three rules, and an `action: global` file that shares one log source and selection between two rules. |
 | [`rules/broken`](sample/rules/broken) | A YAML error, a missing detection, an unknown modifier, revoked and unknown ATT&CK tags, validator findings and a rule with no id or level. They show how errors and findings look. |
+| [`rules/attack`](sample/rules/attack) | The ATT&CK pack: one folder per tactic (`01_reconnaissance` to `15_impact`) with one rule for each Enterprise technique. A technique that sits in several tactics is tagged with all of them and stored under the first. The rules use Windows, Linux, macOS, cloud (AWS, Azure, Microsoft 365, GCP), Kubernetes, ESXi, proxy, web server and firewall log sources. They are samples to learn from, so tune them before production use. |
+| [`logs`](sample/logs) | Six log files for the Test page: Sysmon and Security events in the same JSON layout the EVTX parser makes (both `EventData` styles), PowerShell and Defender events, Linux auditd and process events, firewall and proxy events, and AWS CloudTrail plus Azure sign in records. Every feature sample rule fires on them, and the failed logon bursts trigger both correlation rules. |
 | [`wazuh/events.jsonl`](sample/wazuh/events.jsonl) | Test events for the Wazuh target's `wazuh_check.py` tool. |
 | [`api`](sample/api) | Ready request bodies for every endpoint, plus `run_examples.sh` and `run_examples.ps1` that call them and save the answers in `sample/api/output`. |
 
@@ -1214,9 +1261,63 @@ How tags are read:
 * Revoked techniques are moved to their new id. For example, ATT&CK v20 replaced `T1562.001` with `T1685`. The rule gets a finding and the coverage counts the new id.
 * Tags that do not exist at all are listed as unknown.
 
+Below the map, **Coverage by log source** lists every log source your rules use, with rule counts, techniques and levels. When the SigmaHQ library is synced, **Biggest gaps** shows the techniques SigmaHQ covers and you do not, ranked by how many community rules exist for them, and the log sources that would close the most gaps. Click one to open those rules in the library. The technique drawer also lists SigmaHQ rules for that technique with an **Add** button.
+
+## Testing rules on logs
+
+The Test page runs your rules on real events without a SIEM:
+
+```mermaid
+flowchart LR
+    F[EVTX, JSON, JSON lines] --> P[Parse and flatten<br/>EventData, nested keys]
+    P --> L[Detect log source<br/>channel and event id]
+    L --> DB[(SQLite in memory)]
+    R[Your rules] --> C[Convert to SQLite<br/>with fallbacks]
+    C --> Q[Run each query<br/>with a time limit]
+    DB --> Q
+    Q --> H[Hits, alerts and<br/>matching events]
+```
+
+* **Formats.** `.evtx` files are read with the [evtx](https://github.com/omerbenamram/pyevtx-rs) parser. JSON can be one object, an array, an object with `events`, `records`, `logs` or `Records` (CloudTrail), an Elasticsearch `hits` answer, or one event per line. Wazuh `win.*` events and Elastic `_source` wrappers are unwrapped.
+* **Fields.** Nested keys are flattened to their last name (`EventData.CommandLine` becomes `CommandLine`) and also kept with their full dotted path (`userIdentity.arn`), so both Windows and cloud rules find their fields. Field names are matched without case. The raw event is kept in a `message` column for keyword searches.
+* **Log sources.** For Windows events the channel and event id give the product, service and category (Sysmon event 1 is `process_creation`, PowerShell 4104 is `ps_script` and so on). Other logs can carry a `logsource` object. Three modes decide how strict this is: **auto** only filters events whose log source is known, **strict** always filters, **off** runs every rule on every event.
+* **Correlations** run as real SQLite window queries over the event `timestamp`, and each alert shows its group, window and count.
+* Limits: 64 MB and 250,000 events per run, and 10 seconds per query. See [configuration](#configuration).
+
+## SigmaHQ library
+
+**Sync now** downloads `sigma_all_rules.zip` from the latest [SigmaHQ release](https://github.com/SigmaHQ/sigma/releases) and indexes it by title, technique, log source, level and status. The files are stored in `data/sigmahq` (a Docker volume when you use compose). On a machine without internet, download the zip yourself and use **Upload zip**. Rules you add are stored as `sigmahq/<path>` in your workspace, so you can tell them apart from your own.
+
+## Field mapping
+
+A mapping profile renames Sigma fields before conversion, for example `CommandLine` to `process.command_line`. Renames apply to detections, `fields` and correlation `group-by`, `aliases` and value fields. Presets for Elastic ECS, Wazuh event data and Splunk CIM are included. **Add fields from workspace** lists every field your rules use, so you only fill in your names. Profiles can be imported from JSON, a pySigma `fieldmappings` block or simple `field: name` lines, and exported as JSON. They are stored in your browser.
+
+## Export packages
+
+**Export package** on the Convert page builds a zip for the current target. Every zip has a `README.md` with install steps and a list of converted, skipped and failed rules, and a `manifest.json` with each rule's file, techniques and warnings.
+
+| Target | Package |
+|---|---|
+| Splunk SPL, Splunk CIM | Splunk app with `app.conf`, `savedsearches.conf` (one scheduled search per rule, turned off until you enable it) and `default.meta` |
+| Splunk SPL2 | One SPL2 module |
+| Elastic Lucene, ES\|QL, EQL | `rules.ndjson` for Kibana **Import rules** |
+| ElastAlert | One rule file per Sigma rule |
+| OpenSearch Lucene | One alerting monitor per rule |
+| Sentinel ASIM, Azure Monitor, Defender XDR | `azuredeploy.json` ARM template with scheduled analytics rules, tactics and techniques |
+| Google SecOps | One YARA-L 2.0 rule per file |
+| Grafana Loki | Loki ruler `rules.yml`, or Grafana alert rules |
+| Sumo Logic CSE | Cloud SIEM rules JSON |
+| Panther | Simple detection YAML per rule |
+| ClickHouse | ClickDetect rules |
+| SQLite | Zircolite rule pack |
+| Wazuh | One rules XML file for `/var/ossec/etc/rules/` |
+| Every target | Query files: one file per rule in the target language |
+
+Correlation rules and rules that needed a fallback go into the main file when its format allows it. Otherwise they are written to an `extra` folder as plain queries and the README says so.
+
 ## API
 
-All endpoints take and return JSON.
+All endpoints take and return JSON, except `/api/test` and `/api/library/upload` (multipart form) and `/api/export` (returns a zip).
 
 | Method | Path | What it does |
 |---|---|---|
@@ -1228,6 +1329,18 @@ All endpoints take and return JSON.
 | `POST` | `/api/convert` | Convert rules to a target and format |
 | `POST` | `/api/coverage` | ATT&CK coverage for the rules |
 | `POST` | `/api/coverage/navigator` | ATT&CK Navigator layer JSON |
+| `POST` | `/api/coverage/gaps` | Techniques and log sources SigmaHQ covers that the rules do not |
+| `POST` | `/api/compare` | Convert the same rules for several targets |
+| `POST` | `/api/fields` | Every field the rules use, with counts |
+| `GET` | `/api/export/packages` | Export packages offered for each target |
+| `POST` | `/api/export` | Build a package zip |
+| `POST` | `/api/test` | Run rules on uploaded log files |
+| `GET` | `/api/samples/logs` | Built in sample logs |
+| `GET` | `/api/library/status` | Library state, release and counts |
+| `POST` | `/api/library/sync` | Download the latest SigmaHQ release in the background |
+| `POST` | `/api/library/upload` | Load a `sigma_all_rules.zip` you downloaded |
+| `GET` | `/api/library/search` | Search by `q`, `technique`, `product`, `category`, `service`, `level`, `status`, `group` |
+| `POST` | `/api/library/rules` | Get the content of library rules by path |
 
 Rules are always sent as a list of `{name, content}` objects:
 
@@ -1247,6 +1360,18 @@ Targets with extra settings take them in `options`:
 {"target": "wazuh", "rules": [], "options": {"wazuh_rule_id_start": 110000, "wazuh_double_backslash": false, "wazuh_parent_group": true}}
 ```
 
+`/api/convert`, `/api/compare` and `/api/export` also take a `field_mapping` object, for example `{"CommandLine": "process.command_line"}`. Export takes `package` (an id from `/api/export/packages`, or `auto`) and `name`.
+
+Test rules on logs with a multipart form:
+
+```bash
+curl -s http://127.0.0.1:8000/api/test \
+  -F 'rules=[{"name":"r.yml","content":"..."}]' \
+  -F mode=auto \
+  -F files=@sample/logs/windows_sysmon.jsonl \
+  -F files=@Security.evtx
+```
+
 ## Configuration
 
 Set these as environment variables. See [`.env.example`](.env.example).
@@ -1259,6 +1384,11 @@ Set these as environment variables. See [`.env.example`](.env.example).
 | `SIGMA_FORGE_MAX_RULE_BYTES` | `262144` | Largest file size per rule file |
 | `SIGMA_FORGE_WAZUH_ID_START` | `100100` | Default first Wazuh rule id |
 | `SIGMA_FORGE_WAZUH_MAX_SPLIT` | `64` | Most Wazuh rules made from one Sigma rule |
+| `SIGMA_FORGE_MAX_LOG_BYTES` | `67108864` | Largest total upload for a log test (64 MB) |
+| `SIGMA_FORGE_MAX_LOG_EVENTS` | `250000` | Most events in one log test |
+| `SIGMA_FORGE_LOG_QUERY_SECONDS` | `10` | Time limit for each rule query in a log test |
+| `SIGMA_FORGE_SIGMAHQ_DIR` | `data/sigmahq` | Where the SigmaHQ library is stored |
+| `SIGMA_FORGE_SIGMAHQ_URL` | latest release zip | Where **Sync now** downloads the library from |
 | `WAZUH_API_URL` | `https://127.0.0.1:55000` | Used by `wazuh_check.py` |
 | `WAZUH_API_USER` | `wazuh` | Used by `wazuh_check.py` |
 | `WAZUH_API_PASSWORD` | none | Used by `wazuh_check.py` |
@@ -1279,18 +1409,30 @@ flowchart LR
         W[Sigma Forge backends]
         V[Coverage engine]
         A[(ATT&CK data<br/>attack.json)]
+        T[Log test engine]
+        S[(SQLite<br/>in memory)]
+        X[Export packer]
+        LB[(SigmaHQ library<br/>data/sigmahq)]
         R --> P
         R --> C
         C --> PB[pySigma backends<br/>Splunk, Elastic, Kusto]
         C --> W
         R --> V
         V --> A
+        V --> LB
+        R --> T
+        T --> C
+        T --> S
+        R --> X
+        X --> C
+        R --> LB
     end
     UI <-- JSON --> R
 ```
 
-* The server is stateless. It never stores rules. Each request carries the rules it needs.
-* The SPA uses the History API for clean URLs (`/convert`, `/coverage`, `/rules`). FastAPI returns `index.html` for any path that is not an API route or an asset.
+* The server never stores your rules. Each request carries the rules it needs. The only thing it keeps on disk is the SigmaHQ library you sync. Mapping profiles and the editor draft live in your browser.
+* ATT&CK data for the Elastic SIEM rule formats comes from the local `attack.json`, so no conversion needs internet.
+* The SPA uses the History API for clean URLs (`/convert`, `/coverage`, `/editor`, `/test`, `/library` and so on). FastAPI returns `index.html` for any path that is not an API route or an asset.
 * All colors come from [`web/assets/css/root.css`](web/assets/css/root.css). The rest of the CSS only uses its variables, so changing that one file restyles the whole app, both themes included.
 
 ## Project layout
@@ -1310,6 +1452,11 @@ Sigma-Forge/
 │       ├── targets.py           Target list, backends and pipelines
 │       ├── coverage.py          ATT&CK coverage and Navigator layer
 │       ├── attack.py            ATT&CK data and tag helpers
+│       ├── offline_attack.py    Feeds local ATT&CK data to pySigma
+│       ├── fieldmap.py          Custom field mapping
+│       ├── logtest.py           EVTX and JSON loading, SQLite test runs
+│       ├── library.py           SigmaHQ sync, index and search
+│       ├── export.py            Ready to deploy packages
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
 │           └── mapping.py       Log source and field mapping
@@ -1326,12 +1473,16 @@ Sigma-Forge/
 │       │   ├── store.js         IndexedDB rule store
 │       │   ├── state.js         Shared cache
 │       │   ├── ui.js            Helpers, drawer, toasts, skeletons
-│       │   └── views/           workspace, convert, coverage, rules
+│       │   ├── mappings.js      Field mapping profiles
+│       │   └── views/           workspace, convert, coverage, rules, editor,
+│       │                        compare, test, library, mappings
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/attack/attack.json      Compact ATT&CK Enterprise data
 ├── sample/
 │   ├── rules/                   Sample pack by feature (windows, linux, network,
 │   │                            cloud, modifiers, correlation, collections, broken)
+│   │                            and the ATT&CK pack (attack, 227 rules)
+│   ├── logs/                    Sample logs for the Test page
 │   ├── wazuh/events.jsonl       Wazuh logtest events
 │   └── api/                     API request bodies and run_examples scripts
 ├── tools/
@@ -1355,7 +1506,7 @@ Sigma-Forge/
 .venv/bin/python -m uvicorn app.main:app --reload
 ```
 
-The tests cover the API, every target, error handling, correlations and coverage. The backend tests compile the generated regex and check it against real looking field values, so they catch broken escaping and wrong logic, not only bad XML.
+The tests cover the API, every target, error handling, correlations, coverage, the ATT&CK pack, log tests, field mapping, compare and every export package format. The backend tests compile the generated regex and check it against real looking field values, so they catch broken escaping and wrong logic, not only bad XML.
 
 Adding a sample rule is as simple as dropping a `.yml` file anywhere under `sample/rules/`. It shows up under **Load samples** right away.
 
@@ -1363,7 +1514,8 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 
 * **Feature support differs per target.** Some backends cannot do number compare, `fieldref`, `cidr`, case sensitive matching or keyword search. Those rules show the reason on their card. The [target guide](#target-guide) lists the most common failures for each target.
 * **Correlation rules** only convert on targets whose backend supports them (see [correlation rules](#correlation-rules)). Base rules must be in the same file.
-* **Elastic SIEM rule formats** (`siem_rule`, `siem_rule_ndjson`) make pySigma download ATT&CK data the first time, so they need internet once.
+* **Log tests** use SQLite, so they show whether a rule's logic matches an event, not how a given SIEM parses your logs. Field names in your logs must match the rule (or a mapping profile). Regex follows Python rules.
+* **The ATT&CK pack** covers every parent technique. Sub techniques are covered where a rule targets one, not one by one.
 * **Pipelines** only know the log sources their authors mapped. Rules for other log sources show the pySigma error on their card.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 

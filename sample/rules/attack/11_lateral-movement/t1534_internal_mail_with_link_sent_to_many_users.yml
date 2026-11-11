@@ -1,0 +1,26 @@
+title: Internal Mail With Link Sent To Many Users
+id: 1ea0b47b-733a-5795-a775-da6223af4be8
+status: experimental
+description: Sample rule for T1534 Internal Spearphishing. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1534
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.lateral-movement
+- attack.t1534
+logsource:
+  product: m365
+  service: audit
+detection:
+  selection:
+    Operation: Send
+    Subject|contains:
+    - Shared document
+    - Action required
+    - Password expiry
+    Recipients|contains: all-staff@
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

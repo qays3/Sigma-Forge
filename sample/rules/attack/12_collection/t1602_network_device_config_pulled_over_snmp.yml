@@ -1,0 +1,23 @@
+title: Network Device Config Pulled Over SNMP
+id: 0db45b90-fb8c-5e86-9acb-ac6a432142a4
+status: experimental
+description: Sample rule for T1602 Data from Configuration Repository. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1602
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1602
+logsource:
+  category: firewall
+detection:
+  selection:
+    dst_port: 161
+    action: allow
+    message|contains: ciscoConfigCopy
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

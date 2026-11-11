@@ -1,0 +1,26 @@
+title: Bulk AI Image Or Voice Generation API Use
+id: fd97f54c-d6e4-5dce-8ea8-14029e47b936
+status: experimental
+description: Sample rule for T1683 Generate Content. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1683
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1683
+logsource:
+  product: openai
+  service: audit
+detection:
+  selection:
+    event_type:
+    - images.generate
+    - audio.speech
+    api_key_name|contains:
+    - temp
+    - test
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

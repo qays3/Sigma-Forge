@@ -1,0 +1,22 @@
+title: Script Reads Commands From USB File
+id: aa1f4045-7ee3-5e72-a390-4da3c1d1fe13
+status: experimental
+description: Sample rule for T1092 Communication Through Removable Media. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1092
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1092
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|re: '[E-H]:\\cmd\.txt'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

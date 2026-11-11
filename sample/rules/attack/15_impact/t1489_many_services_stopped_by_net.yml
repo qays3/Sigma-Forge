@@ -1,0 +1,28 @@
+title: Many Services Stopped By Net
+id: ff4941cd-73dd-5777-8e03-0e67fd5cf329
+status: experimental
+description: Sample rule for T1489 Service Stop. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1489
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1489
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \net.exe
+    - \sc.exe
+    CommandLine|contains:
+    - stop "SQL
+    - stop vss
+    - stop MSExchange
+    - stop veeam
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

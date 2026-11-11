@@ -1,0 +1,25 @@
+title: Rogue Wi-Fi Profile Added
+id: 0047b2c6-d0da-5609-a2b6-3baac4154a63
+status: experimental
+description: Sample rule for T1669 Wi-Fi Networks. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1669
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1669
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \netsh.exe
+    CommandLine|contains|all:
+    - wlan
+    - add
+    - profile
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

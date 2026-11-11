@@ -1,0 +1,27 @@
+title: PsExec Style Remote Service Creation
+id: 8daae65f-9e89-55f7-998f-81cf21eb6ea9
+status: experimental
+description: Sample rule for T1072 Software Deployment Tools. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1072
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.lateral-movement
+- attack.t1072
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID: 7045
+    ImagePath|contains:
+    - \ADMIN$\
+    - PAExec
+    - RemCom
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

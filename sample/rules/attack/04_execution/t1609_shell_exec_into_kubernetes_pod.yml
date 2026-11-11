@@ -1,0 +1,23 @@
+title: Shell Exec Into Kubernetes Pod
+id: b80c602d-970b-53b0-9509-4a97ca5898ca
+status: experimental
+description: Sample rule for T1609 Container Administration Command. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1609
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1609
+logsource:
+  product: kubernetes
+  service: audit
+detection:
+  selection:
+    verb: create
+    objectRef.subresource: exec
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

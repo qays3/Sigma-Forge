@@ -1,0 +1,23 @@
+title: Cloud Snapshot Shared Publicly
+id: af87b4ca-3968-572d-a15d-b4d301b9d777
+status: experimental
+description: Sample rule for T1578 Modify Cloud Compute Infrastructure. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1578
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1578
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName: ModifySnapshotAttribute
+    requestParameters.createVolumePermission.add.items.group: all
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

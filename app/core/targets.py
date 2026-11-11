@@ -113,6 +113,9 @@ TARGET_MAP: Dict[str, Target] = {t.id: t for t in TARGETS}
 
 @lru_cache(maxsize=1)
 def plugins() -> InstalledSigmaPlugins:
+    from app.core.offline_attack import install
+
+    install()
     try:
         return InstalledSigmaPlugins.autodiscover()
     except Exception:

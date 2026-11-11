@@ -1,0 +1,21 @@
+title: Hosts File Changed
+id: 00e123f6-807b-5083-9ab4-f3ae6a6844e4
+status: experimental
+description: Sample rule for T1565 Data Manipulation. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1565
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1565
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|endswith: \drivers\etc\hosts
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

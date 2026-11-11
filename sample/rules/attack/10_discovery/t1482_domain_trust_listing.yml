@@ -1,0 +1,24 @@
+title: Domain Trust Listing
+id: 7292c40b-ec38-54b0-8a49-fc7e48d6b92f
+status: experimental
+description: Sample rule for T1482 Domain Trust Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1482
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1482
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - nltest /domain_trusts
+    - nltest /trusted_domains
+    - Get-ADTrust
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

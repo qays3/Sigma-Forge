@@ -1,0 +1,23 @@
+title: Keystroke Injection Device Opens Run Dialog
+id: 3023471d-6c79-506a-9616-3305b633554b
+status: experimental
+description: Sample rule for T1674 Input Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1674
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1674
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \explorer.exe
+    Image|endswith: \powershell.exe
+    CommandLine|contains: -w hidden -nop
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

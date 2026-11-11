@@ -1,0 +1,23 @@
+title: Executable Copied To Admin Share
+id: 12dd2669-82bc-528d-b5f6-9bc693a3627e
+status: experimental
+description: Sample rule for T1570 Lateral Tool Transfer. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1570
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.lateral-movement
+- attack.t1570
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|startswith: \\
+    TargetFilename|contains: \ADMIN$\
+    TargetFilename|endswith: .exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

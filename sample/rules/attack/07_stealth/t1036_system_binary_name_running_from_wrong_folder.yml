@@ -1,0 +1,28 @@
+title: System Binary Name Running From Wrong Folder
+id: 2b462e9f-0610-5c79-98c4-208b71109bf3
+status: experimental
+description: Sample rule for T1036 Masquerading. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1036
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1036
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \svchost.exe
+    - \lsass.exe
+    - \csrss.exe
+  filter_main:
+    Image|startswith:
+    - C:\Windows\System32\
+    - C:\Windows\SysWOW64\
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: high

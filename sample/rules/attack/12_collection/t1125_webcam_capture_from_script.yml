@@ -1,0 +1,23 @@
+title: Webcam Capture From Script
+id: 5c93d957-f9d8-5653-9a26-61073719f1d3
+status: experimental
+description: Sample rule for T1125 Video Capture. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1125
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1125
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - avicap32
+    - capCreateCaptureWindow
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

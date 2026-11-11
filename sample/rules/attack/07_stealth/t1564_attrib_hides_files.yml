@@ -1,0 +1,22 @@
+title: Attrib Hides Files
+id: eb02a31e-6782-582b-960a-ca888fe8f672
+status: experimental
+description: Sample rule for T1564 Hide Artifacts. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1564
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1564
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \attrib.exe
+    CommandLine|contains: ' +h '
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

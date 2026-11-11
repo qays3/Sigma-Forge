@@ -1,0 +1,25 @@
+title: Shell History Turned Off
+id: 935f3023-a40e-50a7-99cd-341ba5e346ed
+status: experimental
+description: Sample rule for T1690 Prevent Command History Logging. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1690
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1690
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    CommandLine|contains:
+    - set +o history
+    - HISTSIZE=0
+    - unset HISTFILE
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,23 @@
+title: OAuth Device Code Flow Token Issued
+id: ea88c4ee-bee5-5b82-8530-427d45b1d02e
+status: experimental
+description: Sample rule for T1528 Steal Application Access Token. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1528
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1528
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    AuthenticationProtocol: deviceCode
+    ResultType: 0
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

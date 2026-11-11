@@ -1,0 +1,23 @@
+title: Service Listing With SC Query
+id: 0f9a3cfc-dc56-5353-b615-3872553ed0e2
+status: experimental
+description: Sample rule for T1007 System Service Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1007
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \sc.exe
+    CommandLine|contains: query
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

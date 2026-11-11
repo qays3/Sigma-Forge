@@ -1,0 +1,26 @@
+title: Network Config Dump
+id: dc4dc6a5-e521-5943-8df0-2d43e67e137f
+status: experimental
+description: Sample rule for T1016 System Network Configuration Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before
+  production use.
+references:
+- https://attack.mitre.org/techniques/T1016
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1016
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \ipconfig.exe
+    CommandLine|contains: /all
+    ParentImage|endswith:
+    - \cmd.exe
+    - \powershell.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

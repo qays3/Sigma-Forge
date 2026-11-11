@@ -1,0 +1,27 @@
+title: MSP Remote Tool Spawns Shell
+id: 09aa7a4c-2845-514f-b75a-f000a38b1dbd
+status: experimental
+description: Sample rule for T1199 Trusted Relationship. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1199
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1199
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith:
+    - \ScreenConnect.ClientService.exe
+    - \TeamViewer_Service.exe
+    - \KaseyaAgent.exe
+    Image|endswith:
+    - \cmd.exe
+    - \powershell.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

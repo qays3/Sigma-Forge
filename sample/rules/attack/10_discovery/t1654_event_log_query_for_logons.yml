@@ -1,0 +1,24 @@
+title: Event Log Query For Logons
+id: 121916f7-7549-5e9e-a12c-2b357e5183d2
+status: experimental
+description: Sample rule for T1654 Log Enumeration. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1654
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1654
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \wevtutil.exe
+    CommandLine|contains:
+    - qe Security
+    - query-events Security
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,22 @@
+title: Office Equation Editor Starts Child Process
+id: f5c5997f-6466-5ea5-a09d-2dbde488be40
+status: experimental
+description: Sample rule for T1203 Exploitation for Client Execution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1203
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1203
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    ParentImage|endswith: \EQNEDT32.EXE
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: critical

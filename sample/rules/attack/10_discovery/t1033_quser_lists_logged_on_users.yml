@@ -1,0 +1,24 @@
+title: Quser Lists Logged On Users
+id: ac40dd6e-b579-5078-b8c9-1ee7a58b49c1
+status: experimental
+description: Sample rule for T1033 System Owner/User Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1033
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1033
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \quser.exe
+    - \qwinsta.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

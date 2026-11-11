@@ -7,6 +7,11 @@ import { workspaceView } from "./views/workspace.js";
 import { convertView } from "./views/convert.js";
 import { coverageView } from "./views/coverage.js";
 import { rulesView } from "./views/rules.js";
+import { editorView } from "./views/editor.js";
+import { compareView } from "./views/compare.js";
+import { testView } from "./views/test.js";
+import { libraryView } from "./views/library.js";
+import { mappingsView } from "./views/mappings.js";
 import { notFoundView } from "./views/notfound.js";
 
 const THEME_KEY = "sigma-forge-theme";
@@ -76,6 +81,11 @@ route("/", "workspace", workspaceView);
 route("/convert", "convert", convertView);
 route("/coverage", "coverage", coverageView);
 route("/rules", "rules", rulesView);
+route("/editor", "editor", editorView);
+route("/compare", "compare", compareView);
+route("/test", "test", testView);
+route("/library", "library", libraryView);
+route("/mappings", "mappings", mappingsView);
 route("*", "notfound", notFoundView);
 
 initTheme();

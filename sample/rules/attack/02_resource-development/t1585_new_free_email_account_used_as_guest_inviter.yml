@@ -1,0 +1,25 @@
+title: New Free Email Account Used As Guest Inviter
+id: 6307b13b-d56a-50a6-8c22-7761061bc26a
+status: experimental
+description: Sample rule for T1585 Establish Accounts. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1585
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1585
+logsource:
+  product: azure
+  service: activitylogs
+detection:
+  selection:
+    OperationName: Invite external user
+    Properties|contains:
+    - '@gmail.com'
+    - '@outlook.com'
+    - '@proton.me'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

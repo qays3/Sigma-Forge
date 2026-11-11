@@ -1,0 +1,24 @@
+title: Second C2 Port Used After Failure
+id: 8f0aedd2-2f82-51d7-a5e9-f145f38ebd2a
+status: experimental
+description: Sample rule for T1008 Fallback Channels. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1008
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1008
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    DestinationPort:
+    - 8080
+    - 8443
+    Image|endswith: \rundll32.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

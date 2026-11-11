@@ -1,0 +1,25 @@
+title: Sensitive Files Collected To Temp
+id: 960ddba4-b461-5c63-b7a1-672a010bd7ed
+status: experimental
+description: Sample rule for T1005 Data from Local System. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1005
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1005
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \cmd.exe
+    CommandLine|contains|all:
+    - copy
+    - \Desktop\
+    - \Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

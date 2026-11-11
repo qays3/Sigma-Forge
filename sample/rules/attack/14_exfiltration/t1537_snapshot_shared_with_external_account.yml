@@ -1,0 +1,25 @@
+title: Snapshot Shared With External Account
+id: a7d2bfa8-f261-5c13-9545-e43938b1b3fc
+status: experimental
+description: Sample rule for T1537 Transfer Data to Cloud Account. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1537
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.exfiltration
+- attack.t1537
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName:
+    - ModifySnapshotAttribute
+    - ModifyImageAttribute
+    requestParameters.createVolumePermission.add.items.userId|exists: true
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

@@ -1,0 +1,24 @@
+title: Scripted Upload Loop To Cloud Storage
+id: df82b142-55e0-57db-b6f1-a63530ff2e88
+status: experimental
+description: Sample rule for T1020 Automated Exfiltration. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1020
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.exfiltration
+- attack.t1020
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \rclone.exe
+    CommandLine|contains:
+    - copy
+    - sync
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

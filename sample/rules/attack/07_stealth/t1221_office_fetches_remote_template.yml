@@ -1,0 +1,23 @@
+title: Office Fetches Remote Template
+id: da19421b-19bc-5ce7-ae71-28f20819e697
+status: experimental
+description: Sample rule for T1221 Template Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1221
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1221
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith: \WINWORD.EXE
+    DestinationPort: 80
+    Initiated: 'true'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

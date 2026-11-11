@@ -1,0 +1,25 @@
+title: Service Control Starts Binary From Temp
+id: 5c230a79-046b-5583-9b62-5cec6a48dc5c
+status: experimental
+description: Sample rule for T1569 System Services. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1569
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1569
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \sc.exe
+    CommandLine|contains|all:
+    - create
+    - binPath=
+    - \Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

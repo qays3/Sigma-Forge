@@ -1,0 +1,25 @@
+title: Bcdedit Changes Boot Settings
+id: 975bd53a-d465-5b49-b84a-d08cb14efdca
+status: experimental
+description: Sample rule for T1542 Pre-OS Boot. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1542
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.stealth
+- attack.t1542
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \bcdedit.exe
+    CommandLine|contains:
+    - testsigning on
+    - nointegritychecks on
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

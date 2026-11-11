@@ -1,0 +1,26 @@
+title: EC2 Instances Listed By New Identity
+id: 617dc679-3fab-5be2-a5a2-dcd15e5bbab5
+status: experimental
+description: Sample rule for T1580 Cloud Infrastructure Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1580
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1580
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName:
+    - DescribeInstances
+    - DescribeSnapshots
+    - DescribeVolumes
+    userIdentity.type: AssumedRole
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

@@ -1,0 +1,25 @@
+title: Data Staged In Recycle Bin
+id: 11bd36c9-c1ec-5383-83ed-9d66a36e228f
+status: experimental
+description: Sample rule for T1074 Data Staged. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1074
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1074
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|contains: \$Recycle.Bin\
+    TargetFilename|endswith:
+    - .zip
+    - .7z
+    - .rar
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

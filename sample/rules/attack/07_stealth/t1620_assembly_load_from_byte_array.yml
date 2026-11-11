@@ -1,0 +1,24 @@
+title: Assembly Load From Byte Array
+id: 25e28db4-c21f-570d-8522-9e6e14edc4a8
+status: experimental
+description: Sample rule for T1620 Reflective Code Loading. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1620
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1620
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - '[System.Reflection.Assembly]::Load('
+    - Reflection.Assembly]::Load([Convert]::FromBase64String
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

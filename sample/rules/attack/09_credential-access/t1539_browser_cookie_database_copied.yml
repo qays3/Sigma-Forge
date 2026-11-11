@@ -1,0 +1,28 @@
+title: Browser Cookie Database Copied
+id: a0c09c77-9e0d-5bad-9774-024fa9349656
+status: experimental
+description: Sample rule for T1539 Steal Web Session Cookie. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1539
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1539
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|endswith:
+    - \Network\Cookies
+    - \cookies.sqlite
+    Image|endswith:
+    - \cmd.exe
+    - \powershell.exe
+    - \robocopy.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

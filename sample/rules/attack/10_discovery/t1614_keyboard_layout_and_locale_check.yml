@@ -1,0 +1,25 @@
+title: Keyboard Layout And Locale Check
+id: 8a535514-b559-5543-859c-79caaaf74abe
+status: experimental
+description: Sample rule for T1614 System Location Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1614
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1614
+logsource:
+  category: ps_script
+  product: windows
+detection:
+  selection:
+    ScriptBlockText|contains:
+    - Get-WinUserLanguageList
+    - GetKeyboardLayoutList
+    - Get-Culture
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

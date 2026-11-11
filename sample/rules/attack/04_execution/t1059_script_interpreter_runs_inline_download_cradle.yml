@@ -1,0 +1,26 @@
+title: Script Interpreter Runs Inline Download Cradle
+id: 6155dc10-51e1-536d-b6e2-b777200717e3
+status: experimental
+description: Sample rule for T1059 Command and Scripting Interpreter. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1059
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1059
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - IEX(New-Object
+    - Invoke-Expression (New-Object
+    - DownloadString(
+    - '| iex'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

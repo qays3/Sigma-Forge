@@ -1,0 +1,24 @@
+title: Startup Folder Shortcut Created
+id: 34460ba6-4d45-5634-acf9-52f20134a7b3
+status: experimental
+description: Sample rule for T1547 Boot or Logon Autostart Execution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1547
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.privilege-escalation
+- attack.t1547
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|contains: \Start Menu\Programs\Startup\
+    TargetFilename|endswith: .lnk
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

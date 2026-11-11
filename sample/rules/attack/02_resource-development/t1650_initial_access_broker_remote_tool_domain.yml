@@ -1,0 +1,24 @@
+title: Initial Access Broker Remote Tool Domain
+id: c2bfc7eb-2dbc-501c-9142-d15336779045
+status: experimental
+description: Sample rule for T1650 Acquire Access. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1650
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1650
+logsource:
+  category: dns_query
+  product: windows
+detection:
+  selection:
+    QueryName|endswith:
+    - .screenconnect.com
+    - .anydesk.com
+    - .splashtop.com
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

@@ -1,0 +1,25 @@
+title: Self Signed TLS To Rare Host
+id: 68837728-5aca-5c3d-a693-c98dbc8520b7
+status: experimental
+description: Sample rule for T1573 Encrypted Channel. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1573
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1573
+logsource:
+  category: network_connection
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \rundll32.exe
+    - \regsvr32.exe
+    DestinationPort: 443
+    Initiated: 'true'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

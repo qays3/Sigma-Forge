@@ -1,0 +1,28 @@
+title: DNS Zone Transfer Request From Outside
+id: d993e782-d294-5ef5-b997-91ae5da9cc5a
+status: experimental
+description: Sample rule for T1590 Gather Victim Network Information. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1590
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1590
+logsource:
+  category: firewall
+detection:
+  selection:
+    dst_port: 53
+    protocol: tcp
+    action: allow
+  filter_main:
+    src_ip|cidr:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: low

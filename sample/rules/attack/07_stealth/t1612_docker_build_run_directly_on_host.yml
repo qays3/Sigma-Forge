@@ -1,0 +1,23 @@
+title: Docker Build Run Directly On Host
+id: b75d8c14-69ef-5eeb-a3fd-1f5588191cfb
+status: experimental
+description: Sample rule for T1612 Build Image on Host. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1612
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1612
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith: /docker
+    CommandLine|contains: build -t
+    User: www-data
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

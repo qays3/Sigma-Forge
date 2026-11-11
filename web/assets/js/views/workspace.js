@@ -186,13 +186,14 @@ export async function workspaceView(root) {
     await addFiles(await readDrop(e.dataTransfer));
   });
 
-  async function loadSamples(e, broken) {
+  async function loadSamples(e, group) {
     e.stopPropagation();
     const btn = e.currentTarget;
     btn.disabled = true;
     try {
       const data = await api.samples();
-      const picked = data.rules.filter((r) => r.name.startsWith("broken/") === broken);
+      const groupOf = (r) => (r.name.startsWith("broken/") ? "broken" : r.name.startsWith("attack/") ? "attack" : "features");
+      const picked = data.rules.filter((r) => (group === "broken" ? groupOf(r) === "broken" : groupOf(r) !== "broken"));
       await addFiles(picked.map((r) => ({ name: `sample/${r.name}`, content: r.content })));
     } catch (err) {
       toast(err.message, "bad");
@@ -201,8 +202,8 @@ export async function workspaceView(root) {
     }
   }
 
-  $("#loadSamples", root).addEventListener("click", (e) => loadSamples(e, false));
-  $("#loadBroken", root).addEventListener("click", (e) => loadSamples(e, true));
+  $("#loadSamples", root).addEventListener("click", (e) => loadSamples(e, "features"));
+  $("#loadBroken", root).addEventListener("click", (e) => loadSamples(e, "broken"));
 
   $("#addPaste", root).addEventListener("click", async () => {
     const name = $("#pasteName", root).value.trim() || "pasted_rule.yml";

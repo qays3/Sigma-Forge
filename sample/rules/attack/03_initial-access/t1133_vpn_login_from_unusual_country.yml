@@ -1,0 +1,28 @@
+title: VPN Login From Unusual Country
+id: 7a68f5ec-5a0b-57c2-b1a8-4759280966c5
+status: experimental
+description: Sample rule for T1133 External Remote Services. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1133
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.persistence
+- attack.t1133
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    AppDisplayName|contains:
+    - VPN
+    - Remote Desktop Gateway
+    Location|contains:
+    - KP
+    - IR
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

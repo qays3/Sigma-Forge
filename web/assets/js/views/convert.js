@@ -1,10 +1,11 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { $, $$, copyText, debounce, download, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
+import { mappingOptions, mappings } from "../mappings.js";
+import { $, $$, copyText, debounce, download, downloadBlob, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const PREF_KEY = "sigma-forge-convert";
 const EXT = { spl: "spl", spl2: "spl2", lucene: "txt", esql: "esql", eql: "eql", kql: "kql", xml: "xml", yaml: "yml", ppl: "ppl", logscale: "txt", s1ql: "txt", powerquery: "txt", xql: "xql", udm: "txt", cbc: "txt", aql: "aql", lpql: "txt", netwitness: "txt", json: "json", python: "py", tql: "txt", logql: "logql", quickwit: "txt", sql: "sql", surrealql: "surql" };
-const FORMAT_EXT = { savedsearches: "conf", kibana_ndjson: "ndjson", siem_rule_ndjson: "ndjson", siem_rule: "json", dsl_lucene: "json", eqlapi: "json", dashboards_ndjson: "ndjson", monitor_rule: "json", module: "spl2", yara_l: "yaral", zircolite: "json", ruler: "yml", grafana_alerting: "json", sdyaml: "yml", pantherflow: "txt", python: "py", cse_rule: "json", clickdetect: "yml", json: "json", data_model: "spl" };
+const FORMAT_EXT = { savedsearches: "conf", kibana_ndjson: "ndjson", siem_rule_ndjson: "ndjson", siem_rule: "json", dsl_lucene: "json", eqlapi: "json", dashboards_ndjson: "ndjson", monitor_rule: "json", module: "spl2", yara_l: "yaral", zircolite: "json", ruler: "yml", grafana_alerting: "yml", sdyaml: "yml", pantherflow: "txt", python: "py", cse_rule: "json", clickdetect: "yml", json: "json", data_model: "spl" };
 
 function loadPrefs() {
   try {
@@ -90,8 +91,13 @@ export async function convertView(root, route) {
           <label class="check mb-0" title="Wazuh eventchannel fields keep escaped backslashes"><input type="checkbox" id="wazuhDouble" ${prefs.wazuhDouble === false ? "" : "checked"}> <span>Double backslashes</span></label>
           <label class="check mb-0" title="Add if_group sysmon or windows"><input type="checkbox" id="wazuhParent" ${prefs.wazuhParent === false ? "" : "checked"}> <span>Parent group</span></label>
         </div>
+        <label class="inline-field">
+          <span class="field__label">Mapping</span>
+          <select class="select" id="mapSelect">${mappingOptions(mappings.activeId())}</select>
+        </label>
         <div class="spacer"></div>
         <button class="btn" type="button" id="pickRules">${icons.file} Rules <span class="badge badge--accent" id="selCount"></span></button>
+        <button class="btn" type="button" id="exportPkg">${icons.box} Export package</button>
         <button class="btn btn--primary" type="button" id="runConvert">${icons.play} Convert</button>
       </div>
     </div>`;
@@ -267,12 +273,8 @@ export async function convertView(root, route) {
     btn.disabled = true;
     $("#output", root).innerHTML = `${forging(`Forging ${plural(chosen.length, "file")} into ${currentTarget()?.name || "queries"}`)}${skeleton.stats(3)}${skeleton.blocks(3)}`;
     try {
-      const options = {
-        wazuh_rule_id_start: Number($("#wazuhStart", root).value) || 100100,
-        wazuh_double_backslash: $("#wazuhDouble", root).checked,
-        wazuh_parent_group: $("#wazuhParent", root).checked,
-      };
-      lastResult = await api.convert(chosen, targetId, formatSelect.value, options);
+      const options = currentOptions();
+      lastResult = await api.convert(chosen, targetId, formatSelect.value, options, currentMap());
       renderResult(lastResult);
     } catch (err) {
       $("#output", root).innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
@@ -280,6 +282,74 @@ export async function convertView(root, route) {
       btn.disabled = false;
     }
   }
+
+  function currentMap() {
+    return mappings.get($("#mapSelect", root).value)?.map || {};
+  }
+
+  function currentOptions() {
+    return {
+      wazuh_rule_id_start: Number($("#wazuhStart", root).value) || 100100,
+      wazuh_double_backslash: $("#wazuhDouble", root).checked,
+      wazuh_parent_group: $("#wazuhParent", root).checked,
+    };
+  }
+
+  $("#mapSelect", root).addEventListener("change", run);
+
+  let packageCache = null;
+  async function openExport() {
+    const t = currentTarget();
+    const chosen = rules.filter((r) => selected.has(r.id));
+    if (!chosen.length) {
+      toast("Select at least one rule", "bad");
+      return;
+    }
+    openDrawer(`Export for ${t.name}`, forging("Loading packages"), async (panel) => {
+      try {
+        if (!packageCache) packageCache = (await api.packages()).packages;
+      } catch (err) {
+        panel.innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+        return;
+      }
+      const list = packageCache[t.id] || [];
+      panel.innerHTML = `
+        <p class="muted">Build a zip with ${esc(plural(chosen.length, "rule file"))}, a manifest and a README with install steps.</p>
+        <div class="pkg" role="radiogroup" aria-label="Package">
+          ${list
+            .map(
+              (p, i) => `<label class="pkg__item">
+                <input type="radio" name="pkg" value="${esc(p.id)}" ${i === 0 ? "checked" : ""}>
+                <span class="pkg__body"><span class="pkg__name">${esc(p.name)}</span><span class="pkg__desc">${esc(p.description)}</span><span class="pkg__fmt mono">format ${esc(p.id === "queries" ? formatSelect.value : p.format)}</span></span>
+              </label>`
+            )
+            .join("")}
+        </div>
+        <label class="field mt-4">
+          <span class="field__label">Package name</span>
+          <input class="input mono" id="pkgName" value="sigma_forge" spellcheck="false">
+        </label>
+        <div class="row"><div class="spacer"></div><button class="btn btn--primary" type="button" id="pkgGo">${icons.download} Download zip</button></div>
+        <div id="pkgResult"></div>`;
+      $("#pkgGo", panel).addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const pkg = panel.querySelector("input[name=pkg]:checked")?.value || "auto";
+        btn.disabled = true;
+        $("#pkgResult", panel).innerHTML = forging("Packing");
+        try {
+          const res = await api.exportZip(chosen, t.id, formatSelect.value, currentOptions(), currentMap(), pkg, $("#pkgName", panel).value.trim() || "sigma_forge");
+          downloadBlob(res.filename, res.blob);
+          const s = res.summary || {};
+          $("#pkgResult", panel).innerHTML = `<div class="card mt-4"><div class="notice notice--ok">Saved ${esc(res.filename)}${s.converted !== undefined ? `: ${s.converted} converted, ${s.skipped} skipped, ${s.failed} failed` : ""}</div></div>`;
+        } catch (err) {
+          $("#pkgResult", panel).innerHTML = `<div class="card mt-4"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+  $("#exportPkg", root).addEventListener("click", openExport);
 
   $("#runConvert", root).addEventListener("click", run);
   renderTargets();

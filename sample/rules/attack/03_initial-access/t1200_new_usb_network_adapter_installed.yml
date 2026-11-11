@@ -1,0 +1,24 @@
+title: New USB Network Adapter Installed
+id: 513fb86f-a20c-510e-ad73-573cc7d241d5
+status: experimental
+description: Sample rule for T1200 Hardware Additions. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1200
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.initial-access
+- attack.t1200
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID: 20001
+    DeviceInstanceId|contains:
+    - USB\VID_0BDA
+    - USB\VID_0B95
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

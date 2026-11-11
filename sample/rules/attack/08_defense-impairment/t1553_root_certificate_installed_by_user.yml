@@ -1,0 +1,24 @@
+title: Root Certificate Installed By User
+id: f92ac7a7-cad4-53c7-a789-4e4a60a02de9
+status: experimental
+description: Sample rule for T1553 Subvert Trust Controls. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1553
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.defense-impairment
+- attack.t1553
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \certutil.exe
+    CommandLine|contains|all:
+    - -addstore
+    - root
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

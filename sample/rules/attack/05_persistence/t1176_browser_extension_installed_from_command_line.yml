@@ -1,0 +1,24 @@
+title: Browser Extension Installed From Command Line
+id: d3ee1e8a-0f28-55db-b567-73cdc2544bf2
+status: experimental
+description: Sample rule for T1176 Software Extensions. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1176
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.t1176
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \chrome.exe
+    - \msedge.exe
+    CommandLine|contains: --load-extension=
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

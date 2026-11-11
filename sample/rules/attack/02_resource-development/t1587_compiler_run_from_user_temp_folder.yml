@@ -1,0 +1,25 @@
+title: Compiler Run From User Temp Folder
+id: beb13029-3706-5e3d-8c39-bd383297542f
+status: experimental
+description: Sample rule for T1587 Develop Capabilities. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1587
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1587
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+    - \csc.exe
+    - \cl.exe
+    - \gcc.exe
+    CurrentDirectory|contains: \AppData\Local\Temp\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

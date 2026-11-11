@@ -1,0 +1,25 @@
+title: S3 Buckets Listed Then Objects Listed
+id: a31fbaec-b2d8-5ed4-b217-33817c8342b1
+status: experimental
+description: Sample rule for T1619 Cloud Storage Object Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1619
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1619
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: s3.amazonaws.com
+    eventName:
+    - ListBuckets
+    - ListObjects
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

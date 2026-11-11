@@ -1,0 +1,25 @@
+title: Port Knocking Tool Run On Linux
+id: 349d1c72-e1b5-5b87-8998-2bb15f4e5cc0
+status: experimental
+description: Sample rule for T1205 Traffic Signaling. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1205
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.stealth
+- attack.command-and-control
+- attack.t1205
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+    - /knockd
+    - /fwknopd
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

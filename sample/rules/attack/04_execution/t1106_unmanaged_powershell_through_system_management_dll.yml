@@ -1,0 +1,26 @@
+title: Unmanaged PowerShell Through System Management DLL
+id: 437a146e-2f21-5082-a0c7-1128561e22be
+status: experimental
+description: Sample rule for T1106 Native API. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1106
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1106
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    ImageLoaded|endswith: \System.Management.Automation.dll
+  filter_main:
+    Image|endswith:
+    - \powershell.exe
+    - \pwsh.exe
+    - \powershell_ise.exe
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: medium

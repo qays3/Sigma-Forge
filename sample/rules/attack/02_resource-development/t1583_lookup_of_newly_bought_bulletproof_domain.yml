@@ -1,0 +1,29 @@
+title: Lookup Of Newly Bought Bulletproof Domain
+id: 97b4c4fd-65ce-500c-af27-e80df84a78ed
+status: experimental
+description: Sample rule for T1583 Acquire Infrastructure. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1583
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1583
+logsource:
+  category: dns_query
+  product: windows
+detection:
+  selection:
+    QueryName|endswith:
+    - .top
+    - .xyz
+    - .zip
+    - .mov
+    Image|endswith:
+    - \powershell.exe
+    - \rundll32.exe
+    - \regsvr32.exe
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

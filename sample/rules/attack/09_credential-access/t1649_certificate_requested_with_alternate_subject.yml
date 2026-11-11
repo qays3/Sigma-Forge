@@ -1,0 +1,23 @@
+title: Certificate Requested With Alternate Subject
+id: 841da7d7-6728-5d98-9ba1-c0a7c4b1aa1b
+status: experimental
+description: Sample rule for T1649 Steal or Forge Authentication Certificates. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it
+  before production use.
+references:
+- https://attack.mitre.org/techniques/T1649
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1649
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4887
+    Attributes|contains: SAN:upn=
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

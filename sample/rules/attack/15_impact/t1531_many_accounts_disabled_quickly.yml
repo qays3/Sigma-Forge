@@ -1,0 +1,23 @@
+title: Many Accounts Disabled Quickly
+id: 8b4a12ee-8b41-531e-ad5f-24871aaeebed
+status: experimental
+description: Sample rule for T1531 Account Access Removal. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1531
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1531
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID:
+    - 4725
+    - 4726
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,24 @@
+title: Shutdown Forced From Script
+id: 586d1a9b-795e-5f8e-b71a-b9036f5f2d82
+status: experimental
+description: Sample rule for T1529 System Shutdown/Reboot. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1529
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.impact
+- attack.t1529
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \shutdown.exe
+    CommandLine|contains:
+    - /r /f /t 0
+    - /s /f /t 0
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

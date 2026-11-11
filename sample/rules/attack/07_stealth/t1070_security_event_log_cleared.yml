@@ -1,0 +1,21 @@
+title: Security Event Log Cleared
+id: 5480e7dd-2946-5a1c-afd7-e1fc5e161221
+status: experimental
+description: Sample rule for T1070 Indicator Removal. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1070
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.stealth
+- attack.t1070
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 1102
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

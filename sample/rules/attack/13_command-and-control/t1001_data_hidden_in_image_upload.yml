@@ -1,0 +1,26 @@
+title: Data Hidden In Image Upload
+id: 227d3e0c-750f-50de-a324-606199688a65
+status: experimental
+description: Sample rule for T1001 Data Obfuscation. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1001
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1001
+logsource:
+  category: proxy
+detection:
+  selection:
+    cs-method: POST
+    c-uri|endswith:
+    - .png
+    - .jpg
+    c-useragent|contains:
+    - python-requests
+    - Go-http-client
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

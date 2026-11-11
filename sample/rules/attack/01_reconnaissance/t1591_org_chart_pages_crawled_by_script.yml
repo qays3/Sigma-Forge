@@ -1,0 +1,28 @@
+title: Org Chart Pages Crawled By Script
+id: acdc0a9f-e74c-57ab-97e0-aa1d1b26c5e4
+status: experimental
+description: Sample rule for T1591 Gather Victim Org Information. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1591
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1591
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri-stem|contains:
+    - /about/team
+    - /leadership
+    - /org-chart
+    cs-user-agent|contains:
+    - python-requests
+    - curl/
+    - Go-http-client
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

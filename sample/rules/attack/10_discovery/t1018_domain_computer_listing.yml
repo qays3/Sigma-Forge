@@ -1,0 +1,24 @@
+title: Domain Computer Listing
+id: 536bcfc9-835c-5240-8b79-1cc149947d24
+status: experimental
+description: Sample rule for T1018 Remote System Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1018
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1018
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - net group "domain computers"
+    - Get-ADComputer -Filter
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

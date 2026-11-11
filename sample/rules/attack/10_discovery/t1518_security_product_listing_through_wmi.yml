@@ -1,0 +1,23 @@
+title: Security Product Listing Through WMI
+id: 09cb04a6-da4c-5a50-8d3a-a3568bd92da5
+status: experimental
+description: Sample rule for T1518 Software Discovery. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1518
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.discovery
+- attack.t1518
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    CommandLine|contains:
+    - SecurityCenter2
+    - AntiVirusProduct
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

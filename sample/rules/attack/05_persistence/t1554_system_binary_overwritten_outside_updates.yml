@@ -1,0 +1,28 @@
+title: System Binary Overwritten Outside Updates
+id: dc44dd16-50fc-58fd-a32f-1cbbd4bdd171
+status: experimental
+description: Sample rule for T1554 Compromise Host Software Binary. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1554
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.persistence
+- attack.t1554
+logsource:
+  category: file_event
+  product: windows
+detection:
+  selection:
+    TargetFilename|startswith: C:\Windows\System32\
+    TargetFilename|endswith: .exe
+  filter_main:
+    Image|endswith:
+    - \TrustedInstaller.exe
+    - \TiWorker.exe
+    - \msiexec.exe
+  condition: selection and not filter_main
+falsepositives:
+- Admin activity that looks the same
+level: high

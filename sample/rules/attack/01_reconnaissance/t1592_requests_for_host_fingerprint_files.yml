@@ -1,0 +1,25 @@
+title: Requests For Host Fingerprint Files
+id: dbb5d628-ff73-5feb-b22d-eaf839eb313e
+status: experimental
+description: Sample rule for T1592 Gather Victim Host Information. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1592
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.reconnaissance
+- attack.t1592
+logsource:
+  category: webserver
+detection:
+  selection:
+    cs-uri-query|contains:
+    - /server-status
+    - /phpinfo.php
+    - /.git/HEAD
+    - /actuator/env
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

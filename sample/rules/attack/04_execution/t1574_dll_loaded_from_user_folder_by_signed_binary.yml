@@ -1,0 +1,25 @@
+title: DLL Loaded From User Folder By Signed Binary
+id: f47e7f92-dd42-5619-a739-1960274668c5
+status: experimental
+description: Sample rule for T1574 Hijack Execution Flow. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1574
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.stealth
+- attack.t1574
+logsource:
+  category: image_load
+  product: windows
+detection:
+  selection:
+    Image|startswith: C:\Program Files\
+    ImageLoaded|contains:
+    - \AppData\Local\Temp\
+    - \Users\Public\
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

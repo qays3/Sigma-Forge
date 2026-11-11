@@ -113,6 +113,17 @@ export const store = {
     return added;
   },
 
+  async replace(oldId, file) {
+    const db = await openDb();
+    if (oldId) {
+      if (db) await wrap(tx(db, "readwrite").delete(oldId));
+      memory = (memory || []).filter((r) => r.id !== oldId);
+    }
+    await this.add([file]);
+    const items = await this.all();
+    return items.find((r) => r.name === file.name && r.content === file.content) || null;
+  },
+
   async remove(id) {
     const db = await openDb();
     if (db) await wrap(tx(db, "readwrite").delete(id));

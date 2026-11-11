@@ -1,0 +1,21 @@
+title: Domain Generation Algorithm Style Lookups
+id: adbf3d77-aa41-57c9-84a5-8bab8b74e55f
+status: experimental
+description: Sample rule for T1568 Dynamic Resolution. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1568
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.command-and-control
+- attack.t1568
+logsource:
+  category: dns_query
+  product: windows
+detection:
+  selection:
+    QueryName|re: ^[a-z]{18,}\.(com|net|info)$
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

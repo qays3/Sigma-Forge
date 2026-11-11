@@ -1,0 +1,26 @@
+title: Bitsadmin Job Created With Notify Command
+id: a363c111-6c89-5bd8-8931-6023603ee74a
+status: experimental
+description: Sample rule for T1197 BITS Jobs. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1197
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.persistence
+- attack.stealth
+- attack.t1197
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \bitsadmin.exe
+    CommandLine|contains:
+    - /SetNotifyCmdLine
+    - /addfile
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: high

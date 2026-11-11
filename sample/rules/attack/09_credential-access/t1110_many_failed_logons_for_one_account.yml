@@ -1,0 +1,22 @@
+title: Many Failed Logons For One Account
+id: d5d4c8f4-d637-5720-ad1e-6409db8d986d
+status: experimental
+description: Sample rule for T1110 Brute Force. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1110
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.credential-access
+- attack.t1110
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4771
+    Status: '0x18'
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

@@ -1,0 +1,25 @@
+title: Robocopy Of Document Types
+id: 3aff67fc-88ba-5d1d-a090-b839cc0137f3
+status: experimental
+description: Sample rule for T1119 Automated Collection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production use.
+references:
+- https://attack.mitre.org/techniques/T1119
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.collection
+- attack.t1119
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: \robocopy.exe
+    CommandLine|contains:
+    - .docx
+    - .pdf
+    - .xlsx
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low

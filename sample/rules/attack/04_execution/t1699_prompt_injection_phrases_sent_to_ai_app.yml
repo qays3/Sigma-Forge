@@ -1,0 +1,25 @@
+title: Prompt Injection Phrases Sent To AI App
+id: 49fd7554-3977-50a2-9837-a3fab4d0fafb
+status: experimental
+description: Sample rule for T1699 Direct Prompt Injection. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1699
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.execution
+- attack.t1699
+logsource:
+  product: openai
+  service: audit
+detection:
+  selection:
+    prompt|contains:
+    - ignore previous instructions
+    - you are now DAN
+    - reveal your system prompt
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: medium

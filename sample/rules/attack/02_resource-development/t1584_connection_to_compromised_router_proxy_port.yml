@@ -1,0 +1,26 @@
+title: Connection To Compromised Router Proxy Port
+id: 7034fd77-a9f4-5a33-a26d-84ecda6ad1c9
+status: experimental
+description: Sample rule for T1584 Compromise Infrastructure. Part of the Sigma Forge ATT&CK pack that tags every Enterprise technique, so the coverage map lights up end to end. Tune it before production
+  use.
+references:
+- https://attack.mitre.org/techniques/T1584
+author: Sigma Forge samples
+date: '2026-11-11'
+tags:
+- attack.resource-development
+- attack.t1584
+logsource:
+  category: firewall
+detection:
+  selection:
+    dst_port:
+    - 8443
+    - 9443
+    - 10443
+    action: allow
+    src_ip|cidr: 10.0.0.0/8
+  condition: selection
+falsepositives:
+- Admin activity that looks the same
+level: low
