@@ -1,7 +1,7 @@
 import { api } from "./api.js";
 import { route, startRouter } from "./router.js";
 import { store } from "./store.js";
-import { $, initDrawer, plural } from "./ui.js";
+import { $, hideSplash, initDrawer, plural, splashText } from "./ui.js";
 import { workspaceView } from "./views/workspace.js";
 import { convertView } from "./views/convert.js";
 import { coverageView } from "./views/coverage.js";
@@ -56,12 +56,21 @@ async function updateCount() {
 
 async function loadFooter() {
   try {
+    splashText("Checking the engine");
     const info = await api.health();
     const attack = info.attack_loaded ? `ATT&CK v${info.attack_version}` : "ATT&CK data missing";
     $("#footerMeta").textContent = `v${info.version} · pySigma ${info.pysigma} · ${attack}`;
   } catch {
     $("#footerMeta").textContent = "Server offline";
   }
+}
+
+async function boot() {
+  const started = Date.now();
+  await Promise.all([loadFooter(), updateCount()]);
+  startRouter($("#main"));
+  const wait = Math.max(0, 900 - (Date.now() - started));
+  setTimeout(hideSplash, wait);
 }
 
 route("/", "workspace", workspaceView);
@@ -74,6 +83,4 @@ initTheme();
 initHeader();
 initDrawer();
 store.onChange(updateCount);
-updateCount();
-loadFooter();
-startRouter($("#main"));
+boot();

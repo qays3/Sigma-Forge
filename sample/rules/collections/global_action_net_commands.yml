@@ -1,0 +1,38 @@
+action: global
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+    Image|endswith:
+      - '\net.exe'
+      - '\net1.exe'
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.discovery
+status: test
+level: medium
+---
+title: Net Command Lists Domain Admins
+id: c0908088-f0be-4c3e-8cbd-579b46e9e71c
+description: Uses the global part above plus its own selection.
+tags:
+  - attack.t1069.002
+detection:
+  selection_cli:
+    CommandLine|contains: 'group "domain admins"'
+  condition: all of selection_*
+---
+title: Net Command Adds A Local User
+id: 0a74cca4-5bf3-4c99-8c80-55e4cf252710
+description: Uses the same global part with a different selection.
+tags:
+  - attack.persistence
+  - attack.t1136.001
+detection:
+  selection_cli:
+    CommandLine|contains|all:
+      - 'user'
+      - '/add'
+  condition: all of selection_*

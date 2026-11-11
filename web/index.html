@@ -15,11 +15,17 @@
   <script type="module" src="/assets/js/app.js"></script>
 </head>
 <body>
+  <div class="splash" id="splash" role="status" aria-live="polite">
+    <img class="splash__logo" src="/assets/img/logo.gif" alt="" width="148" height="148">
+    <div class="splash__name">Sigma <span>Forge</span></div>
+    <div class="splash__text" id="splashText">Warming up the forge</div>
+    <div class="splash__bar"><span></span></div>
+  </div>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="topbar" id="topbar">
     <div class="topbar__inner">
       <a class="brand" href="/" data-link>
-        <img class="brand__logo" src="/assets/img/logo.png" alt="" width="34" height="34">
+        <img class="brand__logo" src="/assets/img/logo.gif" alt="" width="36" height="36">
         <span class="brand__name">Sigma <span class="brand__accent">Forge</span></span>
       </a>
       <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mainNav">
@@ -48,6 +54,7 @@
 
   <footer class="footer">
     <div class="footer__inner">
+      <img class="footer__logo" src="/assets/img/logo.gif" alt="" width="22" height="22">
       <span>Sigma Forge</span>
       <span class="footer__sep" aria-hidden="true"></span>
       <span id="footerMeta">Loading engine info</span>
@@ -59,6 +66,7 @@
     <div class="drawer__scrim" data-close></div>
     <div class="drawer__panel">
       <div class="drawer__head">
+        <img class="drawer__logo" src="/assets/img/logo.gif" alt="" width="28" height="28">
         <h2 class="drawer__title" id="drawerTitle"></h2>
         <button class="icon-btn" type="button" data-close aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>

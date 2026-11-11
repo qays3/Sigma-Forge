@@ -59,8 +59,9 @@ def attack_matrix():
 def samples():
     files = []
     if SAMPLES_DIR.exists():
-        for path in sorted(SAMPLES_DIR.glob("*.y*ml")):
-            files.append({"name": path.name, "content": path.read_text(encoding="utf-8")})
+        for path in sorted(SAMPLES_DIR.rglob("*.y*ml")):
+            name = path.relative_to(SAMPLES_DIR).as_posix()
+            files.append({"name": name, "group": name.split("/")[0] if "/" in name else "", "content": path.read_text(encoding="utf-8")})
     return {"rules": files}
 
 

@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { state } from "../state.js";
-import { $, cssVar, debounce, download, emptyState, esc, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
+import { $, cssVar, debounce, download, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 function heat(count) {
   if (!count) return "";
@@ -33,7 +33,7 @@ export async function coverageView(root) {
           <button class="btn btn--primary" type="button" id="exportLayer" disabled>${icons.download} Navigator layer</button>
         </div>
       </div>
-      <div id="covStats">${skeleton.stats(4)}</div>
+      <div id="covStats">${forging("Mapping rules to ATT&CK")}${skeleton.stats(4)}</div>
       <div class="toolbar">
         <input class="input toolbar__grow" type="search" id="techFilter" placeholder="Find a technique by name or id" aria-label="Find technique">
         <label class="check mb-0"><input type="checkbox" id="coveredOnly"> <span>Covered only</span></label>

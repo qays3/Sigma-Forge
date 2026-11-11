@@ -1,0 +1,22 @@
+title: Web Request With Hacking Tool User Agent
+id: 4fffd79a-d1b0-43e3-a917-e9c6c5fa3b2c
+status: test
+description: Detects proxy logs with user agents of common offensive tools.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.reconnaissance
+  - attack.t1595.002
+logsource:
+  category: proxy
+detection:
+  selection:
+    c-useragent|contains:
+      - 'sqlmap'
+      - 'Nikto'
+      - 'Nmap Scripting Engine'
+      - 'masscan'
+  condition: selection
+falsepositives:
+  - Your own security scans
+level: medium

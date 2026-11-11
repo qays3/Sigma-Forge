@@ -15,5 +15,6 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+      - /home/forge/.cache:uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true

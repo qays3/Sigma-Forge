@@ -1,0 +1,26 @@
+title: Scheduled Task Created From Temp Or Public Folder
+id: 727184a0-5e4d-463a-95e5-6805ebf3f6f2
+status: test
+description: Detects schtasks creating a task that runs a program from a user writable folder.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+    Image|endswith: '\schtasks.exe'
+    CommandLine|contains: '/create'
+  selection_path:
+    CommandLine|contains:
+      - '\AppData\Local\Temp\'
+      - '\Users\Public\'
+      - '\ProgramData\'
+  condition: all of selection_*
+falsepositives:
+  - Installers
+level: low

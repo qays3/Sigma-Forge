@@ -1,0 +1,14 @@
+title: Condition Uses A Missing Detection
+id: 4201feb5-99d3-4cd9-a02d-b33e1e0a01ee
+status: test
+description: The condition names filter_main, which does not exist. Shows a parse error.
+author: Sigma Forge samples
+date: 2026-11-11
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\cmd.exe'
+  condition: selection and not filter_main
+level: low

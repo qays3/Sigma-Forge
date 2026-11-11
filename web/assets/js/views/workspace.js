@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
-import { $, $$, emptyState, esc, icons, plural, skeleton, toast } from "../ui.js";
+import { $, $$, emptyState, esc, forging, icons, logo, plural, skeleton, toast } from "../ui.js";
 
 const YAML_RE = /\.ya?ml$/i;
 
@@ -64,7 +64,7 @@ export async function workspaceView(root) {
   root.innerHTML = `
     <section class="view">
       <div class="hero">
-        <img class="hero__logo" src="/assets/img/logo.png" alt="Sigma Forge logo" width="120" height="120">
+        ${logo(150, "hero__logo")}
         <div>
           <h1 class="hero__title">Sigma <span>Forge</span></h1>
           <p class="hero__text">Load your Sigma rules, convert them to Splunk, Elastic, Microsoft KQL and Wazuh, check them for problems, and see which MITRE ATT&amp;CK techniques they cover.</p>
@@ -86,7 +86,7 @@ export async function workspaceView(root) {
             </div>
             <div data-panel="files">
               <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop Sigma rule files here or choose files">
-                ${icons.upload}
+                ${logo(64, "dropzone__logo")}
                 <div class="dropzone__title">Drop .yml files or folders here</div>
                 <div class="dropzone__text">Rules are sent to your local Sigma Forge server only when you analyze or convert them.</div>
                 <div class="dropzone__actions">
@@ -122,7 +122,7 @@ export async function workspaceView(root) {
       </div>
 
       <h2 class="section-title mt-5">Overview</h2>
-      <div id="overview">${skeleton.stats(4)}${skeleton.card(4)}</div>
+      <div id="overview">${forging("Reading your rules")}${skeleton.stats(4)}${skeleton.card(4)}</div>
     </section>`;
 
   const fileInput = $("#fileInput", root);
@@ -191,7 +191,7 @@ export async function workspaceView(root) {
     btn.disabled = true;
     try {
       const data = await api.samples();
-      await addFiles(data.rules.map((r) => ({ name: `samples/${r.name}`, content: r.content })));
+      await addFiles(data.rules.map((r) => ({ name: `sample/${r.name}`, content: r.content })));
     } catch (err) {
       toast(err.message, "bad");
     } finally {
@@ -239,7 +239,7 @@ export async function workspaceView(root) {
       overview.innerHTML = '<p class="muted">Add rules to see an overview.</p>';
       return;
     }
-    overview.innerHTML = `${skeleton.stats(4)}${skeleton.card(4)}`;
+    overview.innerHTML = `${forging(`Checking ${plural(rules.length, "file")} with pySigma`)}${skeleton.stats(4)}${skeleton.card(4)}`;
     try {
       const { analysis } = await state.analysis();
       if (my !== token) return;
@@ -250,6 +250,7 @@ export async function workspaceView(root) {
           <div class="stat"><div class="stat__label">Valid</div><div class="stat__value stat__value--ok">${s.valid}</div><div class="stat__hint">parsed by pySigma</div></div>
           <div class="stat"><div class="stat__label">Errors</div><div class="stat__value ${s.errors ? "stat__value--bad" : ""}">${s.errors}</div><div class="stat__hint">cannot be converted</div></div>
           <div class="stat"><div class="stat__label">With issues</div><div class="stat__value ${s.with_issues ? "stat__value--warn" : ""}">${s.with_issues}</div><div class="stat__hint">validator findings</div></div>
+          <div class="stat"><div class="stat__label">Correlations</div><div class="stat__value stat__value--accent">${s.correlations || 0}</div><div class="stat__hint">meta rules</div></div>
         </div>
         <div class="grid grid--2">
           <div class="card"><div class="card__head"><h3 class="card__title">Levels</h3></div><div class="card__body">${barList(s.levels, s.valid)}</div></div>

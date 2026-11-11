@@ -1,0 +1,21 @@
+title: Modifier Demo Exists And Null
+id: 4fefd83a-480c-43b1-b6ee-70d920b03852
+status: test
+description: Shows the exists modifier and a null value (field is empty or missing).
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1036.005
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|startswith: 'C:\Windows\'
+    OriginalFileName|exists: true
+    Company: null
+  condition: selection
+falsepositives:
+  - Some old Windows binaries
+level: informational

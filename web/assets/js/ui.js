@@ -144,8 +144,30 @@ export const skeleton = {
   },
 };
 
+export const LOGO_GIF = "/assets/img/logo.gif";
+
+export function logo(size = 48, cls = "") {
+  return `<img class="logo-anim ${cls}" src="${LOGO_GIF}" alt="" width="${size}" height="${size}" loading="lazy">`;
+}
+
+export function forging(text = "Forging") {
+  return `<div class="forging" role="status" aria-live="polite">${logo(44, "forging__logo")}<div class="forging__body"><div class="forging__text">${esc(text)}</div><div class="forging__bar"><span></span></div></div></div>`;
+}
+
 export function emptyState(title, text, actionHtml = "") {
-  return `<div class="empty"><img src="/assets/img/logo.png" alt=""><h3>${esc(title)}</h3><p>${esc(text)}</p>${actionHtml}</div>`;
+  return `<div class="empty">${logo(96, "empty__logo")}<h3>${esc(title)}</h3><p>${esc(text)}</p>${actionHtml}</div>`;
+}
+
+export function hideSplash() {
+  const splash = document.getElementById("splash");
+  if (!splash || splash.classList.contains("is-done")) return;
+  splash.classList.add("is-done");
+  setTimeout(() => splash.remove(), 600);
+}
+
+export function splashText(text) {
+  const el = document.getElementById("splashText");
+  if (el) el.textContent = text;
 }
 
 export function debounce(fn, wait = 200) {

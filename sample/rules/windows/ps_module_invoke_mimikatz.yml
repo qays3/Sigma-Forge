@@ -1,0 +1,24 @@
+title: Mimikatz Function Names In PowerShell Module Log
+id: 2b46adcc-ef78-4f1f-b25f-fcd1b338a9b0
+status: test
+description: Detects Mimikatz function names in PowerShell module logs (event 4103).
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.credential-access
+  - attack.t1003
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  product: windows
+  category: ps_module
+detection:
+  selection:
+    Payload|contains:
+      - 'Invoke-Mimikatz'
+      - 'sekurlsa::logonpasswords'
+      - 'kerberos::golden'
+  condition: selection
+falsepositives:
+  - Red team exercises
+level: critical

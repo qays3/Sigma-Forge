@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { $, $$, copyText, debounce, emptyState, esc, icons, levelBadge, openDrawer, plural, skeleton } from "../ui.js";
+import { $, $$, copyText, debounce, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton } from "../ui.js";
 
 const LEVEL_ORDER = { critical: 5, high: 4, medium: 3, low: 2, informational: 1, "": 0 };
 
@@ -33,12 +33,12 @@ export async function rulesView(root, params) {
         <select class="select" id="fProduct" aria-label="Product"></select>
         <select class="select" id="fTactic" aria-label="Tactic"></select>
         <select class="select" id="fState" aria-label="State">
-          <option value="">Any state</option><option value="ok">Clean</option><option value="issues">Has issues</option><option value="error">Has errors</option>
+          <option value="">Any state</option><option value="ok">Clean</option><option value="issues">Has issues</option><option value="error">Has errors</option><option value="correlation">Correlations</option>
         </select>
       </div>
       <div class="card">
         <div class="card__head"><span class="card__sub" id="count">Loading</span></div>
-        <div class="card__body card__body--flush table-wrap" id="table">${skeleton.rows(10)}</div>
+        <div class="card__body card__body--flush table-wrap" id="table">${forging("Reading rule metadata")}${skeleton.rows(10)}</div>
       </div>
     </section>`;
 
@@ -81,6 +81,7 @@ export async function rulesView(root, params) {
       if (st === "error" && !r.error) return false;
       if (st === "issues" && (!r.issues.length || r.error)) return false;
       if (st === "ok" && (r.error || r.issues.length)) return false;
+      if (st === "correlation" && r.kind !== "correlation") return false;
       if (q) {
         const hay = `${r.title} ${r.id} ${r.key} ${r.tags.join(" ")} ${r.description}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -110,7 +111,7 @@ export async function rulesView(root, params) {
           <tbody>${list
             .map(
               (r) => `<tr data-key="${esc(r.key)}" tabindex="0">
-                <td><div class="table__title">${esc(r.title)}</div><div class="table__sub">${esc(r.key)}</div></td>
+                <td><div class="table__title">${esc(r.title)} ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}</div><div class="table__sub">${esc(r.key)}</div></td>
                 <td>${levelBadge(r.level)}</td>
                 <td>${r.status ? `<span class="badge">${esc(r.status)}</span>` : ""}</td>
                 <td class="muted">${esc(logsourceText(r.logsource))}</td>
@@ -124,7 +125,7 @@ export async function rulesView(root, params) {
 
   async function quickConvert(panel, row, targetId) {
     const out = $("#qcOut", panel);
-    out.innerHTML = skeleton.blocks(1);
+    out.innerHTML = `${forging("Converting")}${skeleton.blocks(1)}`;
     const file = state.fileFor(row.key, files);
     try {
       const res = await api.convert([file], targetId, "default", {});

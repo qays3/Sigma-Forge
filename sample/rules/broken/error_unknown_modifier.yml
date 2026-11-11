@@ -1,0 +1,14 @@
+title: Unknown Modifier
+id: 36b7b85f-3f63-4d2d-96c5-8578774fbeaf
+status: test
+description: Uses a modifier that does not exist. Shows a parse error.
+author: Sigma Forge samples
+date: 2026-11-11
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    CommandLine|containz: 'whoami'
+  condition: selection
+level: low

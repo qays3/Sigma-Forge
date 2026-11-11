@@ -1,0 +1,22 @@
+title: WMI Event Consumer Running A Script
+id: 3f4fa4b3-f322-4d91-b5fa-42a323886fcc
+status: experimental
+description: Detects a WMI ActiveScript or CommandLine event consumer, a common persistence method.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.t1546.003
+logsource:
+  product: windows
+  category: wmi_event
+detection:
+  selection:
+    EventID: 20
+    Type:
+      - 'Script'
+      - 'Command Line'
+  condition: selection
+falsepositives:
+  - Management software that uses WMI consumers
+level: high

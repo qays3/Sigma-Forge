@@ -1,0 +1,14 @@
+{
+  "target": "elastic_esql",
+  "format": "default",
+  "rules": [
+    {
+      "name": "correlation/brute_force_event_count.yml",
+      "content": "title: Failed Logon For Brute Force Correlation\nid: 2c657f75-9250-43cd-ba71-727e08d05e6f\nname: sf_failed_logon\nstatus: test\ndescription: Base rule for the correlation below. It is only converted alone where the target supports correlations.\nauthor: Sigma Forge samples\ndate: 2026-11-11\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4625\n  condition: selection\nlevel: low\n---\ntitle: Brute Force From One Source Address\nid: b06c5bce-c402-491c-83f7-4778bde7ae0c\nstatus: test\ndescription: Ten or more failed logons from the same source address in five minutes.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ncorrelation:\n  type: event_count\n  rules:\n    - sf_failed_logon\n  group-by:\n    - IpAddress\n  timespan: 5m\n  condition:\n    gte: 10\ntags:\n  - attack.credential-access\n  - attack.t1110.001\nlevel: high\n"
+    },
+    {
+      "name": "correlation/password_spray_value_count.yml",
+      "content": "title: Failed Logon For Spray Correlation\nid: acca077f-f84c-4f4a-8521-1437b597e080\nname: sf_failed_logon_spray\nstatus: test\nauthor: Sigma Forge samples\ndate: 2026-11-11\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4625\n  condition: selection\nlevel: low\n---\ntitle: Password Spray Many Users From One Source\nid: 1ffa3334-06a8-420a-a134-64b823defe5f\nstatus: test\ndescription: Twenty or more different user names failing from one source in ten minutes. Uses value_count, which Wazuh cannot do.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ncorrelation:\n  type: value_count\n  rules:\n    - sf_failed_logon_spray\n  group-by:\n    - IpAddress\n  timespan: 10m\n  condition:\n    field: TargetUserName\n    gte: 20\ntags:\n  - attack.credential-access\n  - attack.t1110.003\nlevel: high\n"
+    }
+  ]
+}

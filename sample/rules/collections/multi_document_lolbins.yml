@@ -1,0 +1,63 @@
+title: Mshta Running Remote Script
+id: a992abaa-8171-4430-98dd-e73151f652ff
+status: test
+description: First rule in a file with several rules.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1218.005
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\mshta.exe'
+    CommandLine|contains:
+      - 'http://'
+      - 'https://'
+      - 'javascript:'
+  condition: selection
+level: high
+---
+title: Bitsadmin Download To Temp
+id: 39f93995-2886-4652-8efd-59501caadf27
+status: test
+description: Second rule in the same file.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.t1197
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\bitsadmin.exe'
+    CommandLine|contains|all:
+      - '/transfer'
+      - '\Temp\'
+  condition: selection
+level: medium
+---
+title: Wmic Remote Process Create
+id: 761fc215-c022-4b5a-9a19-3dd9e0d2c70b
+status: test
+description: Third rule in the same file.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.execution
+  - attack.t1047
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\wmic.exe'
+    CommandLine|contains|all:
+      - '/node:'
+      - 'process call create'
+  condition: selection
+level: high

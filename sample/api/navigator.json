@@ -1,0 +1,166 @@
+{
+  "name": "Sigma Forge sample coverage",
+  "colors": [
+    "#0A1120",
+    "#8B4FD8",
+    "#B06CFF"
+  ],
+  "rules": [
+    {
+      "name": "cloud/aws_cloudtrail_stop_logging.yml",
+      "content": "title: AWS CloudTrail Logging Stopped Or Deleted\nid: fa696775-606c-48fd-bf17-38d033c6d565\nstatus: stable\ndescription: Detects someone stopping or deleting a CloudTrail trail to hide activity.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.defense-impairment\n  - attack.t1685.002\nlogsource:\n  product: aws\n  service: cloudtrail\ndetection:\n  selection:\n    eventSource: 'cloudtrail.amazonaws.com'\n    eventName:\n      - 'StopLogging'\n      - 'DeleteTrail'\n      - 'UpdateTrail'\n  condition: selection\nfalsepositives:\n  - Planned changes by cloud admins\nlevel: high\n"
+    },
+    {
+      "name": "cloud/azure_signin_impossible_mfa_fatigue.yml",
+      "content": "title: Many MFA Denials For One User\nid: 1f6e7585-97d7-4ee6-a459-75ef5f076928\nstatus: experimental\ndescription: Detects Azure sign in logs where MFA was denied, a sign of push fatigue attacks.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.credential-access\n  - attack.t1621\nlogsource:\n  product: azure\n  service: signinlogs\ndetection:\n  selection:\n    ResultType: 500121\n    ResultDescription|contains: 'denied'\n  condition: selection\nfalsepositives:\n  - Users who miss the prompt\nlevel: medium\n"
+    },
+    {
+      "name": "collections/global_action_net_commands.yml",
+      "content": "action: global\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    Image|endswith:\n      - '\\net.exe'\n      - '\\net1.exe'\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.discovery\nstatus: test\nlevel: medium\n---\ntitle: Net Command Lists Domain Admins\nid: c0908088-f0be-4c3e-8cbd-579b46e9e71c\ndescription: Uses the global part above plus its own selection.\ntags:\n  - attack.t1069.002\ndetection:\n  selection_cli:\n    CommandLine|contains: 'group \"domain admins\"'\n  condition: all of selection_*\n---\ntitle: Net Command Adds A Local User\nid: 0a74cca4-5bf3-4c99-8c80-55e4cf252710\ndescription: Uses the same global part with a different selection.\ntags:\n  - attack.persistence\n  - attack.t1136.001\ndetection:\n  selection_cli:\n    CommandLine|contains|all:\n      - 'user'\n      - '/add'\n  condition: all of selection_*\n"
+    },
+    {
+      "name": "collections/multi_document_lolbins.yml",
+      "content": "title: Mshta Running Remote Script\nid: a992abaa-8171-4430-98dd-e73151f652ff\nstatus: test\ndescription: First rule in a file with several rules.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1218.005\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: '\\mshta.exe'\n    CommandLine|contains:\n      - 'http://'\n      - 'https://'\n      - 'javascript:'\n  condition: selection\nlevel: high\n---\ntitle: Bitsadmin Download To Temp\nid: 39f93995-2886-4652-8efd-59501caadf27\nstatus: test\ndescription: Second rule in the same file.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1197\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: '\\bitsadmin.exe'\n    CommandLine|contains|all:\n      - '/transfer'\n      - '\\Temp\\'\n  condition: selection\nlevel: medium\n---\ntitle: Wmic Remote Process Create\nid: 761fc215-c022-4b5a-9a19-3dd9e0d2c70b\nstatus: test\ndescription: Third rule in the same file.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1047\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: '\\wmic.exe'\n    CommandLine|contains|all:\n      - '/node:'\n      - 'process call create'\n  condition: selection\nlevel: high\n"
+    },
+    {
+      "name": "correlation/brute_force_event_count.yml",
+      "content": "title: Failed Logon For Brute Force Correlation\nid: 2c657f75-9250-43cd-ba71-727e08d05e6f\nname: sf_failed_logon\nstatus: test\ndescription: Base rule for the correlation below. It is only converted alone where the target supports correlations.\nauthor: Sigma Forge samples\ndate: 2026-11-11\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4625\n  condition: selection\nlevel: low\n---\ntitle: Brute Force From One Source Address\nid: b06c5bce-c402-491c-83f7-4778bde7ae0c\nstatus: test\ndescription: Ten or more failed logons from the same source address in five minutes.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ncorrelation:\n  type: event_count\n  rules:\n    - sf_failed_logon\n  group-by:\n    - IpAddress\n  timespan: 5m\n  condition:\n    gte: 10\ntags:\n  - attack.credential-access\n  - attack.t1110.001\nlevel: high\n"
+    },
+    {
+      "name": "correlation/password_spray_value_count.yml",
+      "content": "title: Failed Logon For Spray Correlation\nid: acca077f-f84c-4f4a-8521-1437b597e080\nname: sf_failed_logon_spray\nstatus: test\nauthor: Sigma Forge samples\ndate: 2026-11-11\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4625\n  condition: selection\nlevel: low\n---\ntitle: Password Spray Many Users From One Source\nid: 1ffa3334-06a8-420a-a134-64b823defe5f\nstatus: test\ndescription: Twenty or more different user names failing from one source in ten minutes. Uses value_count, which Wazuh cannot do.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ncorrelation:\n  type: value_count\n  rules:\n    - sf_failed_logon_spray\n  group-by:\n    - IpAddress\n  timespan: 10m\n  condition:\n    field: TargetUserName\n    gte: 20\ntags:\n  - attack.credential-access\n  - attack.t1110.003\nlevel: high\n"
+    },
+    {
+      "name": "linux/linux_auditd_reverse_shell.yml",
+      "content": "title: Bash Reverse Shell Using Dev Tcp\nid: 9c960957-1268-4483-9dc9-b0d697876656\nstatus: test\ndescription: Detects a bash reverse shell that uses /dev/tcp in the command line.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1059.004\nlogsource:\n  product: linux\n  service: auditd\ndetection:\n  selection:\n    type: 'EXECVE'\n    a0|endswith: 'bash'\n  keywords_devtcp:\n    - '/dev/tcp/'\n  condition: selection and keywords_devtcp\nfalsepositives:\n  - Admin testing\nlevel: high\n"
+    },
+    {
+      "name": "linux/linux_proc_creation_crontab_edit.yml",
+      "content": "title: Crontab Changed From A Pipe Or File\nid: b99cfc95-0c5a-46f6-b34b-5aa7073aa2cc\nstatus: experimental\ndescription: Detects crontab being loaded from stdin or a file in /tmp, a common way to add persistence.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1053.003\nlogsource:\n  product: linux\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: '/crontab'\n    CommandLine|contains:\n      - ' -'\n      - ' /tmp/'\n      - ' /dev/shm/'\n  condition: selection\nfalsepositives:\n  - Config management tools\nlevel: medium\n"
+    },
+    {
+      "name": "linux/linux_proc_creation_history_cleared.yml",
+      "content": "title: Shell History File Cleared On Linux\nid: 708192a3-b4c5-4d6e-8f70-8192a3b4c5d6\nstatus: test\ndescription: Detects commands that wipe shell history files.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1070.003\nlogsource:\n  product: linux\n  category: process_creation\ndetection:\n  selection_clear:\n    CommandLine|contains:\n      - 'history -c'\n      - '> ~/.bash_history'\n      - 'rm ~/.bash_history'\n      - 'unset HISTFILE'\n  condition: selection_clear\nfalsepositives:\n  - Users cleaning their own shell\nlevel: medium\n"
+    },
+    {
+      "name": "modifiers/mod_base64_plain.yml",
+      "content": "title: Modifier Demo Plain Base64\nid: b32390ca-9c8a-41e5-9be1-3886c1150ea3\nstatus: test\ndescription: Shows the base64 modifier for an exact base64 string.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1059.004\nlogsource:\n  product: linux\n  category: process_creation\ndetection:\n  selection:\n    CommandLine|base64|contains: 'curl http'\n  condition: selection\nfalsepositives:\n  - None known\nlevel: medium\n"
+    },
+    {
+      "name": "modifiers/mod_base64offset_wide.yml",
+      "content": "title: Modifier Demo Base64 Offset With Wide Text\nid: e8c93358-71a4-4f6d-b8f8-fdf01b7d90fc\nstatus: test\ndescription: Shows wide (UTF-16) plus base64offset, which finds a word inside a base64 encoded PowerShell command at any offset.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1059.001\n  - attack.stealth\n  - attack.t1027\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    CommandLine|wide|base64offset|contains:\n      - 'IEX'\n      - 'DownloadString'\n      - 'Invoke-Expression'\n  condition: selection\nfalsepositives:\n  - Admin scripts with encoded commands\nlevel: high\n"
+    },
+    {
+      "name": "modifiers/mod_cased_and_wildcards.yml",
+      "content": "title: Modifier Demo Cased And Wildcards\nid: 70fa87cf-4c8d-4380-bbf1-8650a3a9eb4a\nstatus: test\ndescription: Shows the cased modifier and plain wildcards (star for many characters, question mark for one, backslash star for a real star).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.discovery\n  - attack.t1087.002\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_cased:\n    CommandLine|cased|contains: 'AdFind'\n  selection_wild:\n    CommandLine:\n      - '*-f ?objectcategory=computer*'\n      - '*trustdmp*'\n      - '*literal\\*star*'\n  condition: 1 of selection_*\nfalsepositives:\n  - AD admins\nlevel: medium\n"
+    },
+    {
+      "name": "modifiers/mod_cidr_and_numbers.yml",
+      "content": "title: Modifier Demo CIDR And Number Compare\nid: 8611b069-58e1-4eb1-ba37-3584e0c1853a\nstatus: test\ndescription: Shows cidr for IP ranges and gte for numbers. Wazuh cannot do number compare, so this rule fails there on purpose.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1571\nlogsource:\n  product: windows\n  category: network_connection\ndetection:\n  selection:\n    Initiated: 'true'\n    DestinationPort|gte: 50000\n  filter_lan:\n    DestinationIp|cidr: '192.168.0.0/16'\n  condition: selection and not filter_lan\nfalsepositives:\n  - Games and peer to peer apps\nlevel: low\n"
+    },
+    {
+      "name": "modifiers/mod_contains_all_and_windash.yml",
+      "content": "title: Modifier Demo Contains All And Windash\nid: 94dd03ae-1503-4182-b516-fc1cc40fa11f\nstatus: test\ndescription: Shows contains with all (every value must appear) and windash (matches -, / and dash variants).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1218.010\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    Image|endswith: '\\regsvr32.exe'\n  selection_cli_all:\n    CommandLine|contains|all:\n      - 'scrobj'\n      - 'http'\n  selection_cli_flag:\n    CommandLine|contains|windash: ' -i:'\n  condition: all of selection_*\nfalsepositives:\n  - None known\nlevel: high\n"
+    },
+    {
+      "name": "modifiers/mod_exists_and_null.yml",
+      "content": "title: Modifier Demo Exists And Null\nid: 4fefd83a-480c-43b1-b6ee-70d920b03852\nstatus: test\ndescription: Shows the exists modifier and a null value (field is empty or missing).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1036.005\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|startswith: 'C:\\Windows\\'\n    OriginalFileName|exists: true\n    Company: null\n  condition: selection\nfalsepositives:\n  - Some old Windows binaries\nlevel: informational\n"
+    },
+    {
+      "name": "modifiers/mod_keywords_and_fieldref.yml",
+      "content": "title: Modifier Demo Keywords And Fieldref\nid: 594ee431-cc69-4335-b100-bc4f0d85f45b\nstatus: test\ndescription: Shows keyword search (no field) and fieldref (compare two fields). Some targets cannot do fieldref and show an error on purpose.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1036.003\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_same:\n    ParentImage|fieldref: Image\n  keywords:\n    - 'masquerade'\n  condition: selection_same or keywords\nfalsepositives:\n  - Processes that spawn copies of themselves\nlevel: low\n"
+    },
+    {
+      "name": "modifiers/mod_regex_case_insensitive.yml",
+      "content": "title: Modifier Demo Regex With Flags\nid: b1eb873f-de04-4620-82f0-0389b51b698b\nstatus: test\ndescription: Shows the re modifier with the i flag for a case insensitive regular expression.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1027.010\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    CommandLine|re|i: '\\^[a-z]\\^[a-z]\\^[a-z]'\n  condition: selection\nfalsepositives:\n  - Rare batch files with many carets\nlevel: medium\n"
+    },
+    {
+      "name": "network/firewall_smb_outbound.yml",
+      "content": "title: Outbound SMB To The Internet\nid: dae9f148-dc56-43d2-b4d8-7609907bfe71\nstatus: experimental\ndescription: Detects SMB traffic leaving the network to a public address.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.exfiltration\n  - attack.t1048\n  - attack.credential-access\n  - attack.t1187\nlogsource:\n  category: firewall\ndetection:\n  selection:\n    dst_port: 445\n    action: 'allow'\n  filter_private:\n    dst_ip|cidr:\n      - '10.0.0.0/8'\n      - '172.16.0.0/12'\n      - '192.168.0.0/16'\n  condition: selection and not filter_private\nfalsepositives:\n  - Cloud file shares\nlevel: high\n"
+    },
+    {
+      "name": "network/proxy_suspicious_user_agent.yml",
+      "content": "title: Web Request With Hacking Tool User Agent\nid: 4fffd79a-d1b0-43e3-a917-e9c6c5fa3b2c\nstatus: test\ndescription: Detects proxy logs with user agents of common offensive tools.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.reconnaissance\n  - attack.t1595.002\nlogsource:\n  category: proxy\ndetection:\n  selection:\n    c-useragent|contains:\n      - 'sqlmap'\n      - 'Nikto'\n      - 'Nmap Scripting Engine'\n      - 'masscan'\n  condition: selection\nfalsepositives:\n  - Your own security scans\nlevel: medium\n"
+    },
+    {
+      "name": "windows/create_remote_thread_lsass.yml",
+      "content": "title: Remote Thread Created In LSASS\nid: c939a974-e7e2-4e16-a93a-3ceeae3ccc6b\nstatus: test\ndescription: Detects a remote thread created inside lsass.exe by any process.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.credential-access\n  - attack.t1003.001\n  - attack.privilege-escalation\n  - attack.t1055\nlogsource:\n  product: windows\n  category: create_remote_thread\ndetection:\n  selection:\n    TargetImage|endswith: '\\lsass.exe'\n  filter_main_system:\n    SourceImage: 'C:\\Windows\\System32\\csrss.exe'\n  condition: selection and not filter_main_system\nfalsepositives:\n  - Security agents\nlevel: critical\n"
+    },
+    {
+      "name": "windows/dns_query_tunnel_tools.yml",
+      "content": "title: DNS Query For Known Tunneling Service Domains\nid: 6f708192-a3b4-4c5d-9e6f-708192a3b4c5\nstatus: experimental\ndescription: Detects DNS lookups for domains used by popular tunneling services.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1572\nlogsource:\n  product: windows\n  category: dns_query\ndetection:\n  selection:\n    QueryName|endswith:\n      - '.ngrok.io'\n      - '.ngrok-free.app'\n      - '.trycloudflare.com'\n      - '.loca.lt'\n  condition: selection\nfalsepositives:\n  - Developers testing web apps\nlevel: medium\n"
+    },
+    {
+      "name": "windows/driver_load_vulnerable_names.yml",
+      "content": "title: Known Vulnerable Driver Names Loaded\nid: eaa69c96-c049-4485-96bd-ab7b1829d043\nstatus: experimental\ndescription: Detects loading of driver file names often used in bring your own vulnerable driver attacks.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.privilege-escalation\n  - attack.t1068\nlogsource:\n  product: windows\n  category: driver_load\ndetection:\n  selection:\n    ImageLoaded|endswith:\n      - '\\RTCore64.sys'\n      - '\\gdrv.sys'\n      - '\\procexp152.sys'\n      - '\\dbutil_2_3.sys'\n  condition: selection\nfalsepositives:\n  - Legit tools that ship these drivers\nlevel: high\n"
+    },
+    {
+      "name": "windows/file_event_startup_folder_script.yml",
+      "content": "title: Script File Dropped In Startup Folder\nid: 27ccc0bd-cfb4-4872-8da1-8f6774810154\nstatus: test\ndescription: Detects script or shortcut files written to a user or common Startup folder.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1547.001\nlogsource:\n  product: windows\n  category: file_event\ndetection:\n  selection_path:\n    TargetFilename|contains: '\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\'\n  selection_ext:\n    TargetFilename|endswith:\n      - '.vbs'\n      - '.js'\n      - '.bat'\n      - '.ps1'\n      - '.lnk'\n  condition: all of selection_*\nfalsepositives:\n  - Software that adds itself to Startup\nlevel: medium\n"
+    },
+    {
+      "name": "windows/image_load_dbghelp_unusual.yml",
+      "content": "title: Dbghelp Or Dbgcore Loaded By Unusual Process\nid: 3eaebb33-0c8b-4808-be4c-453fc7875fce\nstatus: experimental\ndescription: Detects dbghelp.dll or dbgcore.dll loaded by a script host or Office app, which can point to memory dumping.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.credential-access\n  - attack.t1003.001\nlogsource:\n  product: windows\n  category: image_load\ndetection:\n  selection_dll:\n    ImageLoaded|endswith:\n      - '\\dbghelp.dll'\n      - '\\dbgcore.dll'\n  selection_proc:\n    Image|endswith:\n      - '\\wscript.exe'\n      - '\\cscript.exe'\n      - '\\mshta.exe'\n      - '\\winword.exe'\n      - '\\excel.exe'\n  condition: all of selection_*\nfalsepositives:\n  - Crash handlers\nlevel: high\n"
+    },
+    {
+      "name": "windows/lsass_access_suspicious.yml",
+      "content": "title: Suspicious Process Access To LSASS Memory\nid: 5e6f7081-92a3-4b4c-8d5e-6f708192a3b4\nstatus: experimental\ndescription: Detects a process opening LSASS with access rights often used to dump credentials.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.credential-access\n  - attack.t1003.001\nlogsource:\n  product: windows\n  category: process_access\ndetection:\n  selection:\n    TargetImage|endswith: '\\lsass.exe'\n    GrantedAccess:\n      - '0x1010'\n      - '0x1410'\n      - '0x1fffff'\n  filter_main_system:\n    SourceImage|startswith:\n      - 'C:\\Windows\\System32\\'\n      - 'C:\\Program Files\\'\n  condition: selection and not filter_main_system\nfalsepositives:\n  - Endpoint security agents\nlevel: high\n"
+    },
+    {
+      "name": "windows/net_connection_rundll32_public_ip.yml",
+      "content": "title: Rundll32 Network Connection To Public Address\nid: 7e6d5c4b-3a29-4180-9f8e-7d6c5b4a3928\nstatus: experimental\ndescription: Detects rundll32.exe making an outbound connection to an address outside private ranges.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.stealth\n  - attack.t1218.011\nlogsource:\n  product: windows\n  category: network_connection\ndetection:\n  selection:\n    Image|endswith: '\\rundll32.exe'\n    Initiated: 'true'\n  filter_private:\n    DestinationIp|cidr:\n      - '10.0.0.0/8'\n      - '172.16.0.0/12'\n      - '192.168.0.0/16'\n      - '127.0.0.0/8'\n  condition: selection and not filter_private\nfalsepositives:\n  - Some legitimate DLLs that check for updates\nlevel: medium\n"
+    },
+    {
+      "name": "windows/pipe_created_cobalt_strike_default.yml",
+      "content": "title: Default Cobalt Strike Named Pipe Patterns\nid: ae5d79f7-9eb0-40db-9cb0-318033fcb849\nstatus: test\ndescription: Detects named pipe names that match default Cobalt Strike profiles.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1071\n  - attack.execution\n  - attack.t1559\nlogsource:\n  product: windows\n  category: pipe_created\ndetection:\n  selection:\n    PipeName|startswith:\n      - '\\MSSE-'\n      - '\\postex_'\n      - '\\status_'\n      - '\\msagent_'\n  condition: selection\nfalsepositives:\n  - Rare software with matching pipe names\nlevel: critical\n"
+    },
+    {
+      "name": "windows/proc_creation_certutil_download.yml",
+      "content": "title: Certutil Used To Download A File\nid: 1d7c4b2a-8e9f-4a01-b3c5-6d7e8f9a0b1c\nstatus: test\ndescription: Detects certutil.exe used with urlcache or verifyctl to fetch a remote file.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1105\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    - Image|endswith: '\\certutil.exe'\n    - OriginalFileName: 'CertUtil.exe'\n  selection_cli:\n    CommandLine|contains:\n      - 'urlcache'\n      - 'verifyctl'\n  selection_url:\n    CommandLine|contains:\n      - 'http://'\n      - 'https://'\n  condition: all of selection_*\nfalsepositives:\n  - Rare admin use\nlevel: high\n"
+    },
+    {
+      "name": "windows/proc_creation_encoded_powershell.yml",
+      "content": "title: PowerShell Started With Encoded Command\nid: 6f2a9d1e-3b4c-4e8a-9c71-2d5e8f0a1b23\nstatus: experimental\ndescription: Detects PowerShell launched with an encoded command line argument, often used to hide script content.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1059.001\n  - attack.stealth\n  - attack.t1027\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    Image|endswith:\n      - '\\powershell.exe'\n      - '\\pwsh.exe'\n  selection_cli:\n    CommandLine|contains|windash:\n      - ' -enc '\n      - ' -encodedcommand '\n      - ' -ec '\n  filter_main_programfiles:\n    ParentImage|startswith: 'C:\\Program Files\\'\n  condition: all of selection_* and not 1 of filter_main_*\nfalsepositives:\n  - Management agents that run encoded scripts\nlevel: high\n"
+    },
+    {
+      "name": "windows/proc_creation_scheduled_task_create.yml",
+      "content": "title: Scheduled Task Created From Temp Or Public Folder\nid: 727184a0-5e4d-463a-95e5-6805ebf3f6f2\nstatus: test\ndescription: Detects schtasks creating a task that runs a program from a user writable folder.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.execution\n  - attack.t1053.005\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    Image|endswith: '\\schtasks.exe'\n    CommandLine|contains: '/create'\n  selection_path:\n    CommandLine|contains:\n      - '\\AppData\\Local\\Temp\\'\n      - '\\Users\\Public\\'\n      - '\\ProgramData\\'\n  condition: all of selection_*\nfalsepositives:\n  - Installers\nlevel: low\n"
+    },
+    {
+      "name": "windows/proc_creation_shadow_copy_delete.yml",
+      "content": "title: Shadow Copies Deleted With Vssadmin Or Wmic\nid: 9a8b7c6d-5e4f-4321-8765-0fedcba98765\nstatus: stable\ndescription: Detects deletion of volume shadow copies, a common step before ransomware encryption.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.impact\n  - attack.t1490\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_vssadmin:\n    Image|endswith: '\\vssadmin.exe'\n    CommandLine|contains|all:\n      - 'delete'\n      - 'shadows'\n  selection_wmic:\n    Image|endswith: '\\wmic.exe'\n    CommandLine|contains|all:\n      - 'shadowcopy'\n      - 'delete'\n  condition: 1 of selection_*\nfalsepositives:\n  - Backup software maintenance\nlevel: critical\n"
+    },
+    {
+      "name": "windows/proc_creation_whoami_recon.yml",
+      "content": "title: Whoami With Privilege Or Group Flags\nid: 63c870cb-0408-488b-a211-1e386a937b92\nstatus: stable\ndescription: Detects whoami used to list privileges or groups, often run right after initial access.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.discovery\n  - attack.t1033\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    - Image|endswith: '\\whoami.exe'\n    - OriginalFileName: 'whoami.exe'\n  selection_cli:\n    CommandLine|contains|windash:\n      - ' -priv'\n      - ' -groups'\n      - ' -all'\n  condition: all of selection_*\nfalsepositives:\n  - Admin scripts\nlevel: informational\n"
+    },
+    {
+      "name": "windows/ps_module_invoke_mimikatz.yml",
+      "content": "title: Mimikatz Function Names In PowerShell Module Log\nid: 2b46adcc-ef78-4f1f-b25f-fcd1b338a9b0\nstatus: test\ndescription: Detects Mimikatz function names in PowerShell module logs (event 4103).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.credential-access\n  - attack.t1003\n  - attack.execution\n  - attack.t1059.001\nlogsource:\n  product: windows\n  category: ps_module\ndetection:\n  selection:\n    Payload|contains:\n      - 'Invoke-Mimikatz'\n      - 'sekurlsa::logonpasswords'\n      - 'kerberos::golden'\n  condition: selection\nfalsepositives:\n  - Red team exercises\nlevel: critical\n"
+    },
+    {
+      "name": "windows/ps_script_amsi_bypass.yml",
+      "content": "title: AMSI Bypass Strings In PowerShell Script Block\nid: 4d5e6f70-8192-4a3b-bc4d-5e6f708192a3\nstatus: experimental\ndescription: Detects common AMSI bypass strings in PowerShell script block logs (event 4104).\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.defense-impairment\n  - attack.t1685\nlogsource:\n  product: windows\n  category: ps_script\ndetection:\n  selection:\n    ScriptBlockText|contains:\n      - 'AmsiUtils'\n      - 'amsiInitFailed'\n      - 'AmsiScanBuffer'\n  condition: selection\nfalsepositives:\n  - Security research scripts\nlevel: high\n"
+    },
+    {
+      "name": "windows/registry_set_run_key.yml",
+      "content": "title: Run Key Set To Program In Public Or Temp Folder\nid: 3c2b1a09-8f7e-4d6c-a5b4-c3d2e1f0a9b8\nstatus: experimental\ndescription: Detects a Run or RunOnce registry value pointing to a program in a user writable folder.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1547.001\nlogsource:\n  product: windows\n  category: registry_set\ndetection:\n  selection_key:\n    TargetObject|contains:\n      - '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\'\n      - '\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\'\n  selection_path:\n    Details|contains:\n      - '\\Users\\Public\\'\n      - '\\AppData\\Local\\Temp\\'\n      - '\\Windows\\Temp\\'\n  condition: all of selection_*\nfalsepositives:\n  - Installers that run from temp folders\nlevel: medium\n"
+    },
+    {
+      "name": "windows/win_defender_threat_detected.yml",
+      "content": "title: Microsoft Defender Found A Threat\nid: 5697fc13-ab89-4dc0-9528-44ce9c4c7e3e\nstatus: stable\ndescription: Detects Microsoft Defender malware detection events.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1204\nlogsource:\n  product: windows\n  service: windefend\ndetection:\n  selection:\n    EventID:\n      - 1006\n      - 1116\n  condition: selection\nfalsepositives:\n  - Test files like EICAR\nlevel: high\n"
+    },
+    {
+      "name": "windows/win_security_new_service_temp.yml",
+      "content": "title: Service Installed From Temp Folder\nid: 2b3c4d5e-6f70-4812-9a3b-4c5d6e7f8091\nstatus: test\ndescription: Detects a new service whose binary lives in a temp folder, using Security event 4697.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.privilege-escalation\n  - attack.t1543.003\nlogsource:\n  product: windows\n  service: security\ndetection:\n  selection:\n    EventID: 4697\n    ServiceFileName|contains:\n      - '\\Temp\\'\n      - '\\AppData\\Local\\Temp\\'\n  condition: selection\nfalsepositives:\n  - Software installers\nlevel: high\n"
+    },
+    {
+      "name": "windows/win_system_service_install_psexec.yml",
+      "content": "title: PsExec Service Installed\nid: 072edb1a-1d37-4631-ae12-fe8d32d11ff6\nstatus: stable\ndescription: Detects the PSEXESVC service being installed, using System event 7045.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.lateral-movement\n  - attack.t1021.002\n  - attack.execution\n  - attack.t1569.002\nlogsource:\n  product: windows\n  service: system\ndetection:\n  selection:\n    Provider_Name: 'Service Control Manager'\n    EventID: 7045\n    ServiceName: 'PSEXESVC'\n  condition: selection\nfalsepositives:\n  - Admins using PsExec\nlevel: medium\n"
+    },
+    {
+      "name": "windows/wmi_event_consumer_script.yml",
+      "content": "title: WMI Event Consumer Running A Script\nid: 3f4fa4b3-f322-4d91-b5fa-42a323886fcc\nstatus: experimental\ndescription: Detects a WMI ActiveScript or CommandLine event consumer, a common persistence method.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1546.003\nlogsource:\n  product: windows\n  category: wmi_event\ndetection:\n  selection:\n    EventID: 20\n    Type:\n      - 'Script'\n      - 'Command Line'\n  condition: selection\nfalsepositives:\n  - Management software that uses WMI consumers\nlevel: high\n"
+    }
+  ]
+}

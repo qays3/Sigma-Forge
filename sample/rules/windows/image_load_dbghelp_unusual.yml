@@ -1,0 +1,28 @@
+title: Dbghelp Or Dbgcore Loaded By Unusual Process
+id: 3eaebb33-0c8b-4808-be4c-453fc7875fce
+status: experimental
+description: Detects dbghelp.dll or dbgcore.dll loaded by a script host or Office app, which can point to memory dumping.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.credential-access
+  - attack.t1003.001
+logsource:
+  product: windows
+  category: image_load
+detection:
+  selection_dll:
+    ImageLoaded|endswith:
+      - '\dbghelp.dll'
+      - '\dbgcore.dll'
+  selection_proc:
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+      - '\winword.exe'
+      - '\excel.exe'
+  condition: all of selection_*
+falsepositives:
+  - Crash handlers
+level: high

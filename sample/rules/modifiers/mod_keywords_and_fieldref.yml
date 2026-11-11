@@ -1,0 +1,21 @@
+title: Modifier Demo Keywords And Fieldref
+id: 594ee431-cc69-4335-b100-bc4f0d85f45b
+status: test
+description: Shows keyword search (no field) and fieldref (compare two fields). Some targets cannot do fieldref and show an error on purpose.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1036.003
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_same:
+    ParentImage|fieldref: Image
+  keywords:
+    - 'masquerade'
+  condition: selection_same or keywords
+falsepositives:
+  - Processes that spawn copies of themselves
+level: low

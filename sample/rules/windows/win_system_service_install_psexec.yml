@@ -1,0 +1,23 @@
+title: PsExec Service Installed
+id: 072edb1a-1d37-4631-ae12-fe8d32d11ff6
+status: stable
+description: Detects the PSEXESVC service being installed, using System event 7045.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.lateral-movement
+  - attack.t1021.002
+  - attack.execution
+  - attack.t1569.002
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    Provider_Name: 'Service Control Manager'
+    EventID: 7045
+    ServiceName: 'PSEXESVC'
+  condition: selection
+falsepositives:
+  - Admins using PsExec
+level: medium

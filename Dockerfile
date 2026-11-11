@@ -19,7 +19,7 @@ RUN pip install -r requirements.txt
 COPY app ./app
 COPY web ./web
 COPY data ./data
-COPY samples ./samples
+COPY sample ./sample
 COPY tools ./tools
 
 ARG REFRESH_ATTACK=false

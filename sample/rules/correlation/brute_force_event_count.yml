@@ -1,0 +1,35 @@
+title: Failed Logon For Brute Force Correlation
+id: 2c657f75-9250-43cd-ba71-727e08d05e6f
+name: sf_failed_logon
+status: test
+description: Base rule for the correlation below. It is only converted alone where the target supports correlations.
+author: Sigma Forge samples
+date: 2026-11-11
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4625
+  condition: selection
+level: low
+---
+title: Brute Force From One Source Address
+id: b06c5bce-c402-491c-83f7-4778bde7ae0c
+status: test
+description: Ten or more failed logons from the same source address in five minutes.
+author: Sigma Forge samples
+date: 2026-11-11
+correlation:
+  type: event_count
+  rules:
+    - sf_failed_logon
+  group-by:
+    - IpAddress
+  timespan: 5m
+  condition:
+    gte: 10
+tags:
+  - attack.credential-access
+  - attack.t1110.001
+level: high

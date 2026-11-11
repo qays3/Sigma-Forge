@@ -44,6 +44,8 @@ def describe(parsed: ParsedRule) -> Dict:
         "error": parsed.error,
         "issues": [],
     }
+    if parsed.kind == "correlation" and parsed.correlation is not None:
+        return _describe_correlation(parsed, base)
     rule = parsed.rule
     if rule is None:
         base.update({"title": parsed.file, "id": "", "status": "", "level": "", "logsource": {"product": "", "category": "", "service": ""},
@@ -71,6 +73,35 @@ def describe(parsed: ParsedRule) -> Dict:
     })
     for message in technique_issues(techniques):
         base["issues"].append({"severity": "medium", "message": message})
+    return base
+
+
+def _describe_correlation(parsed: ParsedRule, base: Dict) -> Dict:
+    corr = parsed.correlation
+    techniques, tactics = split_attack_tags(corr.tags)
+    refs = [str(r.reference) for r in corr.rules]
+    cond = corr.condition
+    op = getattr(getattr(cond, "op", None), "name", "").lower()
+    ctype = getattr(corr.type, "name", str(corr.type)).lower()
+    group = ", ".join(corr.group_by or []) or "none"
+    timespan = getattr(corr.timespan, "spec", "")
+    base.update({
+        "title": corr.title or parsed.file,
+        "id": _text(corr.id),
+        "status": corr.status.name.lower() if corr.status else "",
+        "level": corr.level.name.lower() if corr.level else "",
+        "logsource": {"product": "correlation", "category": ctype, "service": ""},
+        "tags": [str(t) for t in corr.tags],
+        "techniques": techniques,
+        "tactics": tactics,
+        "description": _text(corr.description),
+        "author": _text(corr.author),
+        "date": _text(corr.date),
+        "references": [str(r) for r in corr.references or []],
+        "falsepositives": [str(f) for f in corr.falsepositives or []],
+        "detections": refs,
+        "conditions": [f"{ctype} {op} {getattr(cond, 'count', '')} within {timespan} grouped by {group}"],
+    })
     return base
 
 
@@ -104,6 +135,7 @@ def analyze(parsed_rules: List[ParsedRule]) -> Dict:
 
     valid = [r for r in rows if not r["error"]]
     summary = {
+        "correlations": sum(1 for r in valid if r["kind"] == "correlation"),
         "files": len({r["file"] for r in rows}),
         "rules": len(rows),
         "valid": len(valid),

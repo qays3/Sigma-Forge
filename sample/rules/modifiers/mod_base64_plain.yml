@@ -1,0 +1,19 @@
+title: Modifier Demo Plain Base64
+id: b32390ca-9c8a-41e5-9be1-3886c1150ea3
+status: test
+description: Shows the base64 modifier for an exact base64 string.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.execution
+  - attack.t1059.004
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection:
+    CommandLine|base64|contains: 'curl http'
+  condition: selection
+falsepositives:
+  - None known
+level: medium

@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+
+import yaml
 from typing import Iterable, List, Optional
 
 from sigma.collection import SigmaCollection
+from sigma.correlations import SigmaCorrelationRule
 from sigma.rule import SigmaRule
 
 from app.config import MAX_RULE_BYTES, MAX_RULES
@@ -14,6 +17,7 @@ class ParsedRule:
     rule: Optional[SigmaRule]
     error: Optional[str]
     kind: str = "rule"
+    correlation: Optional[SigmaCorrelationRule] = None
 
     @property
     def key(self) -> str:
@@ -42,16 +46,37 @@ def _first_error(errors) -> Optional[str]:
 def parse_file(name: str, content: str) -> List[ParsedRule]:
     try:
         collection = SigmaCollection.from_yaml(content, collect_errors=True)
-    except Exception as exc:
+    except yaml.YAMLError as exc:
         return [ParsedRule(file=name, index=0, rule=None, error=f"YAML error: {exc}")]
+    except Exception as exc:
+        return [ParsedRule(file=name, index=0, rule=None, error=f"Sigma error: {exc}")]
+    try:
+        collection.resolve_rule_references()
+    except Exception:
+        pass
 
     parsed: List[ParsedRule] = []
     for index, item in enumerate(collection.rules):
+        if isinstance(item, SigmaCorrelationRule):
+            error = _first_error(getattr(item, "errors", None))
+            if error is None:
+                missing = [str(ref.reference) for ref in item.rules if getattr(ref, "rule", None) is None]
+                if missing:
+                    error = f"Correlation references rules that are not in the same file: {', '.join(missing)}"
+            parsed.append(ParsedRule(file=name, index=index, rule=None, error=error, kind="correlation", correlation=item))
+            continue
         if not isinstance(item, SigmaRule):
             kind = type(item).__name__.replace("Sigma", "").lower() or "unknown"
             parsed.append(ParsedRule(file=name, index=index, rule=None, error=f"Unsupported Sigma document type: {kind}", kind=kind))
             continue
-        parsed.append(ParsedRule(file=name, index=index, rule=item, error=_first_error(item.errors)))
+        error = _first_error(item.errors)
+        if error is None:
+            try:
+                for condition in item.detection.parsed_condition:
+                    condition.parsed
+            except Exception as exc:
+                error = f"Condition error: {exc}"
+        parsed.append(ParsedRule(file=name, index=index, rule=item, error=error))
 
     if not parsed:
         errors = getattr(collection, "errors", None)

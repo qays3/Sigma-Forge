@@ -1,0 +1,25 @@
+title: Whoami With Privilege Or Group Flags
+id: 63c870cb-0408-488b-a211-1e386a937b92
+status: stable
+description: Detects whoami used to list privileges or groups, often run right after initial access.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.discovery
+  - attack.t1033
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+    - Image|endswith: '\whoami.exe'
+    - OriginalFileName: 'whoami.exe'
+  selection_cli:
+    CommandLine|contains|windash:
+      - ' -priv'
+      - ' -groups'
+      - ' -all'
+  condition: all of selection_*
+falsepositives:
+  - Admin scripts
+level: informational

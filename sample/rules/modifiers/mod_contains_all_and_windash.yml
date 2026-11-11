@@ -1,0 +1,25 @@
+title: Modifier Demo Contains All And Windash
+id: 94dd03ae-1503-4182-b516-fc1cc40fa11f
+status: test
+description: Shows contains with all (every value must appear) and windash (matches -, / and dash variants).
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1218.010
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+    Image|endswith: '\regsvr32.exe'
+  selection_cli_all:
+    CommandLine|contains|all:
+      - 'scrobj'
+      - 'http'
+  selection_cli_flag:
+    CommandLine|contains|windash: ' -i:'
+  condition: all of selection_*
+falsepositives:
+  - None known
+level: high

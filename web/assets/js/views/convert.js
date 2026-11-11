@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
-import { $, $$, copyText, debounce, download, emptyState, esc, icons, levelBadge, plural, skeleton, toast } from "../ui.js";
+import { $, $$, copyText, debounce, download, emptyState, esc, forging, icons, levelBadge, plural, skeleton, toast } from "../ui.js";
 
 const PREF_KEY = "sigma-forge-convert";
 const EXT = { spl: "spl", lucene: "txt", esql: "esql", eql: "eql", kql: "kql", xml: "xml" };
@@ -38,7 +38,7 @@ export async function convertView(root, params) {
       </div>
       <div class="grid grid--side">
         <div class="sticky" id="controls">${skeleton.card(8)}</div>
-        <div id="output">${skeleton.blocks(3)}</div>
+        <div id="output">${forging("Loading targets")}${skeleton.blocks(3)}</div>
       </div>
     </section>`;
 
@@ -175,7 +175,8 @@ export async function convertView(root, params) {
           <div class="result__head">
             <div class="result__title" title="${esc(r.title)}">${esc(r.title)}<div class="result__file">${esc(r.key)}</div></div>
             ${levelBadge(r.level)}
-            ${r.error ? '<span class="badge badge--bad">failed</span>' : '<span class="badge badge--ok">ok</span>'}
+            ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}
+            ${r.error ? '<span class="badge badge--bad">failed</span>' : r.queries.length ? '<span class="badge badge--ok">ok</span>' : '<span class="badge badge--warn">skipped</span>'}
             ${r.queries.length ? `<button class="btn btn--sm" type="button" data-copy="${i}">${icons.copy} Copy</button>` : ""}
           </div>
           ${body}${err}${warn}
@@ -186,6 +187,7 @@ export async function convertView(root, params) {
       <div class="stats">
         <div class="stat"><div class="stat__label">Target</div><div class="stat__value stat__value--accent stat__value--sm">${esc(result.target.name)}</div><div class="stat__hint">format ${esc(result.format)}</div></div>
         <div class="stat"><div class="stat__label">Converted</div><div class="stat__value stat__value--ok">${s.converted}</div><div class="stat__hint">of ${plural(s.total, "rule")}</div></div>
+        <div class="stat"><div class="stat__label">Skipped</div><div class="stat__value ${s.skipped ? "stat__value--warn" : ""}">${s.skipped || 0}</div><div class="stat__hint">used by correlations</div></div>
         <div class="stat"><div class="stat__label">Failed</div><div class="stat__value ${s.failed ? "stat__value--bad" : ""}">${s.failed}</div><div class="stat__hint">see the reasons below</div></div>
       </div>
       ${(result.notes || []).length ? `<div class="card result">${result.notes.map((n) => `<div class="notice notice--info">${esc(n)}</div>`).join("")}</div>` : ""}
@@ -214,7 +216,7 @@ export async function convertView(root, params) {
     persist();
     const btn = $("#runConvert", root);
     btn.disabled = true;
-    $("#output", root).innerHTML = `${skeleton.stats(3)}${skeleton.blocks(3)}`;
+    $("#output", root).innerHTML = `${forging(`Forging ${plural(chosen.length, "file")} into ${currentTarget()?.name || "queries"}`)}${skeleton.stats(3)}${skeleton.blocks(3)}`;
     try {
       const options = {
         wazuh_rule_id_start: Number($("#wazuhStart", root).value) || 100100,

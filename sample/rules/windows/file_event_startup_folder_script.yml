@@ -1,0 +1,26 @@
+title: Script File Dropped In Startup Folder
+id: 27ccc0bd-cfb4-4872-8da1-8f6774810154
+status: test
+description: Detects script or shortcut files written to a user or common Startup folder.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.t1547.001
+logsource:
+  product: windows
+  category: file_event
+detection:
+  selection_path:
+    TargetFilename|contains: '\Microsoft\Windows\Start Menu\Programs\Startup\'
+  selection_ext:
+    TargetFilename|endswith:
+      - '.vbs'
+      - '.js'
+      - '.bat'
+      - '.ps1'
+      - '.lnk'
+  condition: all of selection_*
+falsepositives:
+  - Software that adds itself to Startup
+level: medium

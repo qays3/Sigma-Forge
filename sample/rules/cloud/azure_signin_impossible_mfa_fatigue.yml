@@ -1,0 +1,20 @@
+title: Many MFA Denials For One User
+id: 1f6e7585-97d7-4ee6-a459-75ef5f076928
+status: experimental
+description: Detects Azure sign in logs where MFA was denied, a sign of push fatigue attacks.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.credential-access
+  - attack.t1621
+logsource:
+  product: azure
+  service: signinlogs
+detection:
+  selection:
+    ResultType: 500121
+    ResultDescription|contains: 'denied'
+  condition: selection
+falsepositives:
+  - Users who miss the prompt
+level: medium

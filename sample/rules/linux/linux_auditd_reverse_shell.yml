@@ -1,0 +1,22 @@
+title: Bash Reverse Shell Using Dev Tcp
+id: 9c960957-1268-4483-9dc9-b0d697876656
+status: test
+description: Detects a bash reverse shell that uses /dev/tcp in the command line.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.execution
+  - attack.t1059.004
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    type: 'EXECVE'
+    a0|endswith: 'bash'
+  keywords_devtcp:
+    - '/dev/tcp/'
+  condition: selection and keywords_devtcp
+falsepositives:
+  - Admin testing
+level: high

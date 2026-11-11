@@ -1,0 +1,19 @@
+title: Modifier Demo Regex With Flags
+id: b1eb873f-de04-4620-82f0-0389b51b698b
+status: test
+description: Shows the re modifier with the i flag for a case insensitive regular expression.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1027.010
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    CommandLine|re|i: '\^[a-z]\^[a-z]\^[a-z]'
+  condition: selection
+falsepositives:
+  - Rare batch files with many carets
+level: medium

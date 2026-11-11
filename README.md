@@ -1,8 +1,12 @@
 <div align="center">
 
-<img src="web/assets/img/sigma-forge-logo.gif" alt="Sigma Forge" width="200">
+<img src="web/assets/img/logo.gif" alt="Sigma Forge" width="180">
 
-# Sigma Forge
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="web/assets/img/banner.png">
+  <source media="(prefers-color-scheme: light)" srcset="web/assets/img/banner-light.png">
+  <img src="web/assets/img/banner-light.png" alt="Sigma Forge" width="560">
+</picture>
 
 **Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh. Check them for problems. See which MITRE ATT&CK techniques they cover.**
 
@@ -17,6 +21,7 @@ A FastAPI backend with a single page app (SPA), built on [pySigma](https://githu
 
 [Features](#features) ·
 [Quick start](#quick-start) ·
+[Sample pack](#sample-pack) ·
 [Targets](#supported-targets) ·
 [Wazuh backend](#the-wazuh-backend) ·
 [API](#api) ·
@@ -38,17 +43,19 @@ A FastAPI backend with a single page app (SPA), built on [pySigma](https://githu
 4. [Quick start](#quick-start)
 5. [Setup script options](#setup-script-options)
 6. [How to use it](#how-to-use-it)
-7. [Supported targets](#supported-targets)
-8. [The Wazuh backend](#the-wazuh-backend)
-9. [Testing Wazuh rules on a real manager](#testing-wazuh-rules-on-a-real-manager)
-10. [ATT&CK coverage](#attck-coverage)
-11. [API](#api)
-12. [Configuration](#configuration)
-13. [Architecture](#architecture)
-14. [Project layout](#project-layout)
-15. [Development](#development)
-16. [Known limits](#known-limits)
-17. [Credits](#credits)
+7. [Sample pack](#sample-pack)
+8. [Supported targets](#supported-targets)
+9. [Correlation rules](#correlation-rules)
+10. [The Wazuh backend](#the-wazuh-backend)
+11. [Testing Wazuh rules on a real manager](#testing-wazuh-rules-on-a-real-manager)
+12. [ATT&CK coverage](#attck-coverage)
+13. [API](#api)
+14. [Configuration](#configuration)
+15. [Architecture](#architecture)
+16. [Project layout](#project-layout)
+17. [Development](#development)
+18. [Known limits](#known-limits)
+19. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -64,14 +71,15 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 
 | Area | What you get |
 |---|---|
-| **Load rules** | Drag and drop files or whole folders, pick a folder, paste YAML, or load the built in samples. Multi document YAML files are supported. |
+| **Load rules** | Drag and drop files or whole folders, pick a folder, paste YAML, or load the built in sample pack. Multi document files and `action: global` collections are supported. |
+| **Correlations** | Sigma correlation rules (`event_count`, `value_count`, `temporal`) are parsed, listed and converted on targets that support them, including Wazuh `frequency` rules for `event_count`. |
 | **Convert** | Splunk SPL (Search Processing Language), Splunk CIM (Common Information Model), Elastic Lucene, ES\|QL and EQL, Microsoft Defender XDR, Sentinel ASIM and Azure Monitor KQL (Kusto Query Language), and Wazuh XML rules. Every output format of each backend is available, such as Splunk `savedsearches` or Elastic `siem_rule_ndjson`. |
 | **Wazuh** | A custom backend written for Sigma Forge. It maps Sysmon and Windows fields to Wazuh `win.*` fields, picks the right parent group and event id, and turns Sigma logic into valid `pcre2` field rules. |
 | **Validate** | pySigma validators (dangling detections, wildcard misuse, duplicate tags, bad modifier mixes and more) run offline, plus ATT&CK tag checks against local data. |
 | **Coverage** | ATT&CK v20 Enterprise heat map with every tactic, technique counts that roll up from sub techniques, gap finding, and a Navigator layer export. |
 | **Review** | Sortable and filterable rule table with a detail drawer: metadata, findings, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
-| **UI** | SPA with clean URLs, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
+| **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
 
 ## Screenshots
 
@@ -114,7 +122,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 docker compose up -d --build
 ```
 
-Then open **http://127.0.0.1:8000** and click **Load samples** to try it.
+Then open **http://127.0.0.1:8000** and click **Load samples** to load the [sample pack](#sample-pack).
 
 The setup scripts create a virtual environment in `.venv`, install the packages from `requirements.txt`, check the ATT&CK data and print the command to start the server. Run them again any time. They only change what is needed.
 
@@ -173,6 +181,48 @@ flowchart LR
 3. **Coverage.** The heat map shows every ATT&CK Enterprise tactic and technique. Darker purple means more rules. Click a technique to see its sub techniques and the rules that cover it. Use **Covered only** to hide gaps, or keep them visible to find what to write next. **Navigator layer** downloads a JSON layer for [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).
 4. **Rules.** Search and filter by level, status, product, tactic or check state. Click a row to open the detail drawer with metadata, validator findings, the rule source and a quick convert to any target.
 
+## Sample pack
+
+The [`sample`](sample) folder has rules, test events and API requests that touch every feature. **Load samples** in the Workspace loads all of `sample/rules` (45 files, 50 rules).
+
+```mermaid
+flowchart LR
+    S[sample] --> R[rules]
+    S --> W[wazuh<br/>events.jsonl]
+    S --> A[api<br/>request bodies and scripts]
+    R --> R1[windows]
+    R --> R2[linux]
+    R --> R3[network]
+    R --> R4[cloud]
+    R --> R5[modifiers]
+    R --> R6[correlation]
+    R --> R7[collections]
+    R --> R8[broken]
+```
+
+| Folder | What it shows |
+|---|---|
+| [`rules/windows`](sample/rules/windows) | 21 rules over Sysmon categories (process creation, network, image and driver load, remote thread, process access, pipes, WMI, files, registry, DNS) and Windows services (Security, System, PowerShell script and module logs, Defender). Levels from informational to critical. |
+| [`rules/linux`](sample/rules/linux) | Process creation and auditd rules, including a keyword search. |
+| [`rules/network`](sample/rules/network) | Proxy and firewall rules, with `cidr`. |
+| [`rules/cloud`](sample/rules/cloud) | AWS CloudTrail and Azure sign in rules. Some pipelines do not map these, so you see clear per rule errors. |
+| [`rules/modifiers`](sample/rules/modifiers) | One rule per group of modifiers: `contains`, `all`, `windash`, `re` with flags, `base64`, `wide` with `base64offset`, `cidr`, `gte`, `exists`, `null`, `cased`, wildcards, keywords and `fieldref`. Some fail on purpose on targets that cannot do them. |
+| [`rules/correlation`](sample/rules/correlation) | An `event_count` brute force rule (works on Splunk, ES\|QL and Wazuh) and a `value_count` password spray rule. |
+| [`rules/collections`](sample/rules/collections) | A file with three rules, and an `action: global` file that shares one log source and selection between two rules. |
+| [`rules/broken`](sample/rules/broken) | A YAML error, a missing detection, an unknown modifier, revoked and unknown ATT&CK tags, validator findings and a rule with no id or level. They show how errors and findings look. |
+| [`wazuh/events.jsonl`](sample/wazuh/events.jsonl) | 20 test events for `wazuh_check.py`, including ten failed logons from one address that should fire the brute force correlation on the tenth. |
+| [`api`](sample/api) | Ready request bodies for every endpoint, plus `run_examples.sh` and `run_examples.ps1` that call them and save the answers in `sample/api/output`. |
+
+Try the API samples while the server runs:
+
+```bash
+./sample/api/run_examples.sh                  # Linux and macOS
+```
+
+```powershell
+.\sample\api\run_examples.ps1                # Windows
+```
+
 ## Supported targets
 
 | Target | Backend | Pipelines | Formats |
@@ -192,6 +242,29 @@ ECS means Elastic Common Schema. ASIM means Advanced Security Information Model.
 Some pipelines only support some log sources. For example, the Splunk CIM pipeline does not map network connection or DNS rules, and the KQL pipelines need a known table for each log source. When a rule cannot be converted, its card shows the reason from pySigma instead of failing the whole run.
 
 To add a target, install another pySigma backend with pip and add one line to `TARGETS` in [`app/core/targets.py`](app/core/targets.py).
+
+## Correlation rules
+
+Sigma correlation rules join events from other rules, like "ten failed logons from one address in five minutes". Sigma Forge reads them from the same file as the rules they use.
+
+| Target | Correlation support |
+|---|---|
+| Splunk SPL | `event_count`, `value_count`, `temporal` |
+| Elastic ES\|QL | `event_count`, `value_count`, `temporal` |
+| Wazuh | `event_count` with `gte` or `gt`, as a `frequency` rule |
+| Others | Not supported. The card shows the reason |
+
+A base rule that is only used by a correlation has no query of its own, so it is shown as **skipped**. Add `generate: true` to the base rule if you also want it alone.
+
+For Wazuh, every converted rule gets a group like `sigma_ref_<name>`. The correlation becomes a rule with `frequency`, `timeframe`, `<if_matched_group>` and `<same_field>` for each `group-by` field:
+
+```xml
+<rule id="100101" level="12" frequency="10" timeframe="300">
+  <if_matched_group>sigma_ref_sf_failed_logon</if_matched_group>
+  <same_field>win.eventdata.ipAddress</same_field>
+  <description>Sigma correlation: Brute Force From One Source Address</description>
+</rule>
+```
 
 ## The Wazuh backend
 
@@ -272,7 +345,7 @@ sudo systemctl restart wazuh-manager
   --url https://WAZUH_MANAGER:55000 \
   --user wazuh --password 'YOUR_PASSWORD' \
   --rules sigma-forge_wazuh.xml \
-  --events samples/events/wazuh_eventchannel.jsonl \
+  --events sample/wazuh/events.jsonl \
   --insecure
 ```
 
@@ -418,11 +491,13 @@ Sigma-Forge/
 │       │   ├── state.js         Shared cache
 │       │   ├── ui.js            Helpers, drawer, toasts, skeletons
 │       │   └── views/           workspace, convert, coverage, rules
-│       └── img/                 Logos, banner and screenshots
+│       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/attack/attack.json      Compact ATT&CK Enterprise data
-├── samples/
-│   ├── rules/                   Sample Sigma rules
-│   └── events/                  Wazuh test events
+├── sample/
+│   ├── rules/                   Sample pack by feature (windows, linux, network,
+│   │                            cloud, modifiers, correlation, collections, broken)
+│   ├── wazuh/events.jsonl       Wazuh logtest events
+│   └── api/                     API request bodies and run_examples scripts
 ├── tools/
 │   ├── fetch_attack.py          Build attack.json from MITRE STIX
 │   └── wazuh_check.py           Upload and test rules on a Wazuh manager
@@ -445,12 +520,13 @@ Sigma-Forge/
 
 The tests cover the API, every target, error handling, coverage, and the Wazuh backend. The Wazuh tests compile the generated regex and check it against real looking field values, so they catch broken escaping and wrong logic, not only bad XML.
 
-Adding a sample rule is as simple as dropping a `.yml` file in `samples/rules/`. It shows up under **Load samples** right away.
+Adding a sample rule is as simple as dropping a `.yml` file anywhere under `sample/rules/`. It shows up under **Load samples** right away.
 
 ## Known limits
 
 * **Wazuh** has no number compare for normal fields, so the `lt`, `lte`, `gt` and `gte` modifiers fail with a clear message. `cidr` is turned into a text prefix match. The `fieldref` modifier is not supported. Always test the rules with `wazuh_check.py` before production.
-* **Correlation rules** (Sigma v2 meta rules) are listed but not converted.
+* **Correlation rules** only convert on Splunk, ES\|QL and Wazuh (`event_count` only). Base rules must be in the same file.
+* **Elastic SIEM rule formats** (`siem_rule`, `siem_rule_ndjson`) make pySigma download ATT&CK data the first time, so they need internet once.
 * **Pipelines** only know the log sources their authors mapped. Rules for other log sources show the pySigma error on their card.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 
@@ -462,7 +538,7 @@ Adding a sample rule is as simple as dropping a `.yml` file in `samples/rules/`.
 
 <div align="center">
 <br>
-<img src="web/assets/img/logo-name.png" alt="Sigma Forge" width="180">
+<img src="web/assets/img/logo.gif" alt="Sigma Forge" width="72">
 <br>
 <sub>Built by <a href="https://qayssarayra.com">Qays Sarayra</a></sub>
 </div>

@@ -1,0 +1,21 @@
+title: Microsoft Defender Found A Threat
+id: 5697fc13-ab89-4dc0-9528-44ce9c4c7e3e
+status: stable
+description: Detects Microsoft Defender malware detection events.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.execution
+  - attack.t1204
+logsource:
+  product: windows
+  service: windefend
+detection:
+  selection:
+    EventID:
+      - 1006
+      - 1116
+  condition: selection
+falsepositives:
+  - Test files like EICAR
+level: high

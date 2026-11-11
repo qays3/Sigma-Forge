@@ -1,0 +1,26 @@
+title: Outbound SMB To The Internet
+id: dae9f148-dc56-43d2-b4d8-7609907bfe71
+status: experimental
+description: Detects SMB traffic leaving the network to a public address.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.exfiltration
+  - attack.t1048
+  - attack.credential-access
+  - attack.t1187
+logsource:
+  category: firewall
+detection:
+  selection:
+    dst_port: 445
+    action: 'allow'
+  filter_private:
+    dst_ip|cidr:
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+      - '192.168.0.0/16'
+  condition: selection and not filter_private
+falsepositives:
+  - Cloud file shares
+level: high

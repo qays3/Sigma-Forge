@@ -1,0 +1,23 @@
+title: AWS CloudTrail Logging Stopped Or Deleted
+id: fa696775-606c-48fd-bf17-38d033c6d565
+status: stable
+description: Detects someone stopping or deleting a CloudTrail trail to hide activity.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.defense-impairment
+  - attack.t1685.002
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventSource: 'cloudtrail.amazonaws.com'
+    eventName:
+      - 'StopLogging'
+      - 'DeleteTrail'
+      - 'UpdateTrail'
+  condition: selection
+falsepositives:
+  - Planned changes by cloud admins
+level: high

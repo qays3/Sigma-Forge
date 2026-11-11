@@ -1,0 +1,23 @@
+title: Remote Thread Created In LSASS
+id: c939a974-e7e2-4e16-a93a-3ceeae3ccc6b
+status: test
+description: Detects a remote thread created inside lsass.exe by any process.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.credential-access
+  - attack.t1003.001
+  - attack.privilege-escalation
+  - attack.t1055
+logsource:
+  product: windows
+  category: create_remote_thread
+detection:
+  selection:
+    TargetImage|endswith: '\lsass.exe'
+  filter_main_system:
+    SourceImage: 'C:\Windows\System32\csrss.exe'
+  condition: selection and not filter_main_system
+falsepositives:
+  - Security agents
+level: critical

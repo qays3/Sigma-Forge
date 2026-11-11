@@ -1,0 +1,23 @@
+title: Known Vulnerable Driver Names Loaded
+id: eaa69c96-c049-4485-96bd-ab7b1829d043
+status: experimental
+description: Detects loading of driver file names often used in bring your own vulnerable driver attacks.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.privilege-escalation
+  - attack.t1068
+logsource:
+  product: windows
+  category: driver_load
+detection:
+  selection:
+    ImageLoaded|endswith:
+      - '\RTCore64.sys'
+      - '\gdrv.sys'
+      - '\procexp152.sys'
+      - '\dbutil_2_3.sys'
+  condition: selection
+falsepositives:
+  - Legit tools that ship these drivers
+level: high

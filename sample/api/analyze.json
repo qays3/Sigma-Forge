@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "name": "windows/proc_creation_encoded_powershell.yml",
+      "content": "title: PowerShell Started With Encoded Command\nid: 6f2a9d1e-3b4c-4e8a-9c71-2d5e8f0a1b23\nstatus: experimental\ndescription: Detects PowerShell launched with an encoded command line argument, often used to hide script content.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.t1059.001\n  - attack.stealth\n  - attack.t1027\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    Image|endswith:\n      - '\\powershell.exe'\n      - '\\pwsh.exe'\n  selection_cli:\n    CommandLine|contains|windash:\n      - ' -enc '\n      - ' -encodedcommand '\n      - ' -ec '\n  filter_main_programfiles:\n    ParentImage|startswith: 'C:\\Program Files\\'\n  condition: all of selection_* and not 1 of filter_main_*\nfalsepositives:\n  - Management agents that run encoded scripts\nlevel: high\n"
+    },
+    {
+      "name": "windows/proc_creation_certutil_download.yml",
+      "content": "title: Certutil Used To Download A File\nid: 1d7c4b2a-8e9f-4a01-b3c5-6d7e8f9a0b1c\nstatus: test\ndescription: Detects certutil.exe used with urlcache or verifyctl to fetch a remote file.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1105\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection_img:\n    - Image|endswith: '\\certutil.exe'\n    - OriginalFileName: 'CertUtil.exe'\n  selection_cli:\n    CommandLine|contains:\n      - 'urlcache'\n      - 'verifyctl'\n  selection_url:\n    CommandLine|contains:\n      - 'http://'\n      - 'https://'\n  condition: all of selection_*\nfalsepositives:\n  - Rare admin use\nlevel: high\n"
+    },
+    {
+      "name": "windows/registry_set_run_key.yml",
+      "content": "title: Run Key Set To Program In Public Or Temp Folder\nid: 3c2b1a09-8f7e-4d6c-a5b4-c3d2e1f0a9b8\nstatus: experimental\ndescription: Detects a Run or RunOnce registry value pointing to a program in a user writable folder.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.persistence\n  - attack.t1547.001\nlogsource:\n  product: windows\n  category: registry_set\ndetection:\n  selection_key:\n    TargetObject|contains:\n      - '\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\'\n      - '\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\'\n  selection_path:\n    Details|contains:\n      - '\\Users\\Public\\'\n      - '\\AppData\\Local\\Temp\\'\n      - '\\Windows\\Temp\\'\n  condition: all of selection_*\nfalsepositives:\n  - Installers that run from temp folders\nlevel: medium\n"
+    },
+    {
+      "name": "windows/dns_query_tunnel_tools.yml",
+      "content": "title: DNS Query For Known Tunneling Service Domains\nid: 6f708192-a3b4-4c5d-9e6f-708192a3b4c5\nstatus: experimental\ndescription: Detects DNS lookups for domains used by popular tunneling services.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.command-and-control\n  - attack.t1572\nlogsource:\n  product: windows\n  category: dns_query\ndetection:\n  selection:\n    QueryName|endswith:\n      - '.ngrok.io'\n      - '.ngrok-free.app'\n      - '.trycloudflare.com'\n      - '.loca.lt'\n  condition: selection\nfalsepositives:\n  - Developers testing web apps\nlevel: medium\n"
+    },
+    {
+      "name": "broken/issue_validator_findings.yml",
+      "content": "title: Rule With Several Validator Findings\nid: 7c17f234-75e8-4138-9491-a74c9584ae72\nstatus: test\ndescription: Has a dangling detection, a duplicate tag, a double wildcard and wildcards used instead of a modifier.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.execution\n  - attack.execution\n  - attack.t1059.003\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    CommandLine:\n      - '*/c **echo*'\n      - '*cmd /c*'\n  unused_part:\n    Image|endswith: '\\cmd.exe'\n  condition: selection\nlevel: low\n"
+    },
+    {
+      "name": "broken/issue_revoked_and_unknown_tags.yml",
+      "content": "title: Revoked And Unknown ATT&CK Tags\nid: 16335315-cdbb-4852-a916-32deffad6abd\nstatus: test\ndescription: Tagged with T1562.001, which ATT&CK v20 replaced with T1685, and T9999, which does not exist. Shows tag findings and how coverage maps the old id.\nauthor: Sigma Forge samples\ndate: 2026-11-11\ntags:\n  - attack.defense-evasion\n  - attack.t1562.001\n  - attack.t9999\nlogsource:\n  product: windows\n  category: process_creation\ndetection:\n  selection:\n    Image|endswith: '\\sc.exe'\n    CommandLine|contains|all:\n      - 'stop'\n      - 'WinDefend'\n  condition: selection\nlevel: high\n"
+    }
+  ]
+}

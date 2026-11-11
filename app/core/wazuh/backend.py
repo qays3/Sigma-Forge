@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from itertools import product as cartesian
 from typing import Dict, List, Optional, Tuple
@@ -103,6 +104,7 @@ class WazuhBackend:
         self.options = options or WazuhOptions()
         self.next_id = self.options.rule_id_start
         self._cidrs: List[str] = []
+        self.ref_groups: Dict[str, Tuple[str, str]] = {}
 
     def convert_rule(self, rule: SigmaRule) -> WazuhResult:
         ls = rule.logsource
@@ -124,6 +126,11 @@ class WazuhBackend:
                 )
 
         conjunctions = self._dedupe(conjunctions)
+        ref_group = self._ref_group(rule)
+        if ref_group:
+            for key in (rule.name, str(rule.id) if rule.id else None):
+                if key:
+                    self.ref_groups[str(key)] = (ref_group, product)
         prefix = self._prefix_literals(parent)
         level = LEVELS.get(rule.level.name.lower() if rule.level else "", 5)
         techniques, _ = split_attack_tags(rule.tags)
@@ -134,7 +141,7 @@ class WazuhBackend:
             rule_id = self.next_id
             self.next_id += 1
             ids.append(rule_id)
-            blocks.append(self._render_rule(rule, rule_id, level, parent, prefix + conj, techniques))
+            blocks.append(self._render_rule(rule, rule_id, level, parent, prefix + conj, techniques, ref_group))
 
         if len(ids) > 1:
             warnings.append(f"OR logic was split into {len(ids)} Wazuh rules (ids {ids[0]} to {ids[-1]}).")
@@ -329,7 +336,61 @@ class WazuhBackend:
         parts += "".join(f"(?!{self._wrap(l)}$)" for l in negatives)
         return f"(?s)^{parts}", False
 
-    def _render_rule(self, rule: SigmaRule, rule_id: int, level: int, parent, literals: List[Literal], techniques: List[str]) -> str:
+    @staticmethod
+    def _ref_group(rule) -> str:
+        key = rule.name or (str(rule.id) if rule.id else "")
+        if not key:
+            return ""
+        return "sigma_ref_" + re.sub(r"[^A-Za-z0-9_]", "_", str(key))
+
+    def convert_correlation(self, corr) -> WazuhResult:
+        ctype = getattr(corr.type, "name", str(corr.type)).lower()
+        if ctype != "event_count":
+            raise WazuhConversionError(f"Wazuh only supports event_count correlations, not {ctype}")
+        if len(corr.rules) != 1:
+            raise WazuhConversionError("Wazuh frequency rules can follow only one base rule")
+        ref = corr.rules[0]
+        target = getattr(ref, "rule", None)
+        keys = [str(ref.reference)]
+        if target is not None:
+            keys += [k for k in (target.name, str(target.id) if target.id else None) if k]
+        found = next((self.ref_groups[k] for k in keys if k in self.ref_groups), None)
+        if found is None:
+            raise WazuhConversionError(f"Base rule '{ref.reference}' must be converted in the same run")
+        group, product = found
+        op = getattr(corr.condition.op, "name", "").upper()
+        count = int(corr.condition.count)
+        if op == "GTE":
+            frequency = count
+        elif op == "GT":
+            frequency = count + 1
+        else:
+            raise WazuhConversionError("Wazuh frequency rules only support gte and gt conditions")
+        if frequency < 2:
+            raise WazuhConversionError("Wazuh frequency must be 2 or more")
+        timeframe = int(corr.timespan.seconds)
+        level = LEVELS.get(corr.level.name.lower() if corr.level else "", 10)
+        techniques, _ = split_attack_tags(corr.tags)
+        rule_id = self.next_id
+        self.next_id += 1
+        lines = [f'  <rule id="{rule_id}" level="{level}" frequency="{frequency}" timeframe="{timeframe}">',
+                 f"    <if_matched_group>{group}</if_matched_group>"]
+        for name in corr.group_by or []:
+            mapped, _ = map_field(name, product)
+            lines.append(f"    <same_field>{xml_escape(mapped)}</same_field>")
+        lines.append(f"    <description>Sigma correlation: {xml_escape(corr.title or 'untitled')}</description>")
+        if techniques:
+            lines.append("    <mitre>")
+            lines += [f"      <id>{t}</id>" for t in techniques]
+            lines.append("    </mitre>")
+        level_name = corr.level.name.lower() if corr.level else "unknown"
+        lines.append(f"    <group>sigma,sigma_correlation,sigma_{level_name},</group>")
+        lines.append("  </rule>")
+        xml = '<group name="sigma,">\n' + "\n".join(lines) + "\n</group>\n"
+        warnings = [f"Fires when '{ref.reference}' matches {frequency} times in {timeframe} seconds" + (f" with the same {', '.join(corr.group_by)}" if corr.group_by else "") + "."]
+        return WazuhResult(xml=xml, rule_ids=[rule_id], warnings=warnings)
+
+    def _render_rule(self, rule: SigmaRule, rule_id: int, level: int, parent, literals: List[Literal], techniques: List[str], ref_group: str = "") -> str:
         groups: Dict[Optional[str], List[Literal]] = {}
         for lit in literals:
             groups.setdefault(lit.field, []).append(lit)
@@ -357,6 +418,7 @@ class WazuhBackend:
                 lines.append(f"      <id>{tid}</id>")
             lines.append("    </mitre>")
         level_name = rule.level.name.lower() if rule.level else "unknown"
-        lines.append(f"    <group>sigma,sigma_{level_name},</group>")
+        extra = f"{ref_group}," if ref_group else ""
+        lines.append(f"    <group>sigma,sigma_{level_name},{extra}</group>")
         lines.append("  </rule>")
         return "\n".join(lines)

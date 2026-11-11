@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = BASE_DIR / "web"
 DATA_DIR = BASE_DIR / "data"
 ATTACK_FILE = DATA_DIR / "attack" / "attack.json"
-SAMPLES_DIR = BASE_DIR / "samples" / "rules"
+SAMPLES_DIR = BASE_DIR / "sample" / "rules"
 
 HOST = os.getenv("SIGMA_FORGE_HOST", "127.0.0.1")
 PORT = int(os.getenv("SIGMA_FORGE_PORT", "8000"))

@@ -1,0 +1,23 @@
+title: Crontab Changed From A Pipe Or File
+id: b99cfc95-0c5a-46f6-b34b-5aa7073aa2cc
+status: experimental
+description: Detects crontab being loaded from stdin or a file in /tmp, a common way to add persistence.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.t1053.003
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '/crontab'
+    CommandLine|contains:
+      - ' -'
+      - ' /tmp/'
+      - ' /dev/shm/'
+  condition: selection
+falsepositives:
+  - Config management tools
+level: medium

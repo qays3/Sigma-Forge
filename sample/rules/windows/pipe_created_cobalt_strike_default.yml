@@ -1,0 +1,25 @@
+title: Default Cobalt Strike Named Pipe Patterns
+id: ae5d79f7-9eb0-40db-9cb0-318033fcb849
+status: test
+description: Detects named pipe names that match default Cobalt Strike profiles.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.command-and-control
+  - attack.t1071
+  - attack.execution
+  - attack.t1559
+logsource:
+  product: windows
+  category: pipe_created
+detection:
+  selection:
+    PipeName|startswith:
+      - '\MSSE-'
+      - '\postex_'
+      - '\status_'
+      - '\msagent_'
+  condition: selection
+falsepositives:
+  - Rare software with matching pipe names
+level: critical
