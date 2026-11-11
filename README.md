@@ -1,16 +1,12 @@
 <div align="center">
 
-<img src="web/assets/img/logo.gif" alt="Sigma Forge" width="180">
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="web/assets/img/banner.png">
   <source media="(prefers-color-scheme: light)" srcset="web/assets/img/banner-light.png">
-  <img src="web/assets/img/banner-light.png" alt="Sigma Forge" width="560">
+  <img src="web/assets/img/banner-light.png" alt="Sigma Forge" width="720">
 </picture>
 
-**Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh. Check them for problems. See which MITRE ATT&CK techniques they cover.**
-
-A FastAPI backend with a single page app (SPA), built on [pySigma](https://github.com/SigmaHQ/pySigma), plus a custom Wazuh rule backend.
+Convert Sigma rules to Splunk, Elastic, Microsoft KQL and Wazuh, check them for problems, and see which MITRE ATT&CK techniques they cover.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-B06CFF?style=flat-square&logo=python&logoColor=white&labelColor=0A1120)
 ![FastAPI](https://img.shields.io/badge/FastAPI-backend-B06CFF?style=flat-square&logo=fastapi&logoColor=white&labelColor=0A1120)
@@ -19,21 +15,7 @@ A FastAPI backend with a single page app (SPA), built on [pySigma](https://githu
 ![Docker](https://img.shields.io/badge/Docker-ready-B06CFF?style=flat-square&logo=docker&logoColor=white&labelColor=0A1120)
 ![Platforms](https://img.shields.io/badge/Linux%20%7C%20Windows%20%7C%20macOS-supported-B06CFF?style=flat-square&labelColor=0A1120)
 
-[Features](#features) ·
-[Quick start](#quick-start) ·
-[Sample pack](#sample-pack) ·
-[Targets](#supported-targets) ·
-[Wazuh backend](#the-wazuh-backend) ·
-[API](#api) ·
-[Project layout](#project-layout)
-
 </div>
-
-<br>
-
-<p align="center">
-  <img src="web/assets/img/screenshots/workspace.png" alt="Sigma Forge workspace" width="100%">
-</p>
 
 ## Table of contents
 
@@ -85,12 +67,20 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 
 <table>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert page with Wazuh output"><p align="center"><b>Convert</b>: Wazuh XML from Sigma</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="ATT&CK coverage heat map"><p align="center"><b>Coverage</b>: ATT&CK heat map</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/workspace.png" alt="Workspace"><p align="center"><b>Workspace</b>: load rules and see an overview</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert to Splunk"><p align="center"><b>Convert</b>: Splunk SPL from the sample pack</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rule detail with quick convert"><p align="center"><b>Rules</b>: detail drawer and quick convert</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/workspace.png" alt="Workspace overview"><p align="center"><b>Workspace</b>: load rules and see an overview</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/convert-wazuh.png" alt="Convert to Wazuh"><p align="center"><b>Wazuh backend</b>: XML rules with notes</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="ATT&CK heat map"><p align="center"><b>Coverage</b>: ATT&amp;CK heat map</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage-technique.png" alt="Technique detail"><p align="center"><b>Technique</b>: sub techniques and rules</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rules table"><p align="center"><b>Rules</b>: search, filter and sort</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/rule-detail.png" alt="Rule detail"><p align="center"><b>Rule detail</b>: correlation to Wazuh in one click</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/light.png" alt="Light theme"><p align="center"><b>Light theme</b></p></td>
   </tr>
 </table>
 
@@ -537,8 +527,5 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 * [Wazuh](https://wazuh.com/), [Splunk](https://www.splunk.com/), [Elastic](https://www.elastic.co/) and [Microsoft](https://learn.microsoft.com/en-us/kusto/query/) are trademarks of their owners. Sigma Forge is not tied to any of them.
 
 <div align="center">
-<br>
-<img src="web/assets/img/logo.gif" alt="Sigma Forge" width="72">
-<br>
 <sub>Built by <a href="https://qayssarayra.com">Qays Sarayra</a></sub>
 </div>

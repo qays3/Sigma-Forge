@@ -697,16 +697,6 @@ pre,
   height: 64px;
 }
 
-.dropzone svg {
-  width: 40px;
-  height: 40px;
-  fill: none;
-  stroke: var(--amber);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .dropzone__title {
   font-family: var(--disp);
   font-size: var(--fs-md);
