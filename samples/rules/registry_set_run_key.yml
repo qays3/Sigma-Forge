@@ -1,0 +1,26 @@
+title: Run Key Set To Program In Public Or Temp Folder
+id: 3c2b1a09-8f7e-4d6c-a5b4-c3d2e1f0a9b8
+status: experimental
+description: Detects a Run or RunOnce registry value pointing to a program in a user writable folder.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.t1547.001
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection_key:
+    TargetObject|contains:
+      - '\Software\Microsoft\Windows\CurrentVersion\Run\'
+      - '\Software\Microsoft\Windows\CurrentVersion\RunOnce\'
+  selection_path:
+    Details|contains:
+      - '\Users\Public\'
+      - '\AppData\Local\Temp\'
+      - '\Windows\Temp\'
+  condition: all of selection_*
+falsepositives:
+  - Installers that run from temp folders
+level: medium

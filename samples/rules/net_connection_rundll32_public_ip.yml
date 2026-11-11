@@ -1,0 +1,26 @@
+title: Rundll32 Network Connection To Public Address
+id: 7e6d5c4b-3a29-4180-9f8e-7d6c5b4a3928
+status: experimental
+description: Detects rundll32.exe making an outbound connection to an address outside private ranges.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1218.011
+logsource:
+  product: windows
+  category: network_connection
+detection:
+  selection:
+    Image|endswith: '\rundll32.exe'
+    Initiated: 'true'
+  filter_private:
+    DestinationIp|cidr:
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+      - '192.168.0.0/16'
+      - '127.0.0.0/8'
+  condition: selection and not filter_private
+falsepositives:
+  - Some legitimate DLLs that check for updates
+level: medium

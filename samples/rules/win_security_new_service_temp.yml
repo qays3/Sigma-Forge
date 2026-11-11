@@ -1,0 +1,23 @@
+title: Service Installed From Temp Folder
+id: 2b3c4d5e-6f70-4812-9a3b-4c5d6e7f8091
+status: test
+description: Detects a new service whose binary lives in a temp folder, using Security event 4697.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.persistence
+  - attack.privilege-escalation
+  - attack.t1543.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4697
+    ServiceFileName|contains:
+      - '\Temp\'
+      - '\AppData\Local\Temp\'
+  condition: selection
+falsepositives:
+  - Software installers
+level: high

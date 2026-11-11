@@ -1,0 +1,22 @@
+title: AMSI Bypass Strings In PowerShell Script Block
+id: 4d5e6f70-8192-4a3b-bc4d-5e6f708192a3
+status: experimental
+description: Detects common AMSI bypass strings in PowerShell script block logs (event 4104).
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.defense-impairment
+  - attack.t1685
+logsource:
+  product: windows
+  category: ps_script
+detection:
+  selection:
+    ScriptBlockText|contains:
+      - 'AmsiUtils'
+      - 'amsiInitFailed'
+      - 'AmsiScanBuffer'
+  condition: selection
+falsepositives:
+  - Security research scripts
+level: high

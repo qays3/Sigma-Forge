@@ -1,0 +1,23 @@
+title: Shell History File Cleared On Linux
+id: 708192a3-b4c5-4d6e-8f70-8192a3b4c5d6
+status: test
+description: Detects commands that wipe shell history files.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.stealth
+  - attack.t1070.003
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection_clear:
+    CommandLine|contains:
+      - 'history -c'
+      - '> ~/.bash_history'
+      - 'rm ~/.bash_history'
+      - 'unset HISTFILE'
+  condition: selection_clear
+falsepositives:
+  - Users cleaning their own shell
+level: medium

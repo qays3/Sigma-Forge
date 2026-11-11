@@ -1,0 +1,27 @@
+title: Suspicious Process Access To LSASS Memory
+id: 5e6f7081-92a3-4b4c-8d5e-6f708192a3b4
+status: experimental
+description: Detects a process opening LSASS with access rights often used to dump credentials.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.credential-access
+  - attack.t1003.001
+logsource:
+  product: windows
+  category: process_access
+detection:
+  selection:
+    TargetImage|endswith: '\lsass.exe'
+    GrantedAccess:
+      - '0x1010'
+      - '0x1410'
+      - '0x1fffff'
+  filter_main_system:
+    SourceImage|startswith:
+      - 'C:\Windows\System32\'
+      - 'C:\Program Files\'
+  condition: selection and not filter_main_system
+falsepositives:
+  - Endpoint security agents
+level: high

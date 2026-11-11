@@ -1,0 +1,19 @@
+services:
+  sigma-forge:
+    build:
+      context: .
+      args:
+        REFRESH_ATTACK: "false"
+    image: sigma-forge:latest
+    container_name: sigma-forge
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      SIGMA_FORGE_MAX_RULES: "5000"
+      SIGMA_FORGE_WAZUH_ID_START: "100100"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

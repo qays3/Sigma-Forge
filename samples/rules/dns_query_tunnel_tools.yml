@@ -1,0 +1,23 @@
+title: DNS Query For Known Tunneling Service Domains
+id: 6f708192-a3b4-4c5d-9e6f-708192a3b4c5
+status: experimental
+description: Detects DNS lookups for domains used by popular tunneling services.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.command-and-control
+  - attack.t1572
+logsource:
+  product: windows
+  category: dns_query
+detection:
+  selection:
+    QueryName|endswith:
+      - '.ngrok.io'
+      - '.ngrok-free.app'
+      - '.trycloudflare.com'
+      - '.loca.lt'
+  condition: selection
+falsepositives:
+  - Developers testing web apps
+level: medium

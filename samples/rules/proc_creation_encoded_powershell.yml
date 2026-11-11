@@ -1,0 +1,30 @@
+title: PowerShell Started With Encoded Command
+id: 6f2a9d1e-3b4c-4e8a-9c71-2d5e8f0a1b23
+status: experimental
+description: Detects PowerShell launched with an encoded command line argument, often used to hide script content.
+author: Sigma Forge samples
+date: 2026-11-11
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.stealth
+  - attack.t1027
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_img:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_cli:
+    CommandLine|contains|windash:
+      - ' -enc '
+      - ' -encodedcommand '
+      - ' -ec '
+  filter_main_programfiles:
+    ParentImage|startswith: 'C:\Program Files\'
+  condition: all of selection_* and not 1 of filter_main_*
+falsepositives:
+  - Management agents that run encoded scripts
+level: high
