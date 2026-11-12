@@ -224,7 +224,8 @@ export async function editorView(root, route) {
               ${Object.entries(TEMPLATES).map(([k, t]) => `<option value="${k}">${esc(t.label)}</option>`).join("")}
             </select>
             <button class="btn btn--sm" type="button" id="edOpen">${icons.folder} Open</button>
-            <button class="btn btn--sm" type="button" id="edFromQuery" title="Turn a Splunk, KQL, Elastic query or an event into a Sigma rule">${icons.spark} From query or event</button>
+            <button class="btn btn--sm" type="button" id="edFromQuery" title="Turn a Splunk, KQL or Elastic query, an event or a list of IOCs into Sigma rules">${icons.spark} New from...</button>
+            <button class="btn btn--sm" type="button" id="edFix" title="Fix common problems the checks find">${icons.check || icons.spark} Auto fix</button>
             <button class="btn btn--sm" type="button" id="edHistory" title="Saved versions of this file">${icons.grid} History <span class="badge" id="edHistCount">0</span></button>
             <button class="btn btn--sm" type="button" id="edDownload">${icons.download} Download</button>
             <button class="btn btn--sm btn--primary" type="button" id="edSave">${icons.file} Save to workspace</button>
@@ -320,8 +321,9 @@ export async function editorView(root, route) {
     return { name: /\.ya?ml$/i.test(name) ? name : `${name}.yml`, content: text.value };
   }
 
-  function renderChecks(analysis) {
+  function renderChecks(analysis, explained = null) {
     const items = analysis?.rules || [];
+    const said = new Map((explained?.rules || []).map((x) => [x.key, x.lines]));
     const box = $("#edChecks", root);
     if (!text.value.trim()) {
       box.innerHTML = '<p class="muted editor__empty">Start typing a Sigma rule.</p>';
@@ -349,6 +351,7 @@ export async function editorView(root, route) {
           ${r.error ? `<div class="notice notice--bad">${esc(r.error)}</div>` : ""}
           ${(r.issues || []).map((i) => `<div class="notice notice--warn">${severityBadge(i.severity)} <span>${esc(i.message)}</span></div>`).join("")}
           ${!r.error && !(r.issues || []).length ? '<div class="notice notice--ok">No findings</div>' : ""}
+          ${said.get(r.key)?.length ? `<div class="explain"><div class="explain__label">What it does</div>${said.get(r.key).map((l) => `<p>${esc(l)}</p>`).join("")}</div>` : ""}
           ${r.quality && !r.error ? `<details class="editor__quality"><summary>Quality score ${r.quality.score} of 100, grade ${esc(r.quality.grade)}</summary>${qualityList(r.quality)}</details>` : ""}
           ${r.logsource ? `<div class="editor__meta"><span>Log source</span><span class="mono">${esc([r.logsource.product, r.logsource.category, r.logsource.service].filter(Boolean).join(" / ") || "none")}</span></div>` : ""}
         </div>`
@@ -437,9 +440,9 @@ export async function editorView(root, route) {
       return;
     }
     try {
-      const analysis = await api.analyze([current]);
+      const [analysis, explained] = await Promise.all([api.analyze([current]), api.explain([current]).catch(() => null)]);
       if (seq !== current.seq) return;
-      renderChecks(analysis);
+      renderChecks(analysis, explained);
       renderAttack(analysis);
     } catch (err) {
       $("#edChecks", root).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
@@ -639,6 +642,7 @@ export async function editorView(root, route) {
       <div class="tabs tabs--inline" id="fqTabs">
         <button class="tab is-active" type="button" data-fq="query">From a query</button>
         <button class="tab" type="button" data-fq="event">From an event</button>
+        <button class="tab" type="button" data-fq="ioc">From IOCs</button>
       </div>
       <div data-fqpane="query" class="mt-4">
         <p class="muted">Paste a search from Splunk, Microsoft Sentinel or Defender, Elastic or Kibana. Sigma Forge reads the filters, maps the fields to Sigma names and guesses the log source.</p>
@@ -651,6 +655,13 @@ export async function editorView(root, route) {
         <p class="muted">Paste one event as JSON (Sysmon, Windows event, CloudTrail, anything flat or nested). Then pick the fields that matter.</p>
         <label class="field"><span class="field__label">Event JSON</span><textarea class="textarea mono" id="feText" rows="10" spellcheck="false" placeholder='{"EventID": 1, "Image": "C:\\Windows\\System32\\certutil.exe", "CommandLine": "certutil -urlcache -f http://x/a.exe a.exe"}'></textarea></label>
         <div class="row"><div class="spacer"></div><button class="btn btn--primary" type="button" id="feGo">${icons.spark} Pick fields</button></div>
+      </div>
+      <div data-fqpane="ioc" class="mt-4" hidden>
+        <p class="muted">Paste IOCs (Indicators of Compromise) from a report or a feed: IPs, ranges, domains, URLs, MD5, SHA1 or SHA256 hashes and file names. Defanged values like evil[.]com and hxxp work too. You get Sigma rules for network, DNS, proxy, hashes and file names, plus a YARA file.</p>
+        <label class="field"><span class="field__label">Name of the list</span><input class="input" id="iocName" placeholder="Campaign or report name"></label>
+        <label class="field"><span class="field__label">IOCs</span><textarea class="textarea mono" id="iocText" rows="9" spellcheck="false" placeholder="203.0.113.10&#10;evil-updates[.]com&#10;hxxps://cdn.evil-updates[.]com/a.bin&#10;44d88612fea8a8f36de82e1278abb02f&#10;invoice_viewer.exe"></textarea></label>
+        <div class="row"><div class="spacer"></div><button class="btn btn--primary" type="button" id="iocGo">${icons.spark} Make rules</button></div>
+        <div id="iocOut" class="mt-4"></div>
       </div>`;
     const EXAMPLES = {
       splunk: 'index=windows sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 Image="*\\certutil.exe" (CommandLine="*urlcache*" OR CommandLine="*-decode*")',
@@ -661,6 +672,7 @@ export async function editorView(root, route) {
     openDrawer("New rule from a query or an event", body, (panel) => {
       $("#fqExamples", panel).innerHTML = `Try: ${Object.keys(EXAMPLES).map((k) => `<button class="link-btn" type="button" data-ex="${k}">${esc(k === "kql" ? "KQL" : k === "eql" ? "EQL" : k === "lucene" ? "Kibana" : "Splunk")}</button>`).join(" ")}`;
       let last = null;
+      let lastIoc = null;
       panel.addEventListener("click", async (e) => {
         const tab = e.target.closest("[data-fq]");
         if (tab) {
@@ -708,6 +720,45 @@ export async function editorView(root, route) {
           toast("Rule loaded. Check it, then save.", "ok");
           return;
         }
+        if (e.target.closest("#iocGo")) {
+          const textIn = $("#iocText", panel).value.trim();
+          if (!textIn) {
+            toast("Paste some IOCs first", "bad");
+            return;
+          }
+          $("#iocOut", panel).innerHTML = '<div class="skeleton sk-block"></div>';
+          try {
+            lastIoc = await api.iocRules(textIn, $("#iocName", panel).value.trim());
+            const c = lastIoc.counts;
+            const chips = Object.entries(c).filter(([, n]) => n).map(([k, n]) => `<span class="chip">${n} ${esc(k)}</span>`).join("");
+            $("#iocOut", panel).innerHTML = `
+              <div class="chips">${chips}</div>
+              ${lastIoc.skipped.length ? `<div class="notice notice--warn mt-4">Skipped ${lastIoc.skipped.length} values that are not IOCs: ${esc(lastIoc.skipped.slice(0, 8).join(", "))}${lastIoc.skipped.length > 8 ? "..." : ""}</div>` : ""}
+              <div class="card mt-4"><ul class="list">${lastIoc.sigma.map((r, i) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc((r.content.match(/^title:\s*(.+)$/m) || [])[1] || r.name)}</div><div class="list__meta mono">${esc(r.name)}</div></div><button class="btn btn--sm" type="button" data-iocopen="${i}">Open</button></li>`).join("")}${lastIoc.yara ? `<li class="list__item"><div class="list__main"><div class="list__title">YARA rules for the same IOCs</div><div class="list__meta mono">${esc(lastIoc.yara.name)}</div></div><span class="badge badge--accent">YARA</span></li>` : ""}</ul></div>
+              <div class="row mt-4"><div class="spacer"></div>${lastIoc.yara ? `<button class="btn" type="button" id="iocYara">${icons.grid} Save YARA file</button>` : ""}<button class="btn btn--primary" type="button" id="iocAdd">${icons.file} Add ${esc(plural(lastIoc.sigma.length, "rule"))} to workspace</button></div>`;
+          } catch (err) {
+            $("#iocOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+          }
+          return;
+        }
+        const iocOpen = e.target.closest("[data-iocopen]");
+        if (iocOpen && lastIoc) {
+          const r = lastIoc.sigma[Number(iocOpen.dataset.iocopen)];
+          closeDrawer();
+          loadText(r.name, r.content);
+          return;
+        }
+        if (e.target.closest("#iocAdd") && lastIoc) {
+          const added = await store.add(lastIoc.sigma.map((r) => ({ name: `iocs/${r.name}`, content: r.content })));
+          toast(`Added ${plural(added, "rule")} to the workspace`, "ok");
+          return;
+        }
+        if (e.target.closest("#iocYara") && lastIoc?.yara) {
+          const { yaraStore } = await import("./yarakit.js");
+          yaraStore.upsert({ name: lastIoc.yara.name, content: lastIoc.yara.content });
+          toast(`Saved ${lastIoc.yara.name} to your YARA rules`, "ok");
+          return;
+        }
         if (e.target.closest("#feGo")) {
           let ev;
           try {
@@ -724,6 +775,29 @@ export async function editorView(root, route) {
         }
       });
     });
+  });
+
+  $("#edFix", root).addEventListener("click", async (e) => {
+    if (!text.value.trim()) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const res = await api.autofix(text.value, file().name);
+      if (!res.changed) {
+        toast("Nothing to fix", "ok");
+        return;
+      }
+      pushHistory(file().name, text.value, "before auto fix");
+      setText(res.content);
+      paintGutter();
+      paintHistCount();
+      refresh();
+      openDrawer(`Auto fix, ${plural(res.changes.length, "change")}`, `<p class="muted">The old text is kept in History, so you can undo this.</p><div class="card mt-4"><ul class="list">${res.changes.map((c) => `<li class="list__item"><div class="list__main">${esc(c)}</div></li>`).join("")}</ul></div>`);
+    } catch (err) {
+      toast(err.message, "bad");
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   paintHistCount();

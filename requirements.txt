@@ -28,3 +28,4 @@ pysigma-backend-sumologic>=0.2.5
 pySigma-backend-quickwit>=0.1.4
 pysigma-backend-clickhouse>=1.1
 pySigma-backend-sqlite>=2.0
+psutil>=5.9

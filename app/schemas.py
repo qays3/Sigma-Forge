@@ -24,6 +24,7 @@ class ConvertRequest(BaseModel):
     format: str = "default"
     options: ConvertOptions = ConvertOptions()
     field_mapping: Dict[str, str] = Field(default_factory=dict)
+    allowlist: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class NavigatorRequest(BaseModel):
@@ -37,6 +38,7 @@ class CompareRequest(BaseModel):
     targets: List[str] = Field(min_length=1, max_length=6)
     options: ConvertOptions = ConvertOptions()
     field_mapping: Dict[str, str] = Field(default_factory=dict)
+    allowlist: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ExportRequest(BaseModel):
@@ -47,6 +49,7 @@ class ExportRequest(BaseModel):
     field_mapping: Dict[str, str] = Field(default_factory=dict)
     package: str = Field(default="auto", max_length=40)
     name: str = Field(default="sigma-forge", max_length=80)
+    allowlist: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class LibraryAddRequest(BaseModel):
@@ -87,6 +90,7 @@ class DeployRequest(BaseModel):
     options: ConvertOptions = ConvertOptions()
     field_mapping: Dict[str, str] = Field(default_factory=dict)
     dry_run: bool = True
+    allowlist: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class GitFetchRequest(BaseModel):
@@ -117,6 +121,7 @@ class HuntEventsRequest(BaseModel):
     max_events: int = Field(default=20000, ge=100, le=50000)
     mode: str = "auto"
     field_mapping: Dict[str, Any] = Field(default_factory=dict)
+    allowlist: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class HuntYaraRequest(BaseModel):
@@ -126,3 +131,39 @@ class HuntYaraRequest(BaseModel):
     max_files: int = Field(default=20000, ge=1, le=200000)
     max_size_mb: int = Field(default=32, ge=1, le=512)
     extensions: List[str] = Field(default_factory=list)
+
+
+
+class HuntReportRequest(BaseModel):
+    result: Dict[str, Any]
+    title: str = Field(default="", max_length=200)
+    scope: str = Field(default="", max_length=400)
+
+
+class ScheduleRequest(BaseModel):
+    enabled: bool = False
+    every_minutes: int = Field(default=15, ge=5, le=1440)
+    channels: List[str] = Field(default_factory=list, max_length=20)
+    rules: Optional[List[RuleInput]] = None
+    min_level: str = "medium"
+    kind: str = "slack"
+    url: Optional[str] = Field(default=None, max_length=2000)
+
+
+class ProcessScanRequest(BaseModel):
+    rules: List[RuleInput]
+    pids: List[int] = Field(default_factory=list, max_length=5000)
+
+
+class IocRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=500000)
+    name: str = Field(default="", max_length=80)
+
+
+class AutofixRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=262144)
+    name: str = Field(default="", max_length=300)
+
+
+class PurpleRequestMeta(BaseModel):
+    techniques: List[str] = Field(default_factory=list)

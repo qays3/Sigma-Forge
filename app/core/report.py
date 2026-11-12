@@ -125,3 +125,77 @@ def build_report(parsed: List[ParsedRule], title: str = "", group: Optional[str]
 <title>{_e(title)}</title><style>{CSS}</style></head>
 <body><header><div class="eb">{_e(APP_NAME)} report</div><h1>{_e(title)}</h1><p>Generated {stamp} from {s["valid"]} rules.</p></header>
 <div class="wrap">{body}<footer>Made with {_e(APP_NAME)} {_e(APP_VERSION)}. Print this page or save it as PDF from your browser.</footer></div></body></html>"""
+
+
+LEVEL_CLASS = {"critical": "bad", "high": "bad", "medium": "warn", "low": "ok", "informational": "ok"}
+
+NEXT_STEPS = {
+    "initial-access": "Find the first entry point: mail, web or remote service logs around the first hit.",
+    "execution": "Collect the scripts and binaries that ran and check their hashes.",
+    "persistence": "Remove the run keys, services or tasks that were added, after you save copies.",
+    "privilege-escalation": "Check which accounts gained rights and reset them.",
+    "credential-access": "Reset passwords for every account used on these hosts and look for reuse elsewhere.",
+    "discovery": "Look for what the attacker learned next: lateral movement usually follows discovery.",
+    "lateral-movement": "Scope every host the account touched and isolate the ones with hits.",
+    "collection": "Find which files were gathered and where they were staged.",
+    "command-and-control": "Block the remote IPs and domains at the edge and search for them on other hosts.",
+    "exfiltration": "Estimate what data left and from which host. Start the data breach process if needed.",
+    "impact": "Isolate the hosts now and check backups before you restore.",
+    "stealth": "Assume logs may be missing. Collect memory and disk images before cleaning.",
+    "defense-impairment": "Turn security tools back on and check which ones were changed.",
+}
+
+
+def build_hunt_report(result: Dict, title: str = "", scope: str = "") -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    title = title or "Hunt report"
+    s = result.get("summary", {})
+    tl = result.get("timeline") or {"items": [], "hosts": [], "tactics": []}
+    fired = [r for r in result.get("results", []) if r.get("hits")]
+    fired.sort(key=lambda r: (-{"critical": 5, "high": 4, "medium": 3, "low": 2}.get(r.get("level") or "", 0), -r["hits"]))
+    worst = max(({"critical": 5, "high": 4, "medium": 3, "low": 2, "informational": 1}.get(r.get("level") or "", 0) for r in fired), default=0)
+    verdict = {5: ("Critical", "bad"), 4: ("High", "bad"), 3: ("Medium", "warn"), 2: ("Low", "ok"), 1: ("Low", "ok")}.get(worst, ("Clean", "ok"))
+    parts: List[str] = ['<div class="kpis">']
+    for label, value in [("Events", s.get("events", 0)), ("Rules that fired", f'{s.get("matched_rules", 0)} / {s.get("tested", 0)}'),
+                         ("Hosts with hits", len(tl.get("hosts", []))), ("Highest level", verdict[0])]:
+        parts.append(f'<div class="kpi"><b>{_e(value)}</b><span>{_e(label)}</span></div>')
+    parts.append("</div>")
+    if scope:
+        parts.append(f'<p class="note">Scope: {_e(scope)}</p>')
+    if result.get("channels"):
+        parts.append("<h2>Logs read</h2><table><thead><tr><th>Log</th><th>Events</th><th>Note</th></tr></thead><tbody>")
+        for c in result["channels"]:
+            parts.append(f'<tr><td class="mono">{_e(c.get("channel"))}</td><td>{c.get("events", 0)}</td><td>{_e(c.get("error") or "")}</td></tr>')
+        parts.append("</tbody></table>")
+    if not fired:
+        parts.append('<h2>Result</h2><p>No rule fired on these events. That is a good sign, but check that the right logs were collected.</p>')
+    else:
+        parts.append("<h2>Hosts</h2><table><thead><tr><th>Host</th><th>Highest level</th><th>Hits</th><th>First seen</th><th>Last seen</th><th>Furthest stage</th></tr></thead><tbody>")
+        for h in tl.get("hosts", []):
+            parts.append(f'<tr><td class="mono">{_e(h["host"])}</td><td><span class="pill {LEVEL_CLASS.get(h["top"], "")}">{_e(h["top"])}</span></td><td>{h["hits"]}</td>'
+                         f'<td class="mono">{_e(h["first"])}</td><td class="mono">{_e(h["last"])}</td><td>{_e(h["stage"])}</td></tr>')
+        parts.append("</tbody></table>")
+        if tl.get("tactics"):
+            parts.append('<h2>Attack path</h2><p>' + " &rarr; ".join(f'<span class="pill">{_e(t["name"])}</span>' for t in tl["tactics"]) + "</p>")
+            steps = [NEXT_STEPS[t["short"]] for t in tl["tactics"] if t["short"] in NEXT_STEPS]
+            if steps:
+                parts.append("<h2>Next steps</h2><ol>" + "".join(f"<li>{_e(x)}</li>" for x in reversed(steps)) + "</ol>")
+        parts.append("<h2>Rules that fired</h2><table><thead><tr><th>Rule</th><th>Level</th><th>Hits</th><th>Techniques</th><th>Noise</th></tr></thead><tbody>")
+        for r in fired:
+            noise = (r.get("noise") or {}).get("level", "")
+            parts.append(f'<tr><td>{_e(r["title"])}<div class="note mono">{_e(r["key"])}</div></td><td><span class="pill {LEVEL_CLASS.get(r.get("level") or "", "")}">{_e(r.get("level"))}</span></td>'
+                         f'<td>{r["hits"]}</td><td class="mono">{_e(", ".join(r.get("techniques") or []))}</td><td>{_e(noise)}</td></tr>')
+        parts.append("</tbody></table>")
+        items = tl.get("items", [])
+        parts.append(f'<h2>Timeline</h2><p class="note">{len(items)} hits in time order{", cut at the limit" if tl.get("truncated") else ""}.</p>')
+        parts.append("<table><thead><tr><th>Time</th><th>Host</th><th>Rule</th><th>Tactic</th><th>Detail</th></tr></thead><tbody>")
+        for it in items[:400]:
+            parts.append(f'<tr><td class="mono">{_e(it["ts"])}</td><td class="mono">{_e(it["host"])}</td><td>{_e(it["rule"])}</td>'
+                         f'<td>{_e(", ".join(it["tactics"]))}</td><td class="mono">{_e(it["summary"])}</td></tr>')
+        parts.append("</tbody></table>")
+    body = "\n".join(parts)
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_e(title)}</title><style>{CSS}</style></head>
+<body><header><div class="eb">{_e(APP_NAME)} hunt report</div><h1>{_e(title)}</h1><p>Generated {stamp}. Verdict: {_e(verdict[0])}.</p></header>
+<div class="wrap">{body}<footer>Made with {_e(APP_NAME)} {_e(APP_VERSION)}. Print this page or save it as PDF from your browser.</footer></div></body></html>"""

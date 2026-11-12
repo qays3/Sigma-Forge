@@ -338,6 +338,7 @@ class LogDatabase:
                         break
             product, service, category = _logsource(flat, declared)
             event["logsource"] = {"product": product, "service": service, "category": category}
+            event["ts"] = ts
             label = ":".join(x for x in (product, service or category.split(",")[0]) if x) or "unknown"
             self.stats[label] = self.stats.get(label, 0) + 1
             values = {}
@@ -349,6 +350,7 @@ class LogDatabase:
                 names.setdefault(lowered, name)
                 counts[lowered] = counts.get(lowered, 0) + 1
                 values[lowered] = value
+            event["values"] = values
             rows.append((idx, event["source"], json.dumps(raw, ensure_ascii=False, default=str), product, service, category, ts, values))
         keep = sorted(counts, key=lambda k: -counts[k])[:1900]
         self.columns = {k: names[k] for k in keep}
@@ -419,8 +421,13 @@ def _ls_filter(rule, mode: str) -> Tuple[str, List[str]]:
 MISSING_COLUMN = re.compile(r"no such column: (.+)$")
 
 
-def _sample(event: Dict[str, Any]) -> Dict[str, Any]:
-    return {"source": event["source"], "logsource": event["logsource"], "event": event["raw"]}
+def _sample(event: Dict[str, Any], idx: int = -1, procs=None) -> Dict[str, Any]:
+    out = {"source": event["source"], "logsource": event["logsource"], "event": event["raw"], "ts": event.get("ts") or ""}
+    if procs is not None and idx >= 0:
+        tree = procs.lineage(idx)
+        if tree and (tree["ancestors"] or tree["children"]):
+            out["lineage"] = tree
+    return out
 
 
 def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", max_samples: int = 5, options=None) -> Dict[str, Any]:
@@ -436,6 +443,10 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
     rules_by_key = {p.key: p for p in parse_inputs(items)}
     matched_events = set()
     results = []
+    from app.core.timeline import ProcessIndex, build_timeline, rule_attack
+
+    procs = ProcessIndex(events)
+    timeline_hits = []
     for row in converted["results"]:
         parsed = rules_by_key.get(row["key"])
         entry = {
@@ -516,8 +527,13 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
         entry["hits"] = len(alerts) if is_corr else len(idx_rows)
         entry["events"] = len(idx_rows)
         entry["alerts"] = [_alert(a) for a in alerts[:max_samples]]
-        entry["samples"] = [_sample(events[i]) for i in idx_rows[:max_samples]]
+        entry["samples"] = [_sample(events[i], i, procs) for i in idx_rows[:max_samples]]
         matched_events.update(idx_rows)
+        tids, tactics = rule_attack(parsed.rule if parsed else None)
+        entry["techniques"] = tids
+        entry["tactics"] = tactics
+        if idx_rows and not is_corr:
+            timeline_hits.append({"key": row["key"], "title": row["title"], "level": row["level"], "rows": idx_rows[:400], "tactics": tactics, "techniques": tids})
         if hit_rows and not is_corr:
             entry["noise"] = _noise(db, sorted(set(hit_rows)), len(events), parsed.rule if parsed else None)
         results.append(entry)
@@ -541,6 +557,7 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
         "logsources": [{"name": k, "events": v} for k, v in sorted(db.stats.items(), key=lambda x: -x[1])],
         "fields": len(db.columns),
         "results": results,
+        "timeline": build_timeline(events, timeline_hits),
     }
 
 

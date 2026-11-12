@@ -24,6 +24,20 @@ CHANNELS = [
     {"id": "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational", "name": "RDP sessions", "note": "Remote desktop logons"},
 ]
 
+LINUX_CHANNELS = [
+    {"id": "journal", "name": "systemd journal", "note": "Services, logins, sudo, cron and kernel messages"},
+    {"id": "auditd", "name": "auditd", "note": "Process runs (EXECVE), file and user changes. Needs root"},
+    {"id": "authlog", "name": "auth log", "note": "SSH, sudo and login lines from /var/log/auth.log or /var/log/secure"},
+]
+
+MAC_CHANNELS = [
+    {"id": "unified", "name": "Unified log", "note": "Process, security and system messages from log show"},
+]
+
+AUTH_FILES = ["/var/log/auth.log", "/var/log/secure"]
+AUDIT_FILE = "/var/log/audit/audit.log"
+TAIL_BYTES = 48 * 1024 * 1024
+
 NS = "{http://schemas.microsoft.com/win/2004/08/events/event}"
 MAX_EVENTS = 50000
 QUERY_TIMEOUT = 120
@@ -35,6 +49,15 @@ class HuntError(ValueError):
 
 def is_windows() -> bool:
     return platform.system() == "Windows"
+
+
+def os_kind() -> str:
+    name = platform.system()
+    return {"Windows": "windows", "Linux": "linux", "Darwin": "macos"}.get(name, "other")
+
+
+def channel_list() -> List[Dict[str, str]]:
+    return {"windows": CHANNELS, "linux": LINUX_CHANNELS, "macos": MAC_CHANNELS}.get(os_kind(), [])
 
 
 def is_admin() -> bool:
@@ -96,16 +119,46 @@ def suggested_paths() -> List[str]:
     return out
 
 
+def _unix_info(channel: str) -> Dict[str, Any]:
+    import shutil
+
+    if channel == "journal":
+        ok = shutil.which("journalctl") is not None
+        return {"exists": ok, "records": 0, "error": "" if ok else "journalctl not found"}
+    if channel == "auditd":
+        if not os.path.exists(AUDIT_FILE):
+            return {"exists": False, "records": 0, "error": "auditd log not found"}
+        if not os.access(AUDIT_FILE, os.R_OK):
+            return {"exists": True, "records": 0, "error": "Access denied. Run Sigma Forge as root."}
+        return {"exists": True, "records": 0, "error": ""}
+    if channel == "authlog":
+        for f in AUTH_FILES:
+            if os.path.exists(f):
+                ok = os.access(f, os.R_OK)
+                return {"exists": True, "records": 0, "error": "" if ok else "Access denied. Run Sigma Forge as root."}
+        return {"exists": False, "records": 0, "error": "No auth log file found"}
+    if channel == "unified":
+        ok = shutil.which("log") is not None
+        return {"exists": ok, "records": 0, "error": "" if ok else "The log command was not found"}
+    return {"exists": False, "records": 0, "error": "Unknown log"}
+
+
 def status() -> Dict[str, Any]:
     win = is_windows()
+    kind = os_kind()
     channels = []
     if win:
         for ch in CHANNELS:
             channels.append({**ch, **_channel_info(ch["id"])})
+    elif kind in ("linux", "macos"):
+        for ch in channel_list():
+            channels.append({**ch, **_unix_info(ch["id"])})
     return {
         "platform": platform.system() or "Unknown",
         "host": platform.node(),
         "windows": win,
+        "os": kind,
+        "live": kind in ("windows", "linux", "macos"),
         "admin": is_admin(),
         "channels": channels,
         "paths": suggested_paths(),
@@ -196,7 +249,184 @@ def read_channel(channel: str, hours: float, limit: int) -> List[Dict[str, Any]]
     return parse_events_xml(out, channel)
 
 
+def _iso(seconds: float) -> str:
+    from datetime import datetime, timezone
+
+    return datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def _tail_lines(path: str, limit: int) -> List[str]:
+    with open(path, "rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        fh.seek(max(0, size - TAIL_BYTES))
+        data = fh.read().decode("utf-8", "replace")
+    lines = data.splitlines()
+    if size > TAIL_BYTES and lines:
+        lines = lines[1:]
+    return lines[-limit:]
+
+
+JOURNAL_SERVICE = {"sshd": "sshd", "sudo": "sudo", "su": "auth", "login": "auth", "systemd-logind": "auth", "cron": "cron", "crond": "cron", "CRON": "cron", "vsftpd": "vsftpd"}
+
+
+def read_journal(hours: float, limit: int) -> List[Dict[str, Any]]:
+    minutes = max(1, int(hours * 60))
+    code, out, err = _run(["journalctl", f"--since=-{minutes}min", "-o", "json", "--no-pager", "-r", "-n", str(int(limit))], QUERY_TIMEOUT)
+    if code != 0 and not out:
+        raise HuntError(f"journal: {(err or 'could not read the journal').strip()}")
+    events = []
+    for line in out.splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        ident = str(rec.get("SYSLOG_IDENTIFIER") or rec.get("_COMM") or "")
+        msg = rec.get("MESSAGE")
+        if isinstance(msg, list):
+            msg = bytes(x for x in msg if isinstance(x, int)).decode("utf-8", "replace")
+        ev = {
+            "Message": msg or "",
+            "SyslogIdentifier": ident,
+            "Image": rec.get("_EXE", ""),
+            "CommandLine": rec.get("_CMDLINE", ""),
+            "ProcessId": rec.get("_PID", ""),
+            "User": rec.get("_UID", ""),
+            "Computer": rec.get("_HOSTNAME", ""),
+            "Unit": rec.get("_SYSTEMD_UNIT", ""),
+            "logsource": {"product": "linux", "service": JOURNAL_SERVICE.get(ident, "syslog")},
+        }
+        ts = rec.get("__REALTIME_TIMESTAMP")
+        if ts and str(ts).isdigit():
+            ev["timestamp"] = _iso(int(ts) / 1_000_000)
+        events.append({k: v for k, v in ev.items() if v not in ("", None)})
+    return events
+
+
+AUDIT_RE = None
+
+
+def parse_audit_line(line: str) -> Optional[Dict[str, Any]]:
+    import re
+    import shlex
+
+    global AUDIT_RE
+    if AUDIT_RE is None:
+        AUDIT_RE = re.compile(r"msg=audit\((\d+)(?:\.(\d+))?:(\d+)\)")
+    m = AUDIT_RE.search(line)
+    if not m:
+        return None
+    ev: Dict[str, Any] = {"timestamp": _iso(int(m.group(1)) + int((m.group(2) or "0").ljust(3, "0")[:3]) / 1000), "audit_id": m.group(3)}
+    body = line.replace(m.group(0), " ")
+    try:
+        parts = shlex.split(body, posix=True)
+    except ValueError:
+        parts = body.split()
+    for part in parts:
+        if "=" not in part:
+            continue
+        key, _, value = part.partition("=")
+        key = key.strip().strip("'")
+        if key and key not in ev:
+            ev[key] = value
+    ev["logsource"] = {"product": "linux", "service": "auditd"}
+    return ev
+
+
+def _merge_execve(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    for ev in events:
+        if ev.get("type") == "EXECVE":
+            args = [ev[f"a{i}"] for i in range(int(ev.get("argc", "0") or 0)) if f"a{i}" in ev]
+            fixed = []
+            for a in args:
+                if len(a) % 2 == 0 and a and all(c in "0123456789ABCDEFabcdef" for c in a):
+                    try:
+                        a = bytes.fromhex(a).decode("utf-8", "replace").replace("\x00", " ")
+                    except ValueError:
+                        pass
+                fixed.append(a)
+            ev["CommandLine"] = " ".join(fixed)
+    return events
+
+
+def read_auditd(hours: float, limit: int) -> List[Dict[str, Any]]:
+    import time as _t
+
+    if not os.path.exists(AUDIT_FILE):
+        raise HuntError("auditd: no log file. Install and start auditd first.")
+    if not os.access(AUDIT_FILE, os.R_OK):
+        raise HuntError("auditd: access denied. Run Sigma Forge as root.")
+    cutoff = _t.time() - hours * 3600
+    out = []
+    for line in _tail_lines(AUDIT_FILE, limit * 4):
+        ev = parse_audit_line(line)
+        if not ev:
+            continue
+        out.append(ev)
+    from datetime import datetime
+
+    keep = []
+    for ev in out:
+        try:
+            ts = datetime.strptime(ev["timestamp"][:19], "%Y-%m-%dT%H:%M:%S").timestamp()
+        except ValueError:
+            ts = cutoff
+        if ts >= cutoff - 3 * 3600:
+            keep.append(ev)
+    return _merge_execve(keep[-limit:])
+
+
+def read_authlog(hours: float, limit: int) -> List[Dict[str, Any]]:
+    path = next((f for f in AUTH_FILES if os.path.exists(f)), None)
+    if not path:
+        raise HuntError("auth log: no file found")
+    if not os.access(path, os.R_OK):
+        raise HuntError("auth log: access denied. Run Sigma Forge as root.")
+    events = []
+    for line in _tail_lines(path, limit):
+        ident = ""
+        head = line.split(":", 3)
+        if len(head) >= 3:
+            prog = head[2].split()[-1] if head[2].split() else ""
+            ident = prog.split("[")[0]
+        events.append({"Message": line, "SyslogIdentifier": ident, "logsource": {"product": "linux", "service": "auth"}})
+    return events
+
+
+def read_unified(hours: float, limit: int) -> List[Dict[str, Any]]:
+    minutes = max(1, int(hours * 60))
+    code, out, err = _run(["log", "show", "--last", f"{minutes}m", "--style", "ndjson", "--info"], QUERY_TIMEOUT)
+    if code != 0 and not out:
+        raise HuntError(f"unified log: {(err or 'could not read the log').strip()}")
+    events = []
+    for line in out.splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict) or "eventMessage" not in rec:
+            continue
+        events.append({
+            "Message": rec.get("eventMessage", ""),
+            "Image": rec.get("processImagePath", ""),
+            "ProcessId": rec.get("processID", ""),
+            "Subsystem": rec.get("subsystem", ""),
+            "Category": rec.get("category", ""),
+            "User": rec.get("userID", ""),
+            "timestamp": rec.get("timestamp", ""),
+            "logsource": {"product": "macos"},
+        })
+        if len(events) >= limit:
+            break
+    return events
+
+
+UNIX_READERS = {"journal": read_journal, "auditd": read_auditd, "authlog": read_authlog, "unified": read_unified}
+
+
 def collect(channels: List[str], hours: float, max_events: int) -> Tuple[List[Tuple[str, bytes]], List[Dict[str, Any]]]:
+    if not is_windows():
+        return collect_unix(channels, hours, max_events)
     allowed = {c["id"] for c in CHANNELS}
     limit = max(100, min(int(max_events), MAX_EVENTS))
     per = max(100, limit // max(len(channels), 1))
@@ -256,3 +486,61 @@ def walk_files(paths: List[str], recursive: bool, max_files: int, max_size: int,
         except OSError:
             skipped["no_access"] += 1
     yield ("skipped", json.dumps(skipped), 0)
+
+
+def collect_unix(channels: List[str], hours: float, max_events: int) -> Tuple[List[Tuple[str, bytes]], List[Dict[str, Any]]]:
+    allowed = {c["id"] for c in channel_list()}
+    limit = max(100, min(int(max_events), MAX_EVENTS))
+    per = max(100, limit // max(len(channels), 1))
+    blobs: List[Tuple[str, bytes]] = []
+    stats: List[Dict[str, Any]] = []
+    for ch in channels:
+        started = time.monotonic()
+        if ch not in allowed:
+            stats.append({"channel": ch, "events": 0, "error": "Not available on this system", "seconds": 0})
+            continue
+        try:
+            events = UNIX_READERS[ch](hours, per)
+            err = ""
+        except (HuntError, OSError, subprocess.TimeoutExpired) as exc:
+            events, err = [], str(exc)
+        stats.append({"channel": ch, "events": len(events), "error": err, "seconds": round(time.monotonic() - started, 2)})
+        if events:
+            blobs.append((f"live:{ch}", "\n".join(json.dumps(e, ensure_ascii=False, default=str) for e in events).encode("utf-8")))
+    return blobs, stats
+
+
+def list_processes() -> List[Dict[str, Any]]:
+    out = []
+    try:
+        import psutil
+
+        for p in psutil.process_iter(["pid", "name", "exe", "username"]):
+            info = p.info
+            out.append({"pid": info["pid"], "name": info.get("name") or "", "exe": info.get("exe") or "", "user": info.get("username") or ""})
+        return out
+    except ImportError:
+        pass
+    if is_windows():
+        code, text, _ = _run(["tasklist", "/fo", "csv", "/nh"], 20)
+        import csv
+        import io
+
+        for row in csv.reader(io.StringIO(text)):
+            if len(row) >= 2 and row[1].isdigit():
+                out.append({"pid": int(row[1]), "name": row[0], "exe": "", "user": ""})
+        return out
+    proc = Path("/proc")
+    if proc.is_dir():
+        for d in proc.iterdir():
+            if d.name.isdigit():
+                try:
+                    name = (d / "comm").read_text().strip()
+                except OSError:
+                    continue
+                try:
+                    exe = os.readlink(d / "exe")
+                except OSError:
+                    exe = ""
+                out.append({"pid": int(d.name), "name": name, "exe": exe, "user": ""})
+    return out

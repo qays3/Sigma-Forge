@@ -197,15 +197,16 @@ def cmd_from_query(args) -> int:
 
 
 def cmd_hunt(args) -> int:
-    from app.core.hunt import CHANNELS, collect, is_windows
+    from app.core.hunt import channel_list, collect, os_kind
     from app.core.logtest import run_test
 
-    if not is_windows():
-        print("Live event log scans need Windows. Use 'test --logs file.evtx' instead.", file=sys.stderr)
+    if os_kind() not in ("windows", "linux", "macos"):
+        print("Live log scans need Windows, Linux or macOS. Use 'test --logs file.evtx' instead.", file=sys.stderr)
         return 2
     items = _collect(args.paths)
-    names = {c["name"].lower(): c["id"] for c in CHANNELS}
-    channels = [names.get(c.lower(), c) for c in (args.channels or ["sysmon", "security", "powershell", "system"])]
+    names = {c["name"].lower(): c["id"] for c in channel_list()}
+    default = ["sysmon", "security", "powershell", "system"] if os_kind() == "windows" else [c["id"] for c in channel_list()]
+    channels = [names.get(c.lower(), c) for c in (args.channels or default)]
     blobs, stats = collect(channels, args.hours, args.max_events)
     for st in stats:
         print(f"{st['channel']}: {st['error'] or str(st['events']) + ' events'}")

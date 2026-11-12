@@ -1,8 +1,9 @@
 import { api } from "../api.js";
-import { trackState } from "../router.js";
+import { navigate, trackState } from "../router.js";
 import { state } from "../state.js";
-import { openInEditor, paintMeters, qualityBadge, qualityList } from "../shared.js";
-import { $, $$, copyText, debounce, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton } from "../ui.js";
+import { store } from "../store.js";
+import { openInEditor, paintMeters, pushHistory, qualityBadge, qualityList } from "../shared.js";
+import { $, $$, closeDrawer, copyText, debounce, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const LEVEL_ORDER = { critical: 5, high: 4, medium: 3, low: 2, informational: 1, "": 0 };
 
@@ -170,7 +171,9 @@ export async function rulesView(root, route) {
         <dt>Tags</dt><dd><div class="tags">${row.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("") || "none"}</div></dd>
         <dt>False positives</dt><dd>${esc(row.falsepositives.join(", ") || "none")}</dd>
       </dl>
-      <h3 class="section-title">Checks</h3>
+      <h3 class="section-title">What it does</h3>
+      <div class="explain" id="ruleExplain"><div class="skeleton sk-line"></div><div class="skeleton sk-line"></div></div>
+      <h3 class="section-title">Checks ${row.error ? "" : `<button class="btn btn--sm" type="button" id="fixSrc">${icons.spark} Auto fix</button>`}</h3>
       ${issues}
       ${row.quality ? `<h3 class="section-title">Quality score</h3><div class="card"><div class="card__body">${qualityList(row.quality)}</div></div>` : ""}
       ${row.error ? "" : `<h3 class="section-title">Quick convert</h3>
@@ -184,6 +187,34 @@ export async function rulesView(root, route) {
       $("#copySrc", panel)?.addEventListener("click", () => copyText(file?.content || ""));
       $("#editSrc", panel)?.addEventListener("click", () => file && openInEditor(file.name, file.content, file.id));
       $("#qcRun", panel)?.addEventListener("click", () => quickConvert(panel, row, $("#qcTarget", panel).value));
+      if (file) {
+        api.explain([file])
+          .then((res) => {
+            const hit = res.rules.find((x) => x.key === row.key) || res.rules[0];
+            $("#ruleExplain", panel).innerHTML = hit?.lines?.length ? hit.lines.map((l) => `<p>${esc(l)}</p>`).join("") : `<p class="muted">${esc(hit?.error || "Could not explain this rule.")}</p>`;
+          })
+          .catch((err) => ($("#ruleExplain", panel).innerHTML = `<p class="muted">${esc(err.message)}</p>`));
+      }
+      $("#fixSrc", panel)?.addEventListener("click", async (e) => {
+        if (!file) return;
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try {
+          const res = await api.autofix(file.content, file.name);
+          if (!res.changed) {
+            toast("Nothing to fix in this rule", "ok");
+            return;
+          }
+          pushHistory(file.name, file.content, "before auto fix");
+          await store.replace(file.id, { name: file.name, content: res.content });
+          toast(`Fixed: ${res.changes.slice(0, 3).join(", ")}${res.changes.length > 3 ? ` and ${res.changes.length - 3} more` : ""}`, "ok", 5000);
+          closeDrawer();
+          navigate("/rules", { refresh: Date.now() });
+        } catch (err) {
+          toast(err.message, "bad");
+          btn.disabled = false;
+        }
+      });
     }, () => trackState({ key: undefined }));
   }
 

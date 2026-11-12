@@ -198,3 +198,53 @@ def scan_paths(rule_files: List[Tuple[str, str]], paths: List[str], recursive: b
         "summary": {"scanned": scanned, "matched_files": len(files), "matches": sum(len(f["matches"]) for f in files),
                     "errors": len(errors), "seconds": round(_time.monotonic() - started, 1)},
     }
+
+
+def scan_processes(rule_files: List[Tuple[str, str]], pids=None, budget: int = 240) -> Dict:
+    import os as _os
+    import time as _time
+
+    from app.core.hunt import list_processes
+
+    yara, compiled = _compile_sources(rule_files)
+    procs = list_processes()
+    if pids:
+        wanted = {int(p) for p in pids}
+        procs = [p for p in procs if p["pid"] in wanted]
+    me = _os.getpid()
+    started = _time.monotonic()
+    found, errors = [], []
+    scanned = 0
+    denied = 0
+    truncated = ""
+    for p in procs:
+        if p["pid"] in (0, 4, me):
+            continue
+        if _time.monotonic() - started > budget:
+            truncated = f"Stopped after {budget} seconds"
+            break
+        scanned += 1
+        try:
+            matches = compiled.match(pid=p["pid"], timeout=15)
+        except yara.TimeoutError:
+            errors.append({"path": f'{p["name"]} ({p["pid"]})', "error": "Scan timed out"})
+            continue
+        except yara.Error as exc:
+            text = str(exc)
+            if "access" in text.lower() or "denied" in text.lower() or "could not attach" in text.lower():
+                denied += 1
+            elif len(errors) < 100:
+                errors.append({"path": f'{p["name"]} ({p["pid"]})', "error": text})
+            continue
+        if matches:
+            found.append({"name": f'{p["exe"] or p["name"]} (pid {p["pid"]})', "pid": p["pid"], "process": p["name"], "user": p["user"],
+                          "size": 0, "matches": _match_out(matches), "error": ""})
+    return {
+        "files": found,
+        "missing": [],
+        "errors": errors,
+        "skipped": {"no_access": denied, "too_big": 0},
+        "truncated": truncated,
+        "summary": {"scanned": scanned, "matched_files": len(found), "matches": sum(len(f["matches"]) for f in found),
+                    "errors": len(errors), "denied": denied, "seconds": round(_time.monotonic() - started, 1)},
+    }

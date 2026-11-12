@@ -27,30 +27,36 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 6. [Setup script options](#setup-script-options)
 7. [How to use it](#how-to-use-it)
 8. [Sample pack](#sample-pack)
-9. [Supported targets](#supported-targets) and [target guide](#target-guide)
-10. [Automatic fallbacks](#automatic-fallbacks)
-11. [Correlation rules](#correlation-rules)
-12. [ATT&CK coverage](#attck-coverage)
-13. [Threat groups, log readiness and reports](#threat-groups-log-readiness-and-reports)
-14. [Testing rules on logs](#testing-rules-on-logs)
-15. [Noise check and filters](#noise-check-and-filters)
-16. [Building rules: from a query, from an event](#building-rules-from-a-query-from-an-event)
-17. [Rule quality score and version history](#rule-quality-score-and-version-history)
-18. [Hunt: scan this machine](#hunt-scan-this-machine)
-19. [YARA](#yara)
-20. [Deploy to your SIEM](#deploy-to-your-siem)
-21. [GitHub sync](#github-sync)
-22. [Command line and GitHub Action](#command-line-and-github-action)
-23. [SigmaHQ library](#sigmahq-library)
-24. [Field mapping](#field-mapping)
-25. [Export packages](#export-packages)
-26. [API](#api)
-27. [Configuration](#configuration)
-28. [Architecture](#architecture)
-29. [Project layout](#project-layout)
-30. [Development](#development)
-31. [Known limits](#known-limits)
-32. [Credits](#credits)
+9. [Supported targets](#supported-targets)
+10. [Target guide](#target-guide)
+11. [Automatic fallbacks](#automatic-fallbacks)
+12. [Correlation rules](#correlation-rules)
+13. [ATT&CK coverage](#attck-coverage)
+14. [Threat groups, log readiness and reports](#threat-groups-log-readiness-and-reports)
+15. [Testing rules on logs](#testing-rules-on-logs)
+16. [Noise check and filters](#noise-check-and-filters)
+17. [Building rules: from a query, from an event](#building-rules-from-a-query-from-an-event)
+18. [Rule quality score and version history](#rule-quality-score-and-version-history)
+19. [IOCs, explain, auto fix and SigmaHQ updates](#iocs-explain-auto-fix-and-sigmahq-updates)
+20. [Allow list and query cost](#allow-list-and-query-cost)
+21. [Workspace sharing and the public demo](#workspace-sharing-and-the-public-demo)
+22. [Hunt: scan this machine](#hunt-scan-this-machine)
+23. [Timeline, process tree and hunt report](#timeline-process-tree-and-hunt-report)
+24. [Purple team score](#purple-team-score)
+25. [YARA](#yara)
+26. [Deploy to your SIEM](#deploy-to-your-siem)
+27. [GitHub sync](#github-sync)
+28. [Command line and GitHub Action](#command-line-and-github-action)
+29. [SigmaHQ library](#sigmahq-library)
+30. [Field mapping](#field-mapping)
+31. [Export packages](#export-packages)
+32. [API](#api)
+33. [Configuration](#configuration)
+34. [Architecture](#architecture)
+35. [Project layout](#project-layout)
+36. [Development](#development)
+37. [Known limits](#known-limits)
+38. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -60,7 +66,7 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 2. **Quality checks** with the pySigma validators, plus checks for revoked or unknown ATT&CK tags, live in a rule editor.
 3. **Testing** on your own EVTX or JSON logs, so you see which rules fire before you deploy them.
 4. **Coverage** on a full MITRE ATT&CK (Adversarial Tactics, Techniques and Common Knowledge) Enterprise heat map, by technique and by log source, with gap suggestions from the SigmaHQ library and export to ATT&CK Navigator.
-5. **Hunting** on the machine it runs on: Sigma on the live Windows Event Logs, YARA on any folder, or uploaded `.evtx` files.
+5. **Hunting** on the machine it runs on: Sigma on the live logs of Windows, Linux or macOS, YARA on folders and running processes, uploaded `.evtx` files, scheduled hunts with chat alerts, and a timeline, process tree and report for every hit.
 6. **Shipping**: deploy straight to Splunk, Elastic, Sentinel or Wazuh, or run the same checks in CI (Continuous Integration) with the command line and the GitHub Action.
 
 Everything runs on your machine. Rules are kept in your browser (IndexedDB) and are only sent to your own Sigma Forge server when you analyze or convert them.
@@ -95,6 +101,21 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Deploy** | Push rules to Splunk (saved searches), Elastic Security (detection rules), Microsoft Sentinel (analytics rules) or a Wazuh manager (rules file) through their APIs. A dry run shows every request first. |
 | **GitHub sync** | Pull rules from any public GitHub repository or folder, save it as a source, and sync it again later to get the newest rules. |
 | **CLI and GitHub Action** | `sigma-forge validate`, `test`, `convert`, `coverage`, `export`, `from-query`, `hunt` and `yara` on the command line, plus a GitHub Action that checks every pull request and writes a job summary. |
+| **Timeline** | Every hit from a test or hunt in time order, with an attack path in ATT&CK order and a card per host that shows how far the attack got. |
+| **Process tree** | Parent and child processes for each matching Sysmon or Security process event. |
+| **Hunt report** | One click HTML report of a test or hunt with the verdict, hosts, attack path, next steps and timeline. |
+| **Purple team score** | Pick techniques, run Atomic Red Team tests in a lab, drop the logs, and get detected, missed or no rule for each technique. |
+| **Scheduled hunt** | Hunt the live logs every few minutes in the background and send only new hits to Slack, Teams, Discord or a webhook. |
+| **Linux and macOS live logs** | Hunt the systemd journal, auditd and the auth log on Linux, and the unified log on macOS. |
+| **YARA on processes** | Scan the memory of running processes, not just files on disk. |
+| **IOCs to rules** | Paste IPs, domains, URLs, hashes and file names (defanged is fine) and get Sigma rules and a YARA file. |
+| **Explain** | Any rule's logic in plain sentences, in the editor and the rule drawer. |
+| **Auto fix** | One click fixes for missing ids, dates, levels, wrong modifiers, messy tags and more. |
+| **SigmaHQ updates** | Find workspace rules that are older copies of SigmaHQ rules, see the diff and update them. |
+| **Allow list** | Known good values in your setup added as filters at convert, test, hunt and deploy time, without editing rules. |
+| **Query cost** | Each converted query is rated fast, ok or slow, with the reasons. |
+| **Workspace sharing** | One file with rules, YARA, mappings, allow list and settings for a teammate. |
+| **Demo mode** | `SIGMA_FORGE_DEMO=1` turns off machine and network actions for a public demo site. |
 | **Review** | Sortable and filterable rule table with a quality grade column and a detail drawer: metadata, findings, quality checks, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
@@ -159,6 +180,22 @@ A two minute tour of every page: loading the samples, converting to Sentinel and
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/hunt.png" alt="Hunt"><p align="center"><b>Hunt</b>: scan this machine with YARA and Sigma</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/yara.png" alt="YARA editor"><p align="center"><b>YARA</b>: write, check and scan</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/timeline.png" alt="Timeline"><p align="center"><b>Timeline</b>: attack path, hosts and hits in order</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/process-tree.png" alt="Process tree"><p align="center"><b>Process tree</b>: what started what</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/purple.png" alt="Purple team score"><p align="center"><b>Purple team</b>: detected, missed or no rule</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/schedule.png" alt="Scheduled hunt"><p align="center"><b>Scheduled hunt</b>: new hits to your chat</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/ioc.png" alt="IOCs to rules"><p align="center"><b>IOCs to rules</b>: Sigma and YARA from a list</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/autofix.png" alt="Auto fix"><p align="center"><b>Auto fix and explain</b></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/allowlist.png" alt="Allow list"><p align="center"><b>Allow list</b>: known good values as filters</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/cost.png" alt="Query cost"><p align="center"><b>Query cost</b>: fast, ok or slow</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/yara-hit.png" alt="YARA match"><p align="center"><b>YARA match</b>: strings, offsets and hex</p></td>
@@ -1405,17 +1442,67 @@ Grades: A at 85 and up, B at 70, C at 55, D at 40, F below. The grade shows in t
 
 **Version history.** Every time you save in the editor (Ctrl+S or **Save to workspace**), the file's content is kept as a version, up to 30 per file name, in your browser. **History** lists them with a count of added and removed lines, shows a line diff against what is in the editor, and restores any version. Restoring keeps the current text as a version too, so nothing is lost.
 
+## IOCs, explain, auto fix and SigmaHQ updates
+
+* **IOCs to rules.** In the editor, **New from...** then **From IOCs** takes a list from a report or a feed: IPv4 and IPv6 addresses, ranges, domains, URLs, MD5, SHA1 and SHA256 hashes and file names. Defanged values (`evil[.]com`, `hxxps://`) are cleaned up. You get up to five Sigma rules (network connections, DNS queries, proxy requests, Sysmon file hashes and file names) and one YARA file with a hash rule and a strings rule. Add them all to the workspace in one click, or save the YARA file to your YARA rules.
+* **Explain this rule.** The editor checks and the rule drawer show **What it does**: the rule's logic in plain sentences, like "Fires when Image ends with \\certutil.exe and CommandLine contains any of urlcache, verifyctl". Correlation rules are explained too.
+* **Auto fix.** One click in the editor or the rule drawer fixes what the checks find: a missing or broken id, date, status, level, description, author or false positives entry, tags in the wrong case or repeated, a log source in capitals, misspelled modifiers (`endwith`, `contain`, `regex`), a messy condition and the order of the fields. The old text goes to History first, so you can undo it.
+* **SigmaHQ updates.** On the Library page, **Check my rules for updates** finds workspace rules that are copies of SigmaHQ rules (by id) but differ from the synced library. Each one shows whether SigmaHQ is newer, a line diff, and **Update** or **Update all**.
+
+## Allow list and query cost
+
+* **Allow list** (on the Mappings page). Known good values in your own setup, such as an admin tool, a backup service account or a vulnerability scanner. Each entry has a field, a match (is, ends with, starts with, contains), a value, an optional scope (log source words such as `process_creation`) and a note. Entries are added as `not` filters to every matching rule when you convert, compare, export, deploy, test, hunt or score, without changing the rule files. Turn the list off with one tick.
+* **Query cost.** Every converted query is checked for things that make it slow on the SIEM: values that start with a wildcard, regular expressions, very long OR lists, a Splunk search with no `index=`, KQL `contains` where `has` is faster, no time filter and queries that are too long. Each query gets **fast**, **ok** or **slow** with the reasons, and the summary counts the slow ones.
+
+## Workspace sharing and the public demo
+
+* **Share** on the Workspace page saves one JSON file with all your rules plus your YARA rules, mapping profiles, allow list, log readiness choices, GitHub sources and version history. A teammate presses **Import** to load it.
+* **Public demo mode.** Set `SIGMA_FORGE_DEMO=1` to run Sigma Forge as a public demo site. A banner tells visitors what is off: Hunt and scheduled hunts, live deploys (dry run still works), GitHub sync and library sync or upload. Everything else works, and rules stay in each visitor's browser.
+
+```bash
+docker build -t ghcr.io/qays3/sigma-forge:latest .
+docker run -d -p 8000:8000 -e SIGMA_FORGE_HOST=0.0.0.0 -e SIGMA_FORGE_DEMO=1 ghcr.io/qays3/sigma-forge:latest
+docker push ghcr.io/qays3/sigma-forge:latest
+```
+
+Put a reverse proxy with HTTPS in front of it for a public address.
+
 ## Hunt: scan this machine
 
 The Hunt page scans the computer Sigma Forge is running on. Scans only run when the browser is on the same machine as the server (set `SIGMA_FORGE_ALLOW_REMOTE_HUNT=1` to allow other machines).
 
-* **Live event logs** (Windows). Pick the logs (Sysmon, Security, System, PowerShell, Defender, Task Scheduler, WMI, BITS, DNS client, Code Integrity, Firewall, RDP sessions), a time range and a limit. Sigma Forge reads them with `wevtutil`, turns each event into fields, and runs your Sigma rules on them with the same engine and noise check as the Test page. The Security log needs Sigma Forge to run as administrator. Sysmon gives the best results. Without it, turn on process creation auditing (event 4688) with command lines.
+* **Live logs.** Pick the logs, a time range and a limit. Sigma Forge reads them, turns each event into fields and runs your Sigma rules on them with the same engine, noise check, timeline and process tree as the Test page.
+  * **Windows:** Sysmon, Security, System, Application, PowerShell, Defender, Task Scheduler, WMI, BITS, DNS client, Code Integrity, Firewall and RDP sessions, read with `wevtutil`. Sysmon and Security need Sigma Forge to run as administrator. Without Sysmon, turn on process creation auditing (event 4688) with command lines.
+  * **Linux:** the systemd journal, auditd (`/var/log/audit/audit.log`, with EXECVE arguments joined into a command line) and the auth log (`/var/log/auth.log` or `/var/log/secure`). auditd and the auth log need root.
+  * **macOS:** the unified log through `log show`.
 * **Upload .evtx.** Export a log on any Windows machine (`wevtutil epl Security C:\Temp\Security.evtx`) and drop it here. Works on every platform.
-* **YARA folder scan.** Paste folders or files, one per line (environment variables like `%TEMP%` work), pick a size limit and optional extensions, and scan them with all your YARA rules. Matches open a drawer with the strings that hit.
+* **YARA folders.** Paste folders or files, one per line (environment variables like `%TEMP%` work), pick a size limit and optional extensions, and scan them with all your YARA rules. Matches open a drawer with the strings that hit.
+* **YARA processes.** Scans the memory of every running process (or only the PIDs you list) with your YARA rules. This finds payloads that never touch the disk. It needs admin rights on Windows and root on Linux; processes it cannot open are counted and skipped.
+* **Scheduled hunt.** Pick logs, rules, how often (5 minutes to 12 hours) and the lowest level to alert on, and paste a Slack, Microsoft Teams, Discord or any webhook URL. While Sigma Forge runs, it hunts in the background and sends only new hits: each hit is remembered so it is never sent twice. **Send a test message** checks the webhook, **Run now** runs it at once, and the run history shows every run. The settings are saved in `data/hunt_schedule.json`, so the schedule starts again with the server.
 
-From the command line: `sigma-forge hunt rules/ --channels sysmon security --hours 24` and `sigma-forge yara yara_rules/ --scan C:\Users\Public`.
+From the command line: `sigma-forge hunt rules/ --channels sysmon security --hours 24` (on Linux: `--channels journal auditd`) and `sigma-forge yara yara_rules/ --scan C:\Users\Public`.
 
-> Live event logs need Sigma Forge to run directly on Windows, not in Docker. On Linux and macOS use **Upload .evtx** and the YARA folder scan.
+> Live logs need Sigma Forge to run directly on the machine, not in Docker.
+
+## Timeline, process tree and hunt report
+
+Every Test, Hunt and Purple result has two views: **Rules** and **Timeline**.
+
+* **Timeline** puts every hit in time order with its host, user, ATT&CK tactic and the command line or other key value. Above it, the **attack path** shows the tactics seen in ATT&CK order, and one card per host shows its hits, its highest level, its first and last hit and the furthest stage it reached. Click a host to see only its hits, or click a hit to open the rule.
+* **Process tree.** For Sysmon and Security process events, each matching event shows the chain of parent processes (linked by ProcessGuid, or by process id on the same host) and its child processes. When the parent is not in the logs, it is taken from the ParentImage field.
+* **Hunt report** downloads one HTML file with the verdict, hosts, attack path, next steps for each tactic seen, the rules that fired and the full timeline. Print it to PDF for an incident ticket.
+
+The sample `attack_chain_sysmon.jsonl` log is a full chain on two hosts: a Word document starts PowerShell, which runs discovery, downloads a payload with certutil, starts it with rundll32, sets up persistence and deletes shadow copies.
+
+## Purple team score
+
+The **Purple** page checks your rules against a real attack.
+
+1. Add the techniques you test: type ids, add every technique of a threat group, or take all the techniques your rules cover.
+2. Run the matching [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team) tests on a lab machine with Sysmon (`Invoke-AtomicTest T1059.001`), then export the logs.
+3. Drop the logs and press **Score it**.
+
+Each technique gets **Detected** (a rule tagged with it fired), **Missed** (rules exist but none fired, so they need tuning) or **No rule** (write one). You get a score, the rules behind each result, a link to the Atomic tests, and the full test results with the timeline below. **Sample attack chain logs** fills it in so you can try it right away.
 
 ## YARA
 
@@ -1564,6 +1651,17 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `GET` | `/api/hunt/status` | This machine: platform, admin rights, event logs and suggested folders |
 | `POST` | `/api/hunt/events` | Run rules on this Windows machine's live event logs |
 | `POST` | `/api/hunt/yara` | Scan folders on this machine with YARA rules |
+| `POST` | `/api/hunt/processes` | Scan running processes with YARA rules |
+| `POST` | `/api/hunt/report` | HTML hunt report from a Test, Hunt or Purple result |
+| `GET` `POST` | `/api/hunt/schedule` | Read or save the scheduled hunt |
+| `POST` | `/api/hunt/schedule/run` | Run the scheduled hunt now |
+| `POST` | `/api/hunt/schedule/test` | Send a test message to the webhook |
+| `POST` | `/api/purple` | Purple team score: rules, technique ids and lab logs (multipart form) |
+| `POST` | `/api/rules/ioc` | Sigma and YARA rules from a list of IOCs |
+| `POST` | `/api/rules/explain` | Plain sentences for each rule |
+| `POST` | `/api/rules/autofix` | Fix common problems in a rule |
+| `POST` | `/api/library/updates` | Workspace rules that differ from their SigmaHQ copy |
+| `GET` | `/api/config` | App version and demo mode |
 
 Rules are always sent as a list of `{name, content}` objects:
 
@@ -1613,6 +1711,7 @@ Set these as environment variables. See [`.env.example`](.env.example).
 | `SIGMA_FORGE_SIGMAHQ_DIR` | `data/sigmahq` | Where the SigmaHQ library is stored |
 | `SIGMA_FORGE_SIGMAHQ_URL` | latest release zip | Where **Sync now** downloads the library from |
 | `SIGMA_FORGE_ALLOW_REMOTE_HUNT` | off | Set to `1` to let other machines start Hunt scans on this server |
+| `SIGMA_FORGE_DEMO` | off | Set to `1` for a public demo: machine scans, live deploys, GitHub sync and library sync are turned off |
 | `WAZUH_API_URL` | `https://127.0.0.1:55000` | Used by `wazuh_check.py` |
 | `WAZUH_API_USER` | `wazuh` | Used by `wazuh_check.py` |
 | `WAZUH_API_PASSWORD` | none | Used by `wazuh_check.py` |
@@ -1708,7 +1807,11 @@ Sigma-Forge/
 │       ├── deploy.py            Splunk, Elastic, Sentinel and Wazuh APIs
 │       ├── gitsync.py           Rules from GitHub
 │       ├── hunt.py              Live Windows event logs, folder walking
-│       ├── yara_engine.py       YARA check and scan
+│       ├── yara_engine.py       YARA check, file, folder and process scans
+│       ├── timeline.py          Hit timeline, hosts and process trees
+│       ├── scheduler.py         Scheduled hunts and webhooks
+│       ├── ruletools.py         IOCs to rules, explain, auto fix, allow list, SigmaHQ updates
+│       ├── cost.py              Query cost checks
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
 │           └── mapping.py       Log source and field mapping
@@ -1728,7 +1831,7 @@ Sigma-Forge/
 │       │   ├── mappings.js      Field mapping profiles
 │       │   ├── shared.js        History, diff, quality and editor helpers
 │       │   └── views/           workspace, convert, coverage, rules, editor,
-│       │                        compare, test, hunt, yara, library, mappings,
+│       │                        compare, test, hunt, purple, yara, library, mappings,
 │       │                        results (shared test results), yarakit
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
@@ -1739,7 +1842,8 @@ Sigma-Forge/
 │   ├── rules/                   Sample pack by feature (windows, linux, network,
 │   │                            cloud, modifiers, correlation, collections, broken)
 │   │                            and the ATT&CK pack (attack, 227 rules)
-│   ├── logs/                    Sample logs for the Test page, baseline/ week for
+│   ├── logs/                    Sample logs for the Test page (attack_chain_sysmon.jsonl
+│   │                            is a full attack on two hosts), baseline/ week for
 │   │                            the noise check
 │   ├── yara/                    Sample YARA rules and files they match
 │   ├── github/sigma-forge.yml   Example workflow for the GitHub Action
@@ -1781,7 +1885,9 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 * **The ATT&CK pack** covers every parent technique. Sub techniques are covered where a rule targets one, not one by one.
 * **Pipelines** only know the log sources their authors mapped. Rules for other log sources show the pySigma error on their card.
 * **Query to rule** reads filters, not pipelines. Joins, `stats`, `eval`, lookups and sub searches are skipped, and EQL sequences are not supported yet. Always check the field names and the log source of the result.
-* **Live event logs** need Windows and read up to 50,000 events per scan. The Security log needs administrator rights.
+* **Live logs** read up to 50,000 events per scan. The Windows Security log needs administrator rights, and auditd and the auth log need root on Linux.
+* **Scheduled hunts** only run while Sigma Forge is running. Keep it running as a service for round the clock alerts.
+* **YARA process scans** skip processes the operating system protects, even as admin.
 * **Deploy** was built against the public API docs of each platform. Try a dry run and a small set of rules first on your version.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 

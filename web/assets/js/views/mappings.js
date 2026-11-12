@@ -2,7 +2,63 @@ import { api } from "../api.js";
 import { mappings } from "../mappings.js";
 import { trackState } from "../router.js";
 import { state } from "../state.js";
+import { allowlist } from "../allowlist.js";
 import { $, $$, download, esc, icons, openDrawer, plural, toast } from "../ui.js";
+
+const MATCHES = [["equals", "is"], ["endswith", "ends with"], ["startswith", "starts with"], ["contains", "contains"]];
+
+function allowCard(root) {
+  const box = $("#allowCard", root);
+  const data = allowlist.get();
+  const row = (e, i) => `<tr data-i="${i}">
+      <td><input class="input mono input--cell" data-k="field" value="${esc(e.field || "")}" placeholder="User" spellcheck="false"></td>
+      <td><select class="select select--cell" data-k="match">${MATCHES.map(([k, l]) => `<option value="${k}" ${k === (e.match || "equals") ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+      <td><input class="input mono input--cell" data-k="value" value="${esc(e.value || "")}" placeholder="CORP\\svc_backup" spellcheck="false"></td>
+      <td><input class="input mono input--cell" data-k="scope" value="${esc(e.scope || "")}" placeholder="all rules" spellcheck="false"></td>
+      <td><input class="input input--cell" data-k="note" value="${esc(e.note || "")}" placeholder="why it is safe"></td>
+      <td><button class="icon-btn" type="button" data-del="${i}" aria-label="Remove">${icons.trash}</button></td>
+    </tr>`;
+  box.innerHTML = `
+    <div class="card__head">
+      <label class="check mb-0"><input type="checkbox" id="allowOn" ${data.enabled ? "checked" : ""}> <span>Use the allow list</span></label>
+      <span class="card__sub">${data.entries.length} ${data.entries.length === 1 ? "entry" : "entries"}</span>
+      <div class="spacer"></div>
+      <button class="btn btn--sm" type="button" id="allowAdd">${icons.spark} Add entry</button>
+    </div>
+    <div class="card__body">
+      <p class="muted">Known good values in your own setup: admin tools, service accounts, scanners. Each entry is added to every matching rule as a filter when you convert, compare, export, deploy, test or hunt. The rule files themselves are not changed. Scope limits an entry to rules whose log source has these words, for example <span class="mono">process_creation</span> or <span class="mono">windows security</span>.</p>
+      ${data.entries.length ? `<table class="table table--compact allow__table"><thead><tr><th>Field</th><th>Match</th><th>Value</th><th>Scope</th><th>Note</th><th></th></tr></thead><tbody>${data.entries.map(row).join("")}</tbody></table>` : '<p class="muted">No entries yet.</p>'}
+    </div>`;
+  const save = () => {
+    const entries = $$("tr[data-i]", box).map((tr) => {
+      const e = {};
+      $$("[data-k]", tr).forEach((el) => (e[el.dataset.k] = el.value.trim()));
+      return e;
+    });
+    allowlist.save({ enabled: $("#allowOn", box).checked, entries });
+  };
+  box.oninput = save;
+  box.onchange = save;
+  box.onclick = (ev) => {
+    if (ev.target.closest("#allowAdd")) {
+      save();
+      const d = allowlist.get();
+      d.entries.push({ field: "", match: "equals", value: "", scope: "", note: "" });
+      allowlist.save(d);
+      allowCard(root);
+      $$("tr[data-i] [data-k=field]", box).pop()?.focus();
+      return;
+    }
+    const del = ev.target.closest("[data-del]");
+    if (del) {
+      const d = allowlist.get();
+      d.entries.splice(Number(del.dataset.del), 1);
+      allowlist.save(d);
+      allowCard(root);
+      toast("Entry removed", "ok");
+    }
+  };
+}
 
 const PRESETS = {
   ecs: {
@@ -96,6 +152,8 @@ export async function mappingsView(root, route) {
         </div>
         <div class="card" id="mapEditor"></div>
       </div>
+      <h2 class="section-title mt-5" id="allow">Allow list</h2>
+      <div class="card allow" id="allowCard"></div>
     </section>`;
 
   let current = mappings.get(route.profile) || mappings.active() || mappings.all()[0] || blank();
@@ -307,5 +365,7 @@ export async function mappingsView(root, route) {
   toRows(current.map);
   paintList();
   paintEditor();
+  allowCard(root);
+  if (route?.section === "allow") $("#allow", root)?.scrollIntoView({ block: "start" });
   return null;
 }

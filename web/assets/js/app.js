@@ -14,6 +14,7 @@ import { libraryView } from "./views/library.js";
 import { mappingsView } from "./views/mappings.js";
 import { yaraView } from "./views/yara.js";
 import { huntView } from "./views/hunt.js";
+import { purpleView } from "./views/purple.js";
 import { notFoundView } from "./views/notfound.js";
 
 const THEME_KEY = "sigma-forge-theme";
@@ -93,9 +94,21 @@ async function checkEngine() {
   }
 }
 
+async function checkDemo() {
+  try {
+    const cfg = await api.config();
+    if (cfg.demo) {
+      document.documentElement.setAttribute("data-demo", "1");
+      $("#demoBanner").hidden = false;
+    }
+  } catch {
+    document.documentElement.removeAttribute("data-demo");
+  }
+}
+
 async function boot() {
   const started = Date.now();
-  await Promise.all([checkEngine(), updateCount()]);
+  await Promise.all([checkEngine(), updateCount(), checkDemo()]);
   startRouter($("#main"));
   const wait = Math.max(0, 900 - (Date.now() - started));
   setTimeout(hideSplash, wait);
@@ -112,6 +125,7 @@ route("/library", "library", libraryView);
 route("/mappings", "mappings", mappingsView);
 route("/yara", "yara", yaraView);
 route("/hunt", "hunt", huntView);
+route("/purple", "purple", purpleView);
 route("*", "notfound", notFoundView);
 
 initTheme();

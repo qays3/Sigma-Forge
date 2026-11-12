@@ -10,3 +10,4 @@ __pycache__
 *.log
 tests
 media
+data/hunt_schedule.json

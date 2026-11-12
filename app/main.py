@@ -21,6 +21,13 @@ app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
 INDEX = WEB_DIR / "index.html"
 
 
+@app.on_event("startup")
+def start_scheduler():
+    from app.core.scheduler import start_if_enabled
+
+    start_if_enabled()
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)

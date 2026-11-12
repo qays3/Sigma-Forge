@@ -48,10 +48,75 @@ export async function libraryView(root, route) {
           <button class="btn ${status.available ? "" : "btn--primary"}" type="button" id="libSync" ${busy ? "disabled" : ""}>${icons.download} ${status.available ? "Update" : "Sync now"}</button>
           <label class="btn" for="libZip">${icons.upload} Upload zip</label>
           <input class="hidden-input" type="file" id="libZip" accept=".zip">
+          ${status.available ? `<button class="btn" type="button" id="libUpdates" title="Find workspace rules that are older copies of SigmaHQ rules">${icons.spark} Check my rules for updates</button>` : ""}
         </div>
       </div>`;
     $("#libSync", box).addEventListener("click", sync);
+    $("#libUpdates", box)?.addEventListener("click", checkUpdates);
     $("#libZip", box).addEventListener("change", uploadZip);
+  }
+
+  async function checkUpdates(e) {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const files = await state.rules();
+    let res;
+    try {
+      res = await api.libraryUpdates(files);
+    } catch (err) {
+      toast(err.message, "bad");
+      btn.disabled = false;
+      return;
+    }
+    btn.disabled = false;
+    const { diffHtml, diffStats, lineDiff, pushHistory } = await import("../shared.js");
+    const byName = new Map(files.map((f) => [f.name, f]));
+    const list = res.updates;
+    const listHtml = () => list.length
+      ? `<p class="muted">${esc(plural(res.checked, "workspace rule"))} match SigmaHQ rules by id. ${esc(plural(list.length, "rule"))} differ from the library copy${res.release ? ` (${esc(res.release)})` : ""}. Your old text is kept in the editor History when you update.</p>
+        <div class="row mt-4"><div class="spacer"></div><button class="btn btn--primary btn--sm" type="button" id="updAll">Update all ${list.length}</button></div>
+        <div class="card mt-4"><ul class="list">${list.map((u, i) => {
+          const st = diffStats(lineDiff(byName.get(u.name)?.content || "", u.library_content));
+          return `<li class="list__item ${u.done ? "is-off" : ""}"><div class="list__main"><div class="list__title">${esc(u.title)} ${u.newer ? '<span class="badge badge--warn">newer upstream</span>' : '<span class="badge">different</span>'}</div><div class="list__meta mono">${esc(u.name)} · yours ${esc(u.local_date || "no date")} · SigmaHQ ${esc(u.library_date || "no date")} · <span class="diff__count diff__count--add">+${st.added}</span> <span class="diff__count diff__count--del">-${st.removed}</span></div></div><button class="btn btn--sm" type="button" data-diff="${i}">Diff</button><button class="btn btn--sm" type="button" data-upd="${i}" ${u.done ? "disabled" : ""}>${u.done ? "Updated" : "Update"}</button></li>`;
+        }).join("")}</ul></div>`
+      : `<div class="notice notice--ok">${res.checked ? `All ${esc(plural(res.checked, "rule"))} that come from SigmaHQ match the library.` : "None of your workspace rules come from SigmaHQ (no matching ids)."}</div>`;
+    const apply = async (u) => {
+      const f = byName.get(u.name);
+      if (!f || u.done) return;
+      pushHistory(f.name, f.content, "before SigmaHQ update");
+      await store.replace(f.id, { name: f.name, content: u.library_content });
+      u.done = true;
+    };
+    const bind = (panel) => {
+      panel.onclick = async (ev) => {
+        const d = ev.target.closest("[data-diff]");
+        const up = ev.target.closest("[data-upd]");
+        if (ev.target.closest("[data-back]")) {
+          setBody(listHtml());
+          return;
+        }
+        if (d) {
+          const u = list[Number(d.dataset.diff)];
+          const rows = lineDiff(byName.get(u.name)?.content || "", u.library_content);
+          setBody(`<div class="row"><button class="btn btn--sm" type="button" data-back>Back</button><span class="muted">Your copy to the SigmaHQ copy</span></div><div class="card mt-4">${diffHtml(rows)}</div>`);
+          return;
+        }
+        if (up) {
+          await apply(list[Number(up.dataset.upd)]);
+          toast("Rule updated from SigmaHQ", "ok");
+          setBody(listHtml());
+          return;
+        }
+        if (ev.target.closest("#updAll")) {
+          for (const u of list) await apply(u);
+          toast(`Updated ${plural(list.length, "rule")} from SigmaHQ`, "ok");
+          setBody(listHtml());
+        }
+      };
+    };
+    const { setDrawerBody } = await import("../ui.js");
+    const setBody = (html) => setDrawerBody(html, bind);
+    openDrawer("SigmaHQ updates", listHtml(), bind);
   }
 
   async function loadStatus() {

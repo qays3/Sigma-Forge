@@ -224,7 +224,7 @@ export async function testView(root, route) {
     try {
       const profile = mappings.get($("#testMap", root).value);
       lastResult = await api.test(chosen, files, modeSel.value, profile?.map || {});
-      renderResults(out, lastResult);
+      renderResults(out, lastResult, "", { title: "Log test report", scope: files.map((f) => f.name).join(", ") });
     } catch (err) {
       out.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
     } finally {
@@ -239,7 +239,7 @@ export async function testView(root, route) {
   if (!rules.length) {
     out.innerHTML = `<div class="card">${emptyState("No rules yet", "Add Sigma rules in the workspace, then come back to test them.", '<a class="btn btn--primary" href="/" data-link>Go to workspace</a>')}</div>`;
   } else if (lastResult) {
-    renderResults(out, lastResult);
+    renderResults(out, lastResult, "", { title: "Log test report", scope: files.map((f) => f.name).join(", ") });
   } else {
     out.innerHTML = `<div class="card">${emptyState("Add logs to start", "Drop EVTX or JSON files above, or load the sample logs, then press Run test.")}</div>`;
   }

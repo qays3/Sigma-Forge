@@ -140,6 +140,13 @@ def convert(inputs, target_id: str, fmt: str, options, field_mapping=None) -> Di
             bundle = "\n".join(x for x in parts if x)
         except Exception as exc:
             bundle_error = str(exc)
+    if fmt == "default" and target_id != "sqlite":
+        from app.core.cost import check as cost_check, score as cost_score
+
+        for r in results:
+            if r["queries"] and not r["error"]:
+                items_cost = cost_check(target_id, target.language, r["queries"][0])
+                r["cost"] = {"rating": cost_score(items_cost), "items": items_cost}
     response = _response(target, fmt, results, bundle, bundle_error, list(target.notes) + mapping_note, mapped)
     response["bundle_base"] = bundle_base
     return response

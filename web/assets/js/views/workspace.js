@@ -132,7 +132,12 @@ export async function workspaceView(root) {
         <div class="card">
           <div class="card__head">
             <div><h2 class="card__title">Workspace files</h2><div class="card__sub" id="fileSub">Loading</div></div>
-            <button class="btn btn--sm btn--ghost btn--danger" type="button" id="clearAll">${icons.trash} Clear</button>
+            <div class="row">
+              <button class="btn btn--sm" type="button" id="wsExport" title="Rules, YARA, mappings, allow list and settings in one file for a teammate">${icons.download} Share</button>
+              <label class="btn btn--sm" for="wsImport" title="Load a workspace file from a teammate">${icons.upload} Import</label>
+              <input class="hidden-input" type="file" id="wsImport" accept=".json,.sigmaforge">
+              <button class="btn btn--sm btn--ghost btn--danger" type="button" id="clearAll">${icons.trash} Clear</button>
+            </div>
           </div>
           <div class="card__body card__body--flush scroll" id="fileList">${skeleton.rows(6)}</div>
         </div>
@@ -296,6 +301,50 @@ export async function workspaceView(root) {
   });
 
   paintSources();
+
+  const SKIP = new Set(["sigma-forge-draft", "sigma-forge-incoming", "sigma-forge-theme", "sigma-forge-side"]);
+  $("#wsExport", root).addEventListener("click", async () => {
+    const files = await store.all();
+    const settings = {};
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sigma-forge-") && !SKIP.has(k)) settings[k] = localStorage.getItem(k);
+    }
+    const bundle = { app: "Sigma Forge", kind: "workspace", version: 1, exported: new Date().toISOString(), rules: files.map((f) => ({ name: f.name, content: f.content })), settings };
+    const blob = new Blob([JSON.stringify(bundle)], { type: "application/json" });
+    const { downloadBlob } = await import("../ui.js");
+    downloadBlob(`sigma-forge-workspace-${new Date().toISOString().slice(0, 10)}.json`, blob);
+    toast(`Saved ${plural(files.length, "rule")} and ${plural(Object.keys(settings).length, "setting")}`, "ok");
+  });
+  $("#wsImport", root).addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch {
+      toast("This is not a Sigma Forge workspace file", "bad");
+      return;
+    }
+    if (data?.kind !== "workspace" || !Array.isArray(data.rules)) {
+      toast("This is not a Sigma Forge workspace file", "bad");
+      return;
+    }
+    const rules = data.rules.filter((r) => r && typeof r.name === "string" && typeof r.content === "string");
+    const added = rules.length ? await store.add(rules) : 0;
+    let n = 0;
+    Object.entries(data.settings || {}).forEach(([k, v]) => {
+      if (!k.startsWith("sigma-forge-") || SKIP.has(k) || typeof v !== "string") return;
+      try {
+        localStorage.setItem(k, v);
+        n += 1;
+      } catch {
+        n += 0;
+      }
+    });
+    toast(`Imported ${plural(added, "rule")} and ${plural(n, "setting")}`, "ok", 4200);
+  });
 
   $("#clearAll", root).addEventListener("click", async () => {
     const rules = await store.all();

@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { openInEditor, pretty } from "../shared.js";
 import { state } from "../state.js";
-import { $, $$, copyText, debounce, esc, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
+import { $, $$, copyText, debounce, downloadBlob, esc, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
 
 const NOISE_CLASS = { quiet: "ok", busy: "warn", noisy: "bad" };
 
@@ -23,7 +23,64 @@ function noiseBadge(r) {
   return `<span class="badge badge--${NOISE_CLASS[r.noise.level] || ""}" title="${esc(r.noise.per_1000)} hits per 1000 events">${esc(r.noise.level)}</span>`;
 }
 
-export function renderResults(out, res, extra = "") {
+function shortTime(ts) {
+  const m = String(ts || "").match(/(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  return m ? { day: m[1], time: m[2] } : { day: "", time: ts || "no time" };
+}
+
+function exeName(path) {
+  return String(path || "").split(/[\\/]/).pop() || path || "?";
+}
+
+export function processTree(tree) {
+  if (!tree) return "";
+  const node = (n, cls, depth) => `<li class="ptree__node ${cls}" data-depth="${depth}"><div class="ptree__row"><span class="ptree__exe">${esc(exeName(n.image))}</span>${n.pid ? `<span class="ptree__pid">pid ${esc(n.pid)}</span>` : ""}${n.user ? `<span class="ptree__user">${esc(n.user)}</span>` : ""}${n.guess ? '<span class="ptree__pid">from the event fields</span>' : ""}${n.ts ? `<span class="ptree__ts">${esc(shortTime(n.ts).time)}</span>` : ""}</div>${n.cmd && n.cmd !== n.image ? `<div class="ptree__cmd">${esc(n.cmd)}</div>` : ""}</li>`;
+  let depth = 0;
+  let html = "";
+  tree.ancestors.forEach((a) => {
+    html += node(a, "is-parent", depth);
+    depth += 1;
+  });
+  html += node(tree.self, "is-self", depth);
+  tree.children.forEach((c) => {
+    html += node(c, "is-child", depth + 1);
+  });
+  return `<div class="ptree"><div class="field__label">Process tree</div><ul class="ptree__list">${html}</ul></div>`;
+}
+
+function paintDepth(root) {
+  root.querySelectorAll(".ptree__node[data-depth]").forEach((el) => el.style.setProperty("--depth", el.dataset.depth));
+}
+
+function timelineView(res) {
+  const tl = res.timeline || { items: [], hosts: [], tactics: [] };
+  if (!tl.items.length) return `<div class="card"><div class="card__body"><p class="muted">No hits to put on a timeline.</p></div></div>`;
+  const path = tl.tactics.map((t) => `<span class="tpath__step">${esc(t.name)}</span>`).join('<span class="tpath__arrow" aria-hidden="true"></span>');
+  const hosts = tl.hosts
+    .map((h) => `<button class="thost" type="button" data-host="${esc(h.host)}"><div class="thost__top"><span class="thost__name">${esc(h.host)}</span>${levelBadge(h.top)}</div><div class="thost__meta">${esc(plural(h.hits, "hit"))} · ${esc(plural(h.rules, "rule"))} · ${esc(shortTime(h.first).time)} to ${esc(shortTime(h.last).time)}</div><div class="thost__stage">Reached <strong>${esc(h.stage || "unknown")}</strong></div><div class="thost__bar">${tl.tactics.map((t) => `<span class="${h.tactics.includes(t.short) ? "is-on" : ""}" title="${esc(t.name)}"></span>`).join("")}</div></button>`)
+    .join("");
+  let lastDay = "";
+  const rows = tl.items
+    .map((it, i) => {
+      const t = shortTime(it.ts);
+      let head = "";
+      if (t.day && t.day !== lastDay) {
+        lastDay = t.day;
+        head = `<li class="tline__day">${esc(t.day)}</li>`;
+      }
+      return `${head}<li class="tline__item tline__item--${esc(it.level || "none")}" data-host="${esc(it.host)}" data-key="${esc(it.key)}" data-i="${i}"><span class="tline__time">${esc(t.time)}</span><span class="tline__dot" aria-hidden="true"></span><div class="tline__body"><div class="tline__title"><span>${esc(it.rule)}</span>${levelBadge(it.level)}</div><div class="tline__meta"><span class="chip">${esc(it.host)}</span>${it.user ? `<span class="muted">${esc(it.user)}</span>` : ""}${it.tactics.map((x) => `<span class="badge badge--accent">${esc(x)}</span>`).join("")}</div>${it.summary ? `<div class="tline__sum">${esc(it.summary)}</div>` : ""}</div></li>`;
+    })
+    .join("");
+  return `
+    ${path ? `<div class="card"><div class="card__head"><span class="card__title">Attack path</span><span class="card__sub">tactics seen, in ATT&amp;CK order</span></div><div class="card__body"><div class="tpath">${path}</div></div></div>` : ""}
+    <div class="thosts mt-4">${hosts}</div>
+    <div class="card mt-4">
+      <div class="card__head"><span class="card__title">Timeline</span><span class="card__sub">${esc(plural(tl.items.length, "hit"))}${tl.truncated ? ", cut at the limit" : ""}</span><div class="spacer"></div><select class="select select--sm" data-role="hostFilter" aria-label="Host"><option value="">All hosts</option>${tl.hosts.map((h) => `<option value="${esc(h.host)}">${esc(h.host)}</option>`).join("")}</select></div>
+      <ul class="tline">${rows}</ul>
+    </div>`;
+}
+
+export function renderResults(out, res, extra = "", opts = {}) {
   const s = res.summary;
   const groups = { all: res.results.length, hits: 0, noisy: 0, silent: 0, errors: 0, skipped: 0 };
   res.results.forEach((r) => {
@@ -45,6 +102,16 @@ export function renderResults(out, res, extra = "") {
         .map((l) => `<div class="bar"><span class="bar__label">${esc(l.name)}</span><span class="bar__track"><span class="bar__fill" data-width="${Math.round((l.events / maxSource) * 100)}"></span></span><span class="bar__value">${l.events}</span></div>`)
         .join("")}</div></div>
     </div>
+    <div class="viewbar mt-4">
+      <div class="seg" data-role="views">
+        <button class="seg__btn is-active" type="button" data-view="rules">Rules <span class="tab__count">${res.results.length}</span></button>
+        <button class="seg__btn" type="button" data-view="timeline" ${(res.timeline?.items || []).length ? "" : "disabled"}>Timeline <span class="tab__count">${(res.timeline?.items || []).length}</span></button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn--sm" type="button" data-role="report">${icons.download} Hunt report</button>
+    </div>
+    <div data-pane="timeline" hidden></div>
+    <div data-pane="rules">
     <div class="toolbar mt-4">
       <div class="tabs tabs--inline" data-role="tabs">
         ${[["all", "All"], ["hits", "Fired"], ["noisy", "Noisy"], ["silent", "Silent"], ["errors", "Errors"], ["skipped", "Skipped"]].map(([k, label]) => `<button class="tab ${k === "all" ? "is-active" : ""}" type="button" data-filter="${k}" ${groups[k] || k === "all" ? "" : "disabled"}>${label} <span class="tab__count">${groups[k]}</span></button>`).join("")}
@@ -66,6 +133,7 @@ export function renderResults(out, res, extra = "") {
           </li>`
         )
         .join("")}</ul>
+    </div>
     </div>`;
   out.querySelectorAll(".bar__fill").forEach((el) => el.style.setProperty("width", `${el.dataset.width}%`));
   const tabs = $("[data-role=tabs]", out);
@@ -85,6 +153,50 @@ export function renderResults(out, res, extra = "") {
     apply();
   });
   filter.addEventListener("input", debounce(apply, 120));
+  const tlPane = $("[data-pane=timeline]", out);
+  $("[data-role=views]", out).addEventListener("click", (e) => {
+    const b = e.target.closest("[data-view]");
+    if (!b || b.disabled) return;
+    $$("[data-view]", out).forEach((x) => x.classList.toggle("is-active", x === b));
+    $("[data-pane=rules]", out).hidden = b.dataset.view !== "rules";
+    tlPane.hidden = b.dataset.view !== "timeline";
+    if (b.dataset.view === "timeline" && !tlPane.dataset.ready) {
+      tlPane.innerHTML = timelineView(res);
+      tlPane.dataset.ready = "1";
+      const sel = $("[data-role=hostFilter]", tlPane);
+      const filterHost = (h) => {
+        sel.value = h;
+        $$(".tline__item", tlPane).forEach((li) => (li.hidden = !!h && li.dataset.host !== h));
+        $$(".thost", tlPane).forEach((c) => c.classList.toggle("is-active", c.dataset.host === h));
+      };
+      sel?.addEventListener("change", () => filterHost(sel.value));
+      tlPane.addEventListener("click", (ev) => {
+        const host = ev.target.closest("[data-host].thost");
+        if (host) {
+          filterHost(sel.value === host.dataset.host ? "" : host.dataset.host);
+          return;
+        }
+        const item = ev.target.closest(".tline__item");
+        if (item) {
+          const r = res.results.find((x) => x.key === item.dataset.key);
+          if (r) showDetails(r);
+        }
+      });
+    }
+  });
+  $("[data-role=report]", out).addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const { blob, filename } = await api.hunt.report(res, opts.title || "Hunt report", opts.scope || "");
+      downloadBlob(filename, blob);
+      toast("Report saved. Open it in a browser and print to PDF if you need one.", "ok", 4200);
+    } catch (err) {
+      toast(err.message, "bad");
+    } finally {
+      btn.disabled = false;
+    }
+  });
   out.onclick = (e) => {
     const btn = e.target.closest("[data-show]");
     if (btn) showDetails(res.results[Number(btn.dataset.show)]);
@@ -136,11 +248,12 @@ export function showDetails(r) {
     ${alerts.length ? `<h3 class="section-title">Alerts</h3>${alerts.map((a) => `<div class="card"><pre class="code">${esc(pretty(a))}</pre></div>`).join("")}` : ""}
     ${samples.length ? `<h3 class="section-title">Matching events${r.hits > samples.length ? ` (first ${samples.length} of ${r.events || r.hits})` : ""}</h3>${samples
       .map(
-        (s, i) => `<div class="card test__event"><div class="card__head"><span class="card__sub">${esc(s.source)} · ${esc([s.logsource.product, s.logsource.service, s.logsource.category].filter(Boolean).join(" / ") || "unknown source")}</span><button class="btn btn--sm" type="button" data-rulegen="${i}">${icons.spark} Make a rule from this event</button></div><pre class="code">${esc(pretty(s.event))}</pre></div>`
+        (s, i) => `<div class="card test__event"><div class="card__head"><span class="card__sub">${esc(s.source)} · ${esc([s.logsource.product, s.logsource.service, s.logsource.category].filter(Boolean).join(" / ") || "unknown source")}</span><button class="btn btn--sm" type="button" data-rulegen="${i}">${icons.spark} Make a rule from this event</button></div>${s.lineage ? `<div class="card__body">${processTree(s.lineage)}</div>` : ""}<details class="test__raw" ${s.lineage ? "" : "open"}><summary>Raw event</summary><pre class="code">${esc(pretty(s.event))}</pre></details></div>`
       )
       .join("")}` : r.status === "ok" ? '<p class="muted">No event matched this rule.</p>' : ""}
     ${r.query ? `<h3 class="section-title">SQLite query</h3><div class="card"><pre class="code">${esc(r.query)}</pre><div class="row test__copy"><button class="btn btn--sm" type="button" id="copyQuery">${icons.copy} Copy query</button></div></div>` : ""}`;
   openDrawer(r.title, body, (panel) => {
+    paintDepth(panel);
     $("#copyQuery", panel)?.addEventListener("click", () => copyText(r.query, "Query copied"));
     $("#addFilter", panel)?.addEventListener("click", async (e) => {
       const btn = e.currentTarget;

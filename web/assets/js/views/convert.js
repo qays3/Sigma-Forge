@@ -216,22 +216,25 @@ export async function convertView(root, route) {
         const body = r.queries.length ? r.queries.map((q) => `<pre class="code">${esc(q)}</pre>`).join("") : "";
         const warn = (r.warnings || []).map((w) => `<div class="notice notice--warn">${esc(w)}</div>`).join("");
         const err = r.error ? `<div class="notice notice--bad">${esc(r.error)}</div>` : "";
+        const cost = r.cost && r.cost.items.length ? `<details class="cost"><summary class="cost__sum">Query cost: ${r.cost.items.length} ${r.cost.items.length === 1 ? "note" : "notes"}</summary>${r.cost.items.map((c) => `<div class="cost__item cost__item--${c.level}">${esc(c.text)}</div>`).join("")}</details>` : "";
+        const costBadge = r.cost ? `<span class="badge badge--${{ fast: "ok", ok: "accent", slow: "warn" }[r.cost.rating]}" title="Query cost check">${esc(r.cost.rating)}</span>` : "";
         return `<article class="card result" data-state="${stateOf(r)}">
           <div class="result__head">
             <div class="result__title" title="${esc(r.title)}">${esc(r.title)}<div class="result__file">${esc(r.key)}</div></div>
             ${levelBadge(r.level)}
             ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}
+            ${costBadge}
             ${r.error ? '<span class="badge badge--bad">failed</span>' : r.queries.length ? '<span class="badge badge--ok">ok</span>' : '<span class="badge badge--warn">skipped</span>'}
             ${r.queries.length ? `<button class="btn btn--sm" type="button" data-copy="${i}">${icons.copy} Copy</button>` : ""}
           </div>
-          ${body}${err}${warn}
+          ${body}${cost}${err}${warn}
         </article>`;
       })
       .join("");
     $("#output", root).innerHTML = `
       <div class="stats">
         <div class="stat"><div class="stat__label">Target</div><div class="stat__value stat__value--accent stat__value--sm">${esc(result.target.name)}</div><div class="stat__hint">format ${esc(result.format)}</div></div>
-        <div class="stat"><div class="stat__label">Converted</div><div class="stat__value stat__value--ok">${s.converted}</div><div class="stat__hint">of ${plural(s.total, "rule")}</div></div>
+        <div class="stat"><div class="stat__label">Converted</div><div class="stat__value stat__value--ok">${s.converted}</div><div class="stat__hint">of ${plural(s.total, "rule")}${result.results.filter((r) => r.cost?.rating === "slow").length ? ` · ${result.results.filter((r) => r.cost?.rating === "slow").length} may be slow` : ""}</div></div>
         <div class="stat"><div class="stat__label">Skipped</div><div class="stat__value ${s.skipped ? "stat__value--warn" : ""}">${s.skipped || 0}</div><div class="stat__hint">used by correlations</div></div>
         <div class="stat"><div class="stat__label">Failed</div><div class="stat__value ${s.failed ? "stat__value--bad" : ""}">${s.failed}</div><div class="stat__hint">${s.failed ? "see the Failed tab" : "nothing failed"}</div></div>
       </div>
