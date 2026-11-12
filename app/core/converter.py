@@ -140,6 +140,12 @@ def convert(inputs, target_id: str, fmt: str, options, field_mapping=None) -> Di
             bundle = "\n".join(x for x in parts if x)
         except Exception as exc:
             bundle_error = str(exc)
+    if target.family == "Splunk" and getattr(options, "splunk_windows_source", ""):
+        fix = _splunk_source_fix(options.splunk_windows_source)
+        for r in results:
+            r["queries"] = [fix(q) for q in r["queries"]]
+        bundle = fix(bundle)
+        bundle_base = fix(bundle_base)
     if fmt == "default" and target_id != "sqlite":
         from app.core.cost import check as cost_check, score as cost_score
 
@@ -150,6 +156,19 @@ def convert(inputs, target_id: str, fmt: str, options, field_mapping=None) -> Di
     response = _response(target, fmt, results, bundle, bundle_error, list(target.notes) + mapping_note, mapped)
     response["bundle_base"] = bundle_base
     return response
+
+
+def _splunk_source_fix(mode: str):
+    import re as _re
+
+    def fix(text):
+        if not isinstance(text, str) or mode == "winevent":
+            return text
+        if mode == "xml":
+            return _re.sub(r'source=(\\?)"WinEventLog:', r'source=\1"XmlWinEventLog:', text)
+        return _re.sub(r'source=(\\?)"WinEventLog:[^"\\]*(\\?)"\s*', "", text)
+
+    return fix
 
 
 def _compact(text: str, fmt: str) -> str:

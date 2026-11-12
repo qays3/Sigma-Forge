@@ -16,6 +16,7 @@ class ConvertOptions(BaseModel):
     wazuh_rule_id_start: Optional[int] = Field(default=None, ge=1, le=999999)
     wazuh_double_backslash: bool = True
     wazuh_parent_group: bool = True
+    splunk_windows_source: str = Field(default="", pattern="^(|winevent|xml|none)$")
 
 
 class ConvertRequest(BaseModel):

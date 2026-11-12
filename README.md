@@ -47,22 +47,23 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 26. [Deploy to your SIEM](#deploy-to-your-siem)
 27. [GitHub sync](#github-sync)
 28. [Command line and GitHub Action](#command-line-and-github-action)
-29. [Logging setup and log health](#logging-setup-and-log-health)
-30. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
-31. [Wizard and correlation builder](#wizard-and-correlation-builder)
-32. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
-33. [Threat report to coverage](#threat-report-to-coverage)
-34. [Cases](#cases)
-35. [SigmaHQ library](#sigmahq-library)
-36. [Field mapping](#field-mapping)
-37. [Export packages](#export-packages)
-38. [API](#api)
-39. [Configuration](#configuration)
-40. [Architecture](#architecture)
-41. [Project layout](#project-layout)
-42. [Development](#development)
-43. [Known limits](#known-limits)
-44. [Credits](#credits)
+29. [Fire check: prove rules fire on the platform](#fire-check-prove-rules-fire-on-the-platform)
+30. [Logging setup and log health](#logging-setup-and-log-health)
+31. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
+32. [Wizard and correlation builder](#wizard-and-correlation-builder)
+33. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
+34. [Threat report to coverage](#threat-report-to-coverage)
+35. [Cases](#cases)
+36. [SigmaHQ library](#sigmahq-library)
+37. [Field mapping](#field-mapping)
+38. [Export packages](#export-packages)
+39. [API](#api)
+40. [Configuration](#configuration)
+41. [Architecture](#architecture)
+42. [Project layout](#project-layout)
+43. [Development](#development)
+44. [Known limits](#known-limits)
+45. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -122,6 +123,7 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Query cost** | Each converted query is rated fast, ok or slow, with the reasons. |
 | **Workspace sharing** | One file with rules, YARA, mappings, allow list and settings for a teammate. |
 | **Demo mode** | `SIGMA_FORGE_DEMO=1` turns off machine and network actions for a public demo site. |
+| **Fire check** | Replays your logs into Splunk, Elasticsearch, OpenSearch or Wazuh, runs every converted query there, and compares the hits with what the Sigma rule matched. Silent rules show the missing fields, the wrong values and where the data really is, with a one click mapping fix or field aliases for the platform. |
 | **Logging setup** | A Sysmon config built from your rules (only the events they read), plus the `auditpol` and registry commands for Security audit, command line and PowerShell logging. |
 | **Mapping from logs** | Drop a sample of your own logs. Field names and values are matched to the fields your rules use, and saved as a mapping profile. |
 | **Log health watch** | The scheduled hunt alerts when a log that used to send events goes quiet, and again when it comes back. |
@@ -229,7 +231,7 @@ A two minute tour of every page: loading the samples, converting to Sentinel and
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/guides.png" alt="Guides"><p align="center"><b>Guides</b>: step by step for every tool</p></td>
-    <td width="50%"></td>
+    <td width="50%"><img src="web/assets/img/screenshots/fire-check.png" alt="Fire check"><p align="center"><b>Fire check</b>: silent rules and how to fix them</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/wizard.png" alt="Rule wizard"><p align="center"><b>Rule wizard</b>: answer, get YAML</p></td>
@@ -1637,6 +1639,21 @@ jobs:
 
 It validates the rules, fails a pull request when a rule can never fire on its own generated events, converts them, builds a Navigator layer and an HTML coverage report in `sigma-forge-output/`, and checks your YARA rules.
 
+## Fire check: prove rules fire on the platform
+
+A rule can convert cleanly and still match nothing, because the platform names fields differently or filters on a source your data does not have. **Fire check** finds these rules before an attacker does.
+
+1. Pick Splunk, Elasticsearch, OpenSearch or Wazuh and connect to a lab or test index.
+2. **Replay my logs** sends logs that look like production with a run tag. `.evtx` files go to Splunk as `XmlWinEventLog`, the way the Splunk add on for Windows indexes them. For Elastic you can name the ingest pipeline your agents use.
+3. Sigma Forge runs the Sigma rules locally on the same logs, then runs each converted query on the platform, limited to the run tag, and compares the counts.
+4. Each rule is **Fires**, **Partly**, **Silent**, **Extra hits** or **Error**. Wazuh goes through `logtest` with the rules you deployed.
+5. A silent rule shows the fields the platform does not have, routing values that never show up (like `source="WinEventLog:..."` when your data is `XmlWinEventLog:...`), and the field where each value really is.
+6. Fix the rules with **Save mapping and run again**, or fix the platform with the generated `FIELDALIAS` lines for `props.conf` or alias mappings for Elastic. The Splunk Windows source fix is also used by Convert, Export and Deploy.
+
+**Live data already there** runs every query on the data the platform holds now and checks the fields exist, without sending anything.
+
+Passwords and tokens are never saved, and fire check is off in demo mode. Microsoft Sentinel is not supported yet.
+
 ## Logging setup and log health
 
 **Coverage, Logging setup** reads your rules and writes a Sysmon config that keeps only the events they look at. Rules that use keywords, regex or `not` on their own need every event of that type, so that type logs everything, and the note says which rule asked for it. The same panel lists the `auditpol` subcategories for the Security event ids your rules use, the registry keys for command line in event 4688 and PowerShell script block and module logging, and a `.cmd` file to run as admin.
@@ -1767,6 +1784,9 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `GET` | `/api/siem/targets` | Where events can be sent |
 | `POST` | `/api/siem/send` | Send log files to Splunk HEC, Elasticsearch or syslog (multipart form) |
 | `POST` | `/api/cases/report` | HTML report for a case |
+| `GET` | `/api/firecheck/platforms` | Platforms the fire check can use |
+| `POST` | `/api/firecheck/start` | Start a fire check (multipart form), returns a job id |
+| `GET` | `/api/firecheck/{id}` | Progress and results of a fire check |
 | `POST` | `/api/rules/ioc` | Sigma and YARA rules from a list of IOCs |
 | `POST` | `/api/rules/explain` | Plain sentences for each rule |
 | `POST` | `/api/rules/autofix` | Fix common problems in a rule |
@@ -1933,6 +1953,7 @@ Sigma-Forge/
 │       ├── unittests.py         Match and no match tests per rule
 │       ├── builders.py          Rule wizard and correlation builder
 │       ├── threatreport.py      Threat report to techniques, IOCs and coverage
+│       ├── firecheck.py         Replay logs, run converted queries on the platform, diagnose silent rules
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
 │           └── mapping.py       Log source and field mapping
@@ -1956,7 +1977,7 @@ Sigma-Forge/
 │       │   └── views/           workspace, convert, coverage, rules, editor,
 │       │                        compare, test, hunt, purple, yara, library, mappings,
 │       │                        results (shared test results), yarakit, inventory, cases,
-│       │                        builders, editortools, tools (drawers for the new tools), guides
+│       │                        builders, editortools, tools (drawers for the new tools), guides, firecheck
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups
@@ -2015,6 +2036,7 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 * **SIEM import** uses the query to rule converter, so searches with `stats`, joins or macros keep only their filters. Check each imported rule.
 * **The Sysmon config** includes events, it does not filter noise out. Merge it with your own excludes before you roll it out.
 * **Verdicts, unit tests, inventory stats and cases** live in the browser. Use workspace sharing to move them.
+* **Fire check** needs a lab or test platform you can write to. Wazuh logtest shows one rule per event, so a rule can be hidden by another rule that matches the same event.
 * **Deploy** was built against the public API docs of each platform. Try a dry run and a small set of rules first on your version.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 

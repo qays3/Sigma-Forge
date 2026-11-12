@@ -5347,3 +5347,111 @@ a.chip:hover {
     top: 32px;
   }
 }
+
+.fc__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3) var(--sp-4);
+}
+
+.fc__grid .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+#fcConn .row {
+  margin-top: var(--sp-3);
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+#fcConn > .muted {
+  margin-top: var(--sp-3);
+}
+
+.fc__how ol {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-5);
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-base);
+}
+
+.fc__progress {
+  margin-top: var(--sp-4);
+}
+
+.fc__stage {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-strong);
+}
+
+#fcBar {
+  width: 8%;
+  transition: width var(--dur-3) var(--ease);
+}
+
+.fc__fixes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.fc__fix {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+}
+
+.fc__fix > div {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.fc__fixes .code {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.fc__hints td {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .fc__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fc__fixes,
+.fc__fixes .code,
+#fcOut .card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 700px) {
+  #fcPlat,
+  #fcMode {
+    flex-wrap: wrap;
+    border-radius: var(--r-2);
+  }
+
+  #fcOut .tabs--inline {
+    flex-wrap: wrap;
+  }
+}
+
+#fcTabs {
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}

@@ -91,6 +91,14 @@ export async function convertView(root, route) {
           <label class="check mb-0" title="Wazuh eventchannel fields keep escaped backslashes"><input type="checkbox" id="wazuhDouble" ${prefs.wazuhDouble === false ? "" : "checked"}> <span>Double backslashes</span></label>
           <label class="check mb-0" title="Add if_group sysmon or windows"><input type="checkbox" id="wazuhParent" ${prefs.wazuhParent === false ? "" : "checked"}> <span>Parent group</span></label>
         </div>
+        <label class="inline-field" id="splunkOptions" hidden title="The Splunk add on for Windows writes XmlWinEventLog when renderXml is on">
+          <span class="field__label">Windows source</span>
+          <select class="select select--sm" id="splunkSource">
+            <option value="" ${!prefs.splunkSource ? "selected" : ""}>WinEventLog (pySigma default)</option>
+            <option value="xml" ${prefs.splunkSource === "xml" ? "selected" : ""}>XmlWinEventLog</option>
+            <option value="none" ${prefs.splunkSource === "none" ? "selected" : ""}>Do not filter on source</option>
+          </select>
+        </label>
         <label class="inline-field">
           <span class="field__label">Mapping</span>
           <select class="select" id="mapSelect">${mappingOptions(mappings.activeId())}</select>
@@ -117,6 +125,7 @@ export async function convertView(root, route) {
     const wanted = prefs.formats?.[targetId] || (t?.id === "splunk_cim" ? "data_model" : "default");
     formatSelect.innerHTML = formats.map(([k, label]) => `<option value="${esc(k)}" ${k === wanted ? "selected" : ""}>${esc(k)}: ${esc(label)}</option>`).join("");
     $("#wazuhOptions", root).hidden = targetId !== "wazuh";
+    $("#splunkOptions", root).hidden = !["splunk", "splunk_spl2"].includes(targetId);
     if (t) {
       const engine = t.backend === "sigma-forge-wazuh" ? "Sigma Forge backend" : `pySigma backend ${t.backend}`;
       const pipes = t.pipelines.length ? ` · pipelines ${t.pipelines.join(", ")}` : "";
@@ -183,6 +192,7 @@ export async function convertView(root, route) {
     prefs.wazuhStart = Number($("#wazuhStart", root).value) || 100100;
     prefs.wazuhDouble = $("#wazuhDouble", root).checked;
     prefs.wazuhParent = $("#wazuhParent", root).checked;
+    prefs.splunkSource = $("#splunkSource", root).value;
     savePrefs(prefs);
   }
 
@@ -296,10 +306,12 @@ export async function convertView(root, route) {
       wazuh_rule_id_start: Number($("#wazuhStart", root).value) || 100100,
       wazuh_double_backslash: $("#wazuhDouble", root).checked,
       wazuh_parent_group: $("#wazuhParent", root).checked,
+      splunk_windows_source: $("#splunkSource", root).value,
     };
   }
 
   $("#mapSelect", root).addEventListener("change", run);
+  $("#splunkSource", root).addEventListener("change", run);
 
   let packageCache = null;
   async function openExport() {

@@ -220,4 +220,15 @@ export const api = {
     return upload("/api/siem/send", form);
   },
   caseReport: (c) => fetchFile("/api/cases/report", { case: c }, "case-report.html"),
+  fire: {
+    platforms: () => request("/api/firecheck/platforms"),
+    start(rules, fields, files) {
+      const form = new FormData();
+      form.append("rules", JSON.stringify(strip(rules)));
+      Object.entries(fields).forEach(([k, v]) => form.append(k, typeof v === "string" ? v : JSON.stringify(v)));
+      files.forEach((f) => form.append("files", f, f.name));
+      return upload("/api/firecheck/start", form);
+    },
+    status: (id) => request(`/api/firecheck/${encodeURIComponent(id)}`),
+  },
 };

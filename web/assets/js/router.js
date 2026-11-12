@@ -31,7 +31,7 @@ async function render() {
   outlet = fresh;
   outlet.dataset.route = entry.name;
   current = (await entry.view(outlet, routeState())) || null;
-  document.title = entry.name === "workspace" ? "Sigma Forge" : `${entry.name === "yara" ? "YARA" : entry.name[0].toUpperCase() + entry.name.slice(1)} | Sigma Forge`;
+  document.title = entry.name === "workspace" ? "Sigma Forge" : `${({ yara: "YARA", firecheck: "Fire check" })[entry.name] || entry.name[0].toUpperCase() + entry.name.slice(1)} | Sigma Forge`;
   window.scrollTo({ top: 0 });
 }
 

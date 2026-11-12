@@ -205,3 +205,56 @@ def cases_report(req: CaseReportRequest):
 
     html = build_case_report(req.case)
     return Response(content=html, media_type="text/html", headers={"Content-Disposition": 'attachment; filename="case-report.html"'})
+
+
+@router.get("/firecheck/platforms")
+def firecheck_platforms():
+    from app.core.firecheck import PLATFORMS
+
+    return {"platforms": [{"id": k, **v} for k, v in PLATFORMS.items()]}
+
+
+@router.post("/firecheck/start")
+async def firecheck_start(
+    rules: str = Form(...),
+    platform: str = Form(...),
+    target: str = Form(""),
+    mode: str = Form("replay"),
+    hours: float = Form(24),
+    settings: str = Form("{}"),
+    field_mapping: str = Form("{}"),
+    sample: str = Form(""),
+    files: list[UploadFile] = File(default=[]),
+):
+    from app.config import BASE_DIR
+    from app.core.fieldmap import MappingError, clean_mapping
+    from app.core.firecheck import FireError, start
+
+    _no_demo("The fire check")
+    items = _rules(rules)
+    try:
+        conf = json.loads(settings or "{}")
+        mapping = clean_mapping(json.loads(field_mapping or "{}"))
+    except (ValueError, MappingError) as exc:
+        raise HTTPException(status_code=400, detail=f"Bad request: {exc}")
+    blobs = await _blobs(files)
+    if sample:
+        path = BASE_DIR / "sample" / "logs" / "attack_chain_sysmon.jsonl"
+        blobs.append((path.name, path.read_bytes()))
+    try:
+        _parse(items)
+        jid = start({"rules": items, "platform": platform, "target": target, "mode": mode, "hours": max(0.1, min(hours, 720)),
+                     "settings": conf if isinstance(conf, dict) else {}, "mapping": mapping, "files": blobs})
+    except FireError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"id": jid}
+
+
+@router.get("/firecheck/{jid}")
+def firecheck_status(jid: str):
+    from app.core.firecheck import status
+
+    res = status(jid)
+    if res is None:
+        raise HTTPException(status_code=404, detail="This fire check is gone. Run it again.")
+    return res
