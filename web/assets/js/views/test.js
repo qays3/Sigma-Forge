@@ -2,7 +2,7 @@ import { api } from "../api.js";
 import { mappingOptions, mappings } from "../mappings.js";
 import { trackState } from "../router.js";
 import { state } from "../state.js";
-import { size } from "../shared.js";
+import { fileChips } from "../shared.js";
 import { $, debounce, emptyState, esc, forging, icons, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 import { renderResults } from "./results.js";
 
@@ -25,46 +25,38 @@ export async function testView(root, route) {
           <p>Drop EVTX, JSON or JSON lines files. Sigma Forge loads them into SQLite and runs every rule to show which ones fire and on what.</p>
         </div>
       </div>
-      <div class="grid grid--side test">
-        <div class="test__side">
-          <div class="card">
-            <div class="card__body">
-              <label class="dropzone" id="logDrop" for="logInput">
-                ${logo(56, "dropzone__logo")}
-                <span class="dropzone__title">Drop log files here</span>
-                <span class="dropzone__text">.evtx, .json, .jsonl, .ndjson up to 64 MB</span>
-                <input class="hidden-input" type="file" id="logInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.log,.txt">
-              </label>
-              <div class="dropzone__actions">
-                <button class="btn btn--sm" type="button" id="sampleLogs">${icons.spark} Load sample logs</button>
-                <button class="btn btn--sm" type="button" id="baselineLogs" title="A normal week of Sysmon events with known noise">${icons.box} Load baseline week</button>
-                <button class="btn btn--sm" type="button" id="genEvents" title="Build events that each selected rule should catch">${icons.play} Generate test events</button>
-                <button class="btn btn--sm btn--ghost" type="button" id="clearLogs">${icons.trash} Clear</button>
-              </div>
-              <ul class="list test__files" id="logList"></ul>
-            </div>
+      <div class="card setup">
+        <div class="setup__main">
+          <label class="dropzone dropzone--row" id="logDrop" for="logInput">
+            ${logo(40, "dropzone__logo")}
+            <span class="dropzone__body"><span class="dropzone__title">Drop log files here</span><span class="dropzone__text">.evtx, .json, .jsonl, .ndjson up to 64 MB</span></span>
+            <input class="hidden-input" type="file" id="logInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.log,.txt">
+          </label>
+          <div class="setup__actions">
+            <button class="btn btn--sm" type="button" id="sampleLogs">${icons.spark} Sample logs</button>
+            <button class="btn btn--sm" type="button" id="baselineLogs" title="A normal week of Sysmon events with known noise">${icons.box} Baseline week</button>
+            <button class="btn btn--sm" type="button" id="genEvents" title="Build events that each selected rule should catch">${icons.play} Generate test events</button>
+            <button class="btn btn--sm btn--ghost" type="button" id="clearLogs">${icons.trash} Clear</button>
           </div>
-          <div class="card mt-4">
-            <div class="card__body">
-              <label class="field">
-                <span class="field__label">Log source matching</span>
-                <select class="select" id="testMode">${MODES.map(([k, label]) => `<option value="${k}">${esc(label)}</option>`).join("")}</select>
-                <span class="field__hint" id="modeHint"></span>
-              </label>
-              <label class="field">
-                <span class="field__label">Field mapping</span>
-                <select class="select" id="testMap"></select>
-              </label>
-              <div class="row">
-                <button class="btn" type="button" id="testRules">${icons.file} Rules <span class="badge badge--accent" id="testRuleCount"></span></button>
-                <div class="spacer"></div>
-                <button class="btn btn--primary" type="button" id="runTest">${icons.play} Run test</button>
-              </div>
-            </div>
+          <ul class="filechips" id="logList"></ul>
+        </div>
+        <div class="setup__side">
+          <label class="field">
+            <span class="field__label">Log source matching</span>
+            <select class="select" id="testMode">${MODES.map(([k, label]) => `<option value="${k}">${esc(label)}</option>`).join("")}</select>
+            <span class="field__hint" id="modeHint"></span>
+          </label>
+          <label class="field">
+            <span class="field__label">Field mapping</span>
+            <select class="select" id="testMap"></select>
+          </label>
+          <div class="setup__run">
+            <button class="btn" type="button" id="testRules">${icons.file} Rules <span class="badge badge--accent" id="testRuleCount"></span></button>
+            <button class="btn btn--primary" type="button" id="runTest">${icons.play} Run test</button>
           </div>
         </div>
-        <div id="testOut"></div>
       </div>
+      <div id="testOut" class="mt-5"></div>
     </section>`;
 
   const rules = await state.rules();
@@ -82,9 +74,7 @@ export async function testView(root, route) {
   $("#testMap", root).innerHTML = mappingOptions(mappings.activeId());
 
   function paintFiles() {
-    $("#logList", root).innerHTML = files
-      .map((f, i) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(f.name)}</div><div class="list__meta">${esc(size(f.size))}</div></div><button class="icon-btn" type="button" data-drop="${i}" aria-label="Remove ${esc(f.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>`)
-      .join("");
+    $("#logList", root).innerHTML = fileChips(files, "No log files yet");
     $("#runTest", root).disabled = !files.length || !rules.length;
   }
 
@@ -251,7 +241,7 @@ export async function testView(root, route) {
   } else if (lastResult) {
     renderResults(out, lastResult);
   } else {
-    out.innerHTML = `<div class="card">${emptyState("Add logs to start", "Drop EVTX or JSON files on the left, or load the sample logs, then press Run test.")}</div>`;
+    out.innerHTML = `<div class="card">${emptyState("Add logs to start", "Drop EVTX or JSON files above, or load the sample logs, then press Run test.")}</div>`;
   }
   return null;
 }

@@ -114,16 +114,15 @@ export async function rulesView(root, route) {
     $("#count", root).textContent = `${plural(list.length, "rule")} shown of ${rows.length}`;
     const th = (key, label) => `<th data-sort="${key}" class="${sortKey === key ? "is-sorted" : ""}" aria-sort="${sortKey === key ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${label}${sortKey === key ? (sortDir > 0 ? " ↑" : " ↓") : ""}</th>`;
     $("#table", root).innerHTML = list.length
-      ? `<table class="table">
-          <thead><tr>${th("title", "Rule")}${th("level", "Level")}${th("status", "Status")}${th("logsource", "Log source")}${th("attack", "ATT&amp;CK")}${th("quality", "Quality")}${th("issues", "Checks")}</tr></thead>
+      ? `<table class="table table--fit rules__table">
+          <colgroup><col><col class="rules__c-level"><col class="rules__c-attack"><col class="rules__c-quality"><col class="rules__c-checks"></colgroup>
+          <thead><tr>${th("title", "Rule")}${th("level", "Level")}${th("attack", "ATT&amp;CK")}${th("quality", "Quality")}${th("issues", "Checks")}</tr></thead>
           <tbody>${list
             .map(
               (r) => `<tr data-key="${esc(r.key)}" tabindex="0">
-                <td><div class="table__title">${esc(r.title)} ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}</div><div class="table__sub">${esc(r.key)}</div></td>
-                <td>${levelBadge(r.level)}</td>
-                <td>${r.status ? `<span class="badge">${esc(r.status)}</span>` : ""}</td>
-                <td class="muted">${esc(logsourceText(r.logsource))}</td>
-                <td><div class="tags">${r.techniques.slice(0, 4).map((t) => `<span class="badge badge--accent">${esc(t)}</span>`).join("")}${r.techniques.length > 4 ? `<span class="badge">+${r.techniques.length - 4}</span>` : ""}</div></td>
+                <td><div class="table__title">${esc(r.title)} ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}</div><div class="table__sub" title="${esc(r.key)}">${esc(r.key)}</div><div class="table__sub">${esc(logsourceText(r.logsource))}</div></td>
+                <td><div class="rules__stack">${levelBadge(r.level)}${r.status ? `<span class="badge">${esc(r.status)}</span>` : ""}</div></td>
+                <td><div class="tags">${r.techniques.slice(0, 2).map((t) => `<span class="badge badge--accent">${esc(t)}</span>`).join("")}${r.techniques.length > 2 ? `<span class="badge">+${r.techniques.length - 2}</span>` : ""}</div></td>
                 <td>${qualityBadge(r.quality)}</td>
                 <td>${r.error ? '<span class="badge badge--bad">error</span>' : r.issues.length ? `<span class="badge badge--warn">${r.issues.length} issue${r.issues.length > 1 ? "s" : ""}</span>` : '<span class="badge badge--ok">clean</span>'}</td>
               </tr>`

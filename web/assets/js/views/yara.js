@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { size } from "../shared.js";
+import { fileChips } from "../shared.js";
 import { $, debounce, download, emptyState, esc, forging, icons, logo, plural, skeleton, toast } from "../ui.js";
 import { b64File, renderYaraScan, yaraStore } from "./yarakit.js";
 
@@ -31,54 +31,49 @@ export async function yaraView(root) {
         </div>
         <div class="page-head__side" id="yaraStatus"></div>
       </div>
-      <div class="yara">
-        <div class="card yara__files">
-          <div class="card__head"><span class="card__title">Rule files</span><span class="card__sub" id="yaraCount"></span></div>
-          <div class="card__body">
-            <div class="row yara__actions">
-              <button class="btn btn--sm" type="button" id="yNew">${icons.file} New</button>
-              <button class="btn btn--sm" type="button" id="yImport">${icons.upload} Import</button>
-              <button class="btn btn--sm btn--primary" type="button" id="ySamples">${icons.spark} Load samples</button>
-            </div>
-            <input class="hidden-input" type="file" id="yInput" accept=".yar,.yara,.txt" multiple>
+      <div class="card yara">
+        <div class="yara__head">
+          <div class="yara__tabs" id="yList" role="tablist" aria-label="YARA rule files"></div>
+          <div class="yara__tools">
+            <button class="btn btn--sm" type="button" id="yNew">${icons.file} New</button>
+            <button class="btn btn--sm" type="button" id="yImport">${icons.upload} Import</button>
+            <button class="btn btn--sm btn--primary" type="button" id="ySamples">${icons.spark} Load samples</button>
           </div>
-          <ul class="list yara__list" id="yList"></ul>
+          <input class="hidden-input" type="file" id="yInput" accept=".yar,.yara,.txt" multiple>
         </div>
-        <div class="card editor__main yara__editor">
-          <div class="editor__bar">
-            <input class="input editor__name" id="yName" aria-label="File name" spellcheck="false">
-            <div class="spacer"></div>
-            <button class="btn btn--sm" type="button" id="yDownload">${icons.download} Download</button>
-            <button class="btn btn--sm btn--ghost" type="button" id="yDelete">${icons.trash} Delete</button>
-            <button class="btn btn--sm btn--primary" type="button" id="ySave">${icons.file} Save</button>
-          </div>
-          <div class="editor__area">
-            <pre class="editor__gutter" id="yGutter" aria-hidden="true"></pre>
-            <textarea class="editor__text" id="yText" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="YARA rule"></textarea>
-          </div>
-          <div class="editor__status" id="yCheck"></div>
+        <div class="editor__bar">
+          <input class="input editor__name" id="yName" aria-label="File name" spellcheck="false">
+          <span class="muted" id="yaraCount"></span>
+          <div class="spacer"></div>
+          <button class="btn btn--sm" type="button" id="yDownload">${icons.download} Download</button>
+          <button class="btn btn--sm btn--ghost" type="button" id="yDelete">${icons.trash} Delete</button>
+          <button class="btn btn--sm btn--primary" type="button" id="ySave">${icons.file} Save</button>
+        </div>
+        <div class="editor__area yara__area">
+          <pre class="editor__gutter" id="yGutter" aria-hidden="true"></pre>
+          <textarea class="editor__text" id="yText" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="YARA rule"></textarea>
+        </div>
+        <div class="editor__status" id="yCheck"></div>
+      </div>
+      <h2 class="section-title mt-5">Scan files</h2>
+      <div class="card setup setup--stack">
+        <div class="setup__grid">
+          <label class="dropzone dropzone--row" id="yDrop" for="yScanInput">
+            ${logo(40, "dropzone__logo")}
+            <span class="dropzone__body"><span class="dropzone__title">Drop files to scan</span><span class="dropzone__text">Any file type, up to 64 MB in total</span></span>
+            <input class="hidden-input" type="file" id="yScanInput" multiple>
+          </label>
+          <ul class="filechips filechips--box" id="yFileList"></ul>
+        </div>
+        <div class="setup__bar">
+          <button class="btn btn--sm" type="button" id="ySampleFiles">${icons.spark} Sample files</button>
+          <button class="btn btn--sm btn--ghost" type="button" id="yClearFiles">${icons.trash} Clear</button>
+          <a class="btn btn--sm" href="/hunt" data-link>${icons.folder} Scan a folder on this machine</a>
+          <div class="spacer"></div>
+          <button class="btn btn--primary" type="button" id="yScan">${icons.play} Scan with all rules</button>
         </div>
       </div>
-      <div class="grid grid--side mt-5">
-        <div class="card">
-          <div class="card__head"><span class="card__title">Scan files</span></div>
-          <div class="card__body">
-            <label class="dropzone" id="yDrop" for="yScanInput">
-              ${logo(56, "dropzone__logo")}
-              <span class="dropzone__title">Drop files to scan</span>
-              <span class="dropzone__text">Any file type, up to 64 MB in total. Files stay on your Sigma Forge server.</span>
-              <input class="hidden-input" type="file" id="yScanInput" multiple>
-            </label>
-            <div class="dropzone__actions">
-              <button class="btn btn--sm" type="button" id="ySampleFiles">${icons.spark} Load sample files</button>
-              <button class="btn btn--sm btn--ghost" type="button" id="yClearFiles">${icons.trash} Clear</button>
-            </div>
-            <ul class="list" id="yFileList"></ul>
-            <div class="row mt-4"><a class="btn btn--sm" href="/hunt" data-link>${icons.folder} Scan a folder on this machine</a><div class="spacer"></div><button class="btn btn--primary" type="button" id="yScan">${icons.play} Scan with all rules</button></div>
-          </div>
-        </div>
-        <div id="yOut"></div>
-      </div>
+      <div id="yOut" class="mt-5"></div>
     </section>`;
 
   let files = yaraStore.all();
@@ -103,9 +98,10 @@ export async function yaraView(root) {
 
   function paintList() {
     $("#yaraCount", root).textContent = plural(files.length, "file");
+    const ruleCount = (f) => (f.content.match(/^\s*(?:private\s+|global\s+)*rule\s+\w+/gm) || []).length;
     $("#yList", root).innerHTML = files.length
-      ? files.map((f) => `<li class="list__item ${f.name === current ? "is-active" : ""}"><button class="list__main list__btn" type="button" data-open="${esc(f.name)}"><div class="list__title">${esc(f.name)}</div><div class="list__meta" data-meta="${esc(f.name)}">${esc(plural((f.content.match(/^\s*(?:private\s+|global\s+)*rule\s+\w+/gm) || []).length, "rule"))}</div></button></li>`).join("")
-      : `<li class="list__item"><p class="muted">No YARA rules yet. Press New or Load samples.</p></li>`;
+      ? files.map((f) => `<button class="ytab ${f.name === current ? "is-active" : ""}" type="button" role="tab" aria-selected="${f.name === current}" data-open="${esc(f.name)}"><span class="ytab__name">${esc(f.name)}</span><span class="ytab__count">${ruleCount(f)}</span></button>`).join("") + (current ? "" : '<span class="ytab is-active is-new"><span class="ytab__name">unsaved</span></span>')
+      : '<span class="muted yara__empty">No YARA files yet. Press New or Load samples.</span>';
   }
 
   function open(name) {
@@ -214,9 +210,7 @@ export async function yaraView(root) {
   });
 
   function paintFiles() {
-    $("#yFileList", root).innerHTML = scanFiles
-      .map((f, i) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(f.name)}</div><div class="list__meta">${esc(size(f.size))}</div></div><button class="icon-btn" type="button" data-drop="${i}" aria-label="Remove ${esc(f.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>`)
-      .join("");
+    $("#yFileList", root).innerHTML = fileChips(scanFiles, "No files yet");
   }
   function addScan(list) {
     Array.from(list || []).forEach((f) => {

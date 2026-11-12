@@ -168,3 +168,10 @@ export function pretty(obj) {
 export function fileSlug(text) {
   return String(text || "rule").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "rule";
 }
+
+export function fileChips(files, empty = "") {
+  if (!files.length) return empty ? `<li class="filechips__empty">${esc(empty)}</li>` : "";
+  return files
+    .map((f, i) => `<li class="filechip"><span class="filechip__name" title="${esc(f.name)}">${esc(f.name)}</span><span class="filechip__size">${esc(size(f.size))}</span><button class="filechip__x" type="button" data-drop="${i}" aria-label="Remove ${esc(f.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>`)
+    .join("");
+}

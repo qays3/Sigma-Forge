@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { mappingOptions, mappings } from "../mappings.js";
-import { readJson, size, writeJson } from "../shared.js";
+import { fileChips, readJson, writeJson } from "../shared.js";
 import { state } from "../state.js";
 import { $, $$, debounce, emptyState, esc, forging, icons, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 import { renderResults } from "./results.js";
@@ -28,39 +28,28 @@ export async function huntView(root) {
         <button class="tab" type="button" data-hunt="evtx">Upload .evtx</button>
         <button class="tab" type="button" data-hunt="yara">YARA folder scan</button>
       </div>
-      <div class="grid grid--side mt-4">
-        <div>
-          <div class="card" data-hpane="live">
-            <div class="card__body" id="livePane">${skeleton.rows(6)}</div>
+      <div class="card setup setup--stack mt-4">
+        <div data-hpane="live" id="livePane">${skeleton.rows(4)}</div>
+        <div data-hpane="evtx" hidden>
+          <div class="setup__grid">
+            <label class="dropzone dropzone--row" id="evtxDrop" for="evtxInput">
+              ${logo(40, "dropzone__logo")}
+              <span class="dropzone__body"><span class="dropzone__title">Drop .evtx files here</span><span class="dropzone__text">Security, Sysmon, PowerShell and more, up to 64 MB</span></span>
+              <input class="hidden-input" type="file" id="evtxInput" multiple accept=".evtx,.json,.jsonl">
+            </label>
+            <div class="setup__note">Export a log on any Windows machine with<code class="mono">wevtutil epl Security C:\\Temp\\Security.evtx</code></div>
           </div>
-          <div class="card" data-hpane="evtx" hidden>
-            <div class="card__body">
-              <label class="dropzone" id="evtxDrop" for="evtxInput">
-                ${logo(56, "dropzone__logo")}
-                <span class="dropzone__title">Drop .evtx files here</span>
-                <span class="dropzone__text">Security.evtx, Sysmon, PowerShell and more, up to 64 MB</span>
-                <input class="hidden-input" type="file" id="evtxInput" multiple accept=".evtx,.json,.jsonl">
-              </label>
-              <p class="muted mt-4">Export a log on any Windows machine with: <span class="mono">wevtutil epl Security C:\\Temp\\Security.evtx</span></p>
-              <ul class="list" id="evtxList"></ul>
-              <div class="row mt-4"><div class="spacer"></div><button class="btn btn--primary" type="button" id="evtxRun">${icons.play} Scan with Sigma</button></div>
-            </div>
-          </div>
-          <div class="card" data-hpane="yara" hidden>
-            <div class="card__body" id="yaraPane"></div>
-          </div>
-          <div class="card mt-4">
-            <div class="card__body">
-              <label class="field">
-                <span class="field__label">Field mapping</span>
-                <select class="select" id="huntMap"></select>
-              </label>
-              <div class="row"><button class="btn" type="button" id="huntRules">${icons.file} Sigma rules <span class="badge badge--accent" id="huntRuleCount"></span></button><div class="spacer"></div><a class="btn btn--sm" href="/yara" data-link>${icons.grid} YARA rules <span class="badge badge--accent" id="huntYaraCount"></span></a></div>
-            </div>
-          </div>
+          <ul class="filechips" id="evtxList"></ul>
+          <div class="setup__bar"><div class="spacer"></div><button class="btn btn--primary" type="button" id="evtxRun">${icons.play} Scan with Sigma</button></div>
         </div>
-        <div id="huntOut"></div>
+        <div data-hpane="yara" id="yaraPane" hidden></div>
+        <div class="setup__foot">
+          <button class="btn btn--sm" type="button" id="huntRules">${icons.file} Sigma rules <span class="badge badge--accent" id="huntRuleCount"></span></button>
+          <a class="btn btn--sm" href="/yara" data-link>${icons.grid} YARA rules <span class="badge badge--accent" id="huntYaraCount"></span></a>
+          <label class="inline-field"><span class="field__label">Field mapping</span><select class="select" id="huntMap"></select></label>
+        </div>
       </div>
+      <div id="huntOut" class="mt-5"></div>
     </section>`;
 
   const out = $("#huntOut", root);
@@ -107,15 +96,20 @@ export async function huntView(root) {
     }
     box.innerHTML = `
       <div class="field__label">Event logs</div>
-      <ul class="list hunt__channels">${status.channels
-        .map((c) => `<li class="list__item ${c.exists ? "" : "is-off"}"><label class="check list__main"><input type="checkbox" data-ch="${esc(c.id)}" ${chosenChannels.has(c.id) && c.exists ? "checked" : ""} ${c.exists && !c.error ? "" : c.exists ? "" : "disabled"}> <span><span class="list__title">${esc(c.name)}</span><span class="list__meta">${esc(c.error || c.note)}</span></span></label>${c.exists && !c.error ? `<span class="badge">${c.records.toLocaleString()}</span>` : c.error && c.exists ? '<span class="badge badge--warn">admin</span>' : '<span class="badge">off</span>'}</li>`)
-        .join("")}</ul>
-      <div class="grid grid--2 mt-4">
-        <label class="field"><span class="field__label">Time range</span><select class="select" id="liveHours">${HOURS.map(([h, label]) => `<option value="${h}" ${h === (prefs.hours || 24) ? "selected" : ""}>${label}</option>`).join("")}</select></label>
-        <label class="field"><span class="field__label">Max events</span><select class="select" id="liveMax">${[5000, 20000, 50000].map((n) => `<option value="${n}" ${n === (prefs.max || 20000) ? "selected" : ""}>${n.toLocaleString()}</option>`).join("")}</select></label>
-      </div>
-      <div class="row"><span class="muted">Sysmon gives the best results. Without it, turn on process creation auditing (4688) with command lines.</span></div>
-      <div class="row mt-4"><div class="spacer"></div><button class="btn btn--primary" type="button" id="liveRun">${icons.play} Scan now</button></div>`;
+      <div class="chgrid">${status.channels
+        .map((c) => {
+          const ok = c.exists && !c.error;
+          const badge = ok ? `<span class="badge">${c.records.toLocaleString()}</span>` : c.exists ? '<span class="badge badge--warn">admin</span>' : '<span class="badge">off</span>';
+          return `<label class="chcard ${ok ? "" : c.exists ? "is-locked" : "is-off"}"><input type="checkbox" data-ch="${esc(c.id)}" ${chosenChannels.has(c.id) && c.exists ? "checked" : ""} ${c.exists ? "" : "disabled"}><span class="chcard__body"><span class="chcard__top"><span class="chcard__name">${esc(c.name)}</span>${badge}</span><span class="chcard__note">${esc(c.error || c.note)}</span></span></label>`;
+        })
+        .join("")}</div>
+      ${status.admin ? "" : '<div class="notice notice--warn mt-4">Sysmon and Security need admin rights. Close Sigma Forge and start it again from a terminal opened with Run as administrator.</div>'}
+      <div class="setup__bar">
+        <label class="inline-field"><span class="field__label">Time range</span><select class="select" id="liveHours">${HOURS.map(([h, label]) => `<option value="${h}" ${h === (prefs.hours || 24) ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label class="inline-field"><span class="field__label">Max events</span><select class="select" id="liveMax">${[5000, 20000, 50000].map((n) => `<option value="${n}" ${n === (prefs.max || 20000) ? "selected" : ""}>${n.toLocaleString()}</option>`).join("")}</select></label>
+        <div class="spacer"></div>
+        <button class="btn btn--primary" type="button" id="liveRun">${icons.play} Scan now</button>
+      </div>`;
     box.addEventListener("change", (e) => {
       const ch = e.target.closest("[data-ch]");
       if (ch) {
@@ -167,7 +161,7 @@ export async function huntView(root) {
 
   function paintLast() {
     if (!last) {
-      out.innerHTML = `<div class="card">${emptyState("Ready to hunt", "Pick a scan on the left. Results show here with the same noise checks and event details as the Test page.")}</div>`;
+      out.innerHTML = `<div class="card">${emptyState("Ready to hunt", "Pick a scan above. Results show here with the same noise checks and event details as the Test page.")}</div>`;
       return;
     }
     if (last.kind === "yara") renderYaraScan(out, last.res, "Files scanned");
@@ -175,9 +169,7 @@ export async function huntView(root) {
   }
 
   function paintEvtx() {
-    $("#evtxList", root).innerHTML = evtxFiles
-      .map((f, i) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(f.name)}</div><div class="list__meta">${esc(size(f.size))}</div></div><button class="icon-btn" type="button" data-drop="${i}" aria-label="Remove ${esc(f.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>`)
-      .join("");
+    $("#evtxList", root).innerHTML = fileChips(evtxFiles, "No files yet");
   }
   const drop = $("#evtxDrop", root);
   const addEvtx = (list) => {
@@ -226,17 +218,27 @@ export async function huntView(root) {
     const yr = yaraStore.all();
     box.innerHTML = `
       ${status.yara?.available ? "" : `<div class="notice notice--bad">${esc(status.yara?.message || "YARA is not installed on the server")}</div>`}
-      <label class="field">
-        <span class="field__label">Folders or files, one per line</span>
-        <textarea class="textarea mono" id="yPaths" rows="4" spellcheck="false" placeholder="C:\\Users\\Public&#10;%TEMP%">${esc((prefs.paths || []).join("\n"))}</textarea>
-      </label>
-      ${status.paths?.length ? `<div class="tags">${status.paths.map((p) => `<button class="chip" type="button" data-path="${esc(p)}">${esc(p)}</button>`).join("")}</div>` : ""}
-      <div class="grid grid--2 mt-4">
-        <label class="field"><span class="field__label">Skip files bigger than</span><select class="select" id="yMax">${[8, 32, 128, 512].map((n) => `<option value="${n}" ${n === (prefs.maxMb || 32) ? "selected" : ""}>${n} MB</option>`).join("")}</select></label>
-        <label class="field"><span class="field__label">Only these extensions</span><input class="input mono" id="yExt" placeholder="exe dll ps1 (empty for all)" value="${esc((prefs.ext || []).join(" "))}"></label>
+      <div class="setup__grid">
+        <div>
+          <label class="field">
+            <span class="field__label">Folders or files, one per line</span>
+            <textarea class="textarea mono" id="yPaths" rows="5" spellcheck="false" placeholder="C:\\Users\\Public&#10;%TEMP%">${esc((prefs.paths || []).join("\n"))}</textarea>
+          </label>
+        </div>
+        <div>
+          <div class="field__label">Quick add</div>
+          ${status.paths?.length ? `<div class="pathchips">${status.paths.map((p) => `<button class="pathchip" type="button" data-path="${esc(p)}" title="${esc(p)}">${esc(p.split(/[\\/]/).filter(Boolean).slice(-2).join("\\") || p)}</button>`).join("")}</div>` : '<p class="muted">No common folders found.</p>'}
+        </div>
       </div>
-      <label class="check"><input type="checkbox" id="yRec" ${prefs.recursive === false ? "" : "checked"}> <span>Include sub folders</span></label>
-      <div class="row mt-4"><span class="muted">${yr.length ? `${esc(plural(yr.length, "YARA file"))} will run` : "No YARA rules yet"}</span><div class="spacer"></div>${yr.length ? "" : `<a class="btn btn--sm" href="/yara" data-link>Add YARA rules</a>`}<button class="btn btn--primary" type="button" id="yRun" ${yr.length ? "" : "disabled"}>${icons.play} Scan folders</button></div>`;
+      <div class="setup__bar">
+        <label class="inline-field"><span class="field__label">Skip files over</span><select class="select" id="yMax">${[8, 32, 128, 512].map((n) => `<option value="${n}" ${n === (prefs.maxMb || 32) ? "selected" : ""}>${n} MB</option>`).join("")}</select></label>
+        <label class="inline-field"><span class="field__label">Extensions</span><input class="input mono input--sm" id="yExt" placeholder="all" value="${esc((prefs.ext || []).join(" "))}"></label>
+        <label class="check mb-0"><input type="checkbox" id="yRec" ${prefs.recursive === false ? "" : "checked"}> <span>Sub folders</span></label>
+        <div class="spacer"></div>
+        <span class="muted">${yr.length ? esc(plural(yr.length, "YARA file")) : "No YARA rules yet"}</span>
+        ${yr.length ? "" : '<a class="btn btn--sm" href="/yara" data-link>Add YARA rules</a>'}
+        <button class="btn btn--primary" type="button" id="yRun" ${yr.length ? "" : "disabled"}>${icons.play} Scan folders</button>
+      </div>`;
     box.onclick = (e) => {
       const chip = e.target.closest("[data-path]");
       if (chip) {
