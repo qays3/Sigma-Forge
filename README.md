@@ -1754,7 +1754,6 @@ Sigma-Forge/
 ├── setup.ps1                    Windows setup
 ├── sigma-forge, sigma-forge.ps1 Command line wrappers
 ├── action.yml                   GitHub Action
-├── .github/workflows/ci.yml     Tests and CLI checks on every push
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt             Core packages and 20 pySigma backends
