@@ -122,10 +122,22 @@ pre,
   top: 0;
   z-index: var(--z-header);
   height: var(--header-h);
-  background: color-mix(in srgb, var(--bg0) 84%, transparent);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg0) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
   transition: height var(--dur-2) var(--ease);
+}
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber-line) 20%, var(--amber) 50%, var(--amber-line) 80%, transparent);
+  pointer-events: none;
 }
 
 .topbar.is-shrunk {
@@ -139,13 +151,14 @@ pre,
   padding: 0 var(--sp-5);
   display: flex;
   align-items: center;
-  gap: var(--sp-5);
+  gap: var(--sp-4);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  flex: none;
   color: var(--text-strong);
 }
 
@@ -155,6 +168,7 @@ pre,
 
 .brand__logo {
   border-radius: var(--r-2);
+  filter: drop-shadow(0 0 10px var(--amber-soft));
 }
 
 .brand__name {
@@ -162,6 +176,7 @@ pre,
   font-weight: var(--fw-bold);
   font-size: var(--fs-lg);
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .brand__accent {
@@ -170,19 +185,35 @@ pre,
 
 .nav {
   display: flex;
-  gap: var(--sp-1);
-  flex: 1;
+  align-items: center;
+  gap: 2px;
+  margin: 0 auto;
+  padding: 4px;
+  background: var(--steel-softer);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 1px 0 var(--steel-soft);
+}
+
+.nav__sep {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 var(--sp-1);
+  background: var(--border-strong);
 }
 
 .nav__link {
   position: relative;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-sm);
+  padding: 6px var(--sp-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.01em;
   white-space: nowrap;
   color: var(--mut);
-  font-weight: var(--fw-medium);
-  border-radius: var(--r-2);
-  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
 }
 
 .nav__link:hover {
@@ -191,18 +222,15 @@ pre,
 }
 
 .nav__link.is-active {
-  color: var(--text-strong);
+  color: var(--amber-contrast);
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-softer), 0 4px 14px var(--amber-soft);
 }
 
-.nav__link.is-active::after {
-  content: "";
-  position: absolute;
-  left: var(--sp-3);
-  right: var(--sp-3);
-  bottom: -2px;
-  height: 2px;
-  background: var(--amber);
-  border-radius: var(--r-pill);
+.nav__link.is-active:hover {
+  color: var(--amber-contrast);
+  background: var(--amber-hover);
 }
 
 .nav-toggle {
@@ -233,13 +261,26 @@ pre,
 }
 
 .rule-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-family: var(--mono);
   font-size: var(--fs-2xs);
-  color: var(--mut);
-  padding: var(--sp-1) var(--sp-3);
+  color: var(--text);
+  padding: 5px var(--sp-3);
+  background: var(--steel-softer);
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   white-space: nowrap;
+}
+
+.rule-count::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-soft);
 }
 
 .icon-btn {
@@ -1561,10 +1602,28 @@ pre,
     left: 0;
     right: 0;
     flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 0;
     padding: var(--sp-3) var(--sp-5);
     background: var(--bg1);
+    border: 0;
     border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: var(--shadow-2);
     display: none;
+  }
+
+  .nav__sep {
+    width: auto;
+    height: 1px;
+    margin: var(--sp-2) 0;
+  }
+
+  .nav__link {
+    padding: var(--sp-2) var(--sp-3);
+    font-size: var(--fs-sm);
+    border-radius: var(--r-2);
   }
 
   .nav.is-open {
