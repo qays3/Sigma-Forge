@@ -1,6 +1,25 @@
 import { $$, closeDrawer } from "./ui.js";
 
 const routes = new Map();
+const GUIDE_FOR = {
+  workspace: "workspace", convert: "convert", coverage: "coverage", rules: "rules", editor: "editor", compare: "compare", test: "test-logs",
+  library: "library", mappings: "mappings", yara: "yara", hunt: "hunt-live", purple: "purple", inventory: "inventory", cases: "cases", firecheck: "fire-check",
+};
+const GUIDE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h6M8 11h6"/></svg>';
+
+function addGuideButton(root, name) {
+  const id = GUIDE_FOR[name];
+  if (!id) return;
+  const head = root.querySelector(".page-head__eyebrow, .hero");
+  if (!head || root.querySelector(".guide-btn")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "guide-btn";
+  btn.title = "How to use this page";
+  btn.innerHTML = `${GUIDE_ICON}<span>Guide</span>`;
+  btn.addEventListener("click", () => navigate("/guides", { guide: id }));
+  head.appendChild(btn);
+}
 let current = null;
 let outlet = null;
 
@@ -30,7 +49,11 @@ async function render() {
   outlet.replaceWith(fresh);
   outlet = fresh;
   outlet.dataset.route = entry.name;
-  current = (await entry.view(outlet, routeState())) || null;
+  const view = outlet;
+  const pending = entry.view(view, routeState());
+  addGuideButton(view, entry.name);
+  current = (await pending) || null;
+  addGuideButton(view, entry.name);
   document.title = entry.name === "workspace" ? "Sigma Forge" : `${({ yara: "YARA", firecheck: "Fire check" })[entry.name] || entry.name[0].toUpperCase() + entry.name.slice(1)} | Sigma Forge`;
   window.scrollTo({ top: 0 });
 }

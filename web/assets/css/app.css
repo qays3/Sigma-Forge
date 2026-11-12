@@ -5455,3 +5455,61 @@ a.chip:hover {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+.guide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  align-self: flex-start;
+  flex: none;
+  padding: 7px var(--sp-4);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--amber);
+  background: var(--amber-softer);
+  border: 1px solid var(--amber);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.guide-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.guide-btn:hover {
+  color: var(--amber-contrast);
+  background: var(--amber);
+}
+
+.hero .guide-btn {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-4);
+}
+
+.page-head__eyebrow:has(.guide-btn) {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.page-head__eyebrow .guide-btn {
+  padding: 3px var(--sp-3);
+  font-family: var(--body);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.page-head__eyebrow .guide-btn svg {
+  width: 13px;
+  height: 13px;
+}
