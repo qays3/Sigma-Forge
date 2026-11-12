@@ -29,6 +29,11 @@ function readTheme() {
 function applyTheme(theme) {
   if (theme === "light") document.documentElement.setAttribute("data-theme", "light");
   else document.documentElement.removeAttribute("data-theme");
+  const btn = document.getElementById("themeToggle");
+  if (btn) {
+    btn.setAttribute("aria-checked", String(theme !== "light"));
+    btn.setAttribute("aria-label", theme === "light" ? "Light theme" : "Dark theme");
+  }
 }
 
 function initTheme() {
