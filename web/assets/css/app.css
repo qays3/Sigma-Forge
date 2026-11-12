@@ -3770,3 +3770,7 @@ a.chip:hover {
     padding: var(--sp-3) var(--sp-4);
   }
 }
+
+.results__extra {
+  margin-bottom: var(--sp-5);
+}

@@ -32,7 +32,7 @@ export function renderResults(out, res, extra = "") {
   });
   const maxSource = Math.max(1, ...res.logsources.map((l) => l.events));
   out.innerHTML = `
-    ${extra}
+    ${extra ? `<div class="results__extra">${extra}</div>` : ""}
     <div class="stats">
       <div class="stat"><div class="stat__label">Events</div><div class="stat__value stat__value--accent">${s.events}</div><div class="stat__hint">${esc(plural(s.files, "file"))} · ${esc(plural(res.fields, "field"))}</div></div>
       <div class="stat"><div class="stat__label">Rules that fired</div><div class="stat__value stat__value--ok">${s.matched_rules}</div><div class="stat__hint">of ${s.tested} tested</div></div>
