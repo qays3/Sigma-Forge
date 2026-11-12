@@ -49,17 +49,34 @@ function initTheme() {
   });
 }
 
+const SIDE_KEY = "sigma-forge-side";
+
 function initHeader() {
-  const bar = $("#topbar");
-  const onScroll = () => bar.classList.toggle("is-shrunk", window.scrollY > 24);
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
-  const toggle = $("#navToggle");
-  toggle.addEventListener("click", () => {
-    const nav = $("#mainNav");
-    const open = nav.classList.toggle("is-open");
-    toggle.setAttribute("aria-expanded", String(open));
+  const root = document.documentElement;
+  try {
+    if (localStorage.getItem(SIDE_KEY) === "mini") root.setAttribute("data-side", "mini");
+  } catch {
+    root.removeAttribute("data-side");
+  }
+  $("#sideCollapse").addEventListener("click", () => {
+    const mini = root.getAttribute("data-side") !== "mini";
+    if (mini) root.setAttribute("data-side", "mini");
+    else root.removeAttribute("data-side");
+    $("#sideCollapse").setAttribute("aria-label", mini ? "Expand menu" : "Collapse menu");
+    try {
+      localStorage.setItem(SIDE_KEY, mini ? "mini" : "full");
+    } catch {
+      return;
+    }
   });
+  const toggle = $("#navToggle");
+  const nav = $("#mainNav");
+  const setOpen = (open) => {
+    nav.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => setOpen(!nav.classList.contains("is-open")));
+  $("#sideScrim").addEventListener("click", () => setOpen(false));
 }
 
 async function updateCount() {
