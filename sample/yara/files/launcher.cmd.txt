@@ -1,0 +1,2 @@
+rem Training sample for Sigma Forge. Saved as text so it never runs.
+powershell.exe -NoProfile -WindowStyle Hidden -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAKQA=

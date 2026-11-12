@@ -6,6 +6,7 @@ from pathlib import Path
 
 SOURCE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
 OUTPUT = Path(__file__).resolve().parent.parent / "data" / "attack" / "attack.json"
+GROUPS_OUTPUT = OUTPUT.with_name("groups.json")
 
 TACTIC_ORDER = [
     "reconnaissance",
@@ -113,6 +114,53 @@ def build(bundle):
     return {"version": version, "tactics": ordered, "techniques": techniques, "revoked": dict(sorted(revoked.items()))}
 
 
+def first_sentence(text, limit=260):
+    import re
+
+    text = " ".join((text or "").split())
+    text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"\s*\(Citation:[^)]*\)", "", text)
+    end = text.find(". ")
+    if 0 < end < limit:
+        return text[: end + 1]
+    return text[:limit].rstrip() + ("..." if len(text) > limit else "")
+
+
+def build_groups(bundle, techniques):
+    objects = bundle.get("objects", [])
+    stix_tech = {}
+    for obj in objects:
+        if obj.get("type") == "attack-pattern" and not obj.get("revoked") and not obj.get("x_mitre_deprecated"):
+            tid, _ = external_id(obj)
+            if tid and tid in techniques:
+                stix_tech[obj["id"]] = tid
+    groups = {}
+    for obj in objects:
+        if obj.get("type") != "intrusion-set" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
+            continue
+        gid, url = external_id(obj)
+        if not gid:
+            continue
+        aliases = [a for a in obj.get("aliases", []) if a != obj.get("name")]
+        groups[obj["id"]] = {"id": gid, "name": obj.get("name", gid), "aliases": aliases[:8], "url": url,
+                             "description": first_sentence(obj.get("description", "")), "techniques": set()}
+    for obj in objects:
+        if obj.get("type") != "relationship" or obj.get("relationship_type") != "uses" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
+            continue
+        group = groups.get(obj.get("source_ref"))
+        tid = stix_tech.get(obj.get("target_ref"))
+        if group is not None and tid:
+            group["techniques"].add(tid)
+    out = []
+    for g in groups.values():
+        if not g["techniques"]:
+            continue
+        g["techniques"] = sorted(g["techniques"])
+        out.append(g)
+    out.sort(key=lambda g: g["name"].lower())
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build the compact MITRE ATT&CK Enterprise data file used by Sigma Forge")
     parser.add_argument("--source", default=SOURCE_URL, help="URL or local path of enterprise-attack.json (STIX 2.1 bundle)")
@@ -129,6 +177,9 @@ def main():
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    groups = build_groups(bundle, data["techniques"])
+    out.with_name("groups.json").write_text(json.dumps({"version": data["version"], "groups": groups}, separators=(",", ":")), encoding="utf-8")
+    print(f"{len(groups)} threat groups -> {out.with_name('groups.json')}")
     print(f"ATT&CK v{data['version']}: {len(data['tactics'])} tactics, {len(data['techniques'])} techniques, {len(data['revoked'])} revoked mappings -> {out}")
     return 0
 

@@ -53,8 +53,76 @@ class LibraryAddRequest(BaseModel):
     paths: List[str] = Field(min_length=1, max_length=500)
 
 
+class CoverageRequest(BaseModel):
+    rules: List[RuleInput]
+    group: Optional[str] = Field(default=None, max_length=80)
+    collected: Optional[List[str]] = None
+
+
+class ReportRequest(BaseModel):
+    rules: List[RuleInput]
+    title: str = Field(default="", max_length=200)
+    group: Optional[str] = Field(default=None, max_length=80)
+    collected: Optional[List[str]] = None
+
+
+class RuleGenRequest(BaseModel):
+    event: Dict[str, Any]
+    logsource: Optional[Dict[str, str]] = None
+    fields: Optional[List[str]] = None
+    title: str = Field(default="", max_length=200)
+
+
+class AddFilterRequest(BaseModel):
+    content: str
+    title: str = Field(default="", max_length=300)
+    filters: List[Dict[str, Any]] = Field(min_length=1, max_length=20)
+
+
+class DeployRequest(BaseModel):
+    rules: List[RuleInput]
+    kind: str = Field(max_length=20)
+    target: str = Field(default="", max_length=40)
+    settings: Dict[str, Any] = Field(default_factory=dict)
+    options: ConvertOptions = ConvertOptions()
+    field_mapping: Dict[str, str] = Field(default_factory=dict)
+    dry_run: bool = True
+
+
+class GitFetchRequest(BaseModel):
+    repo: str = Field(max_length=300)
+    ref: str = Field(default="", max_length=120)
+    path: str = Field(default="", max_length=300)
+
+
 class ErrorResponse(BaseModel):
     detail: str
 
 
 JSONDict = Dict[str, Any]
+
+
+class QueryGenRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=20000)
+    language: str = "auto"
+    title: str = Field(default="", max_length=300)
+    level: str = "medium"
+    logsource: Optional[Dict[str, str]] = None
+
+
+class HuntEventsRequest(BaseModel):
+    rules: List[RuleInput]
+    channels: List[str] = Field(min_length=1, max_length=20)
+    hours: float = Field(default=24, gt=0, le=720)
+    max_events: int = Field(default=20000, ge=100, le=50000)
+    mode: str = "auto"
+    field_mapping: Dict[str, Any] = Field(default_factory=dict)
+
+
+class HuntYaraRequest(BaseModel):
+    rules: List[RuleInput]
+    paths: List[str] = Field(min_length=1, max_length=20)
+    recursive: bool = True
+    max_files: int = Field(default=20000, ge=1, le=200000)
+    max_size_mb: int = Field(default=32, ge=1, le=512)
+    extensions: List[str] = Field(default_factory=list)

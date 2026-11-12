@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { trackState } from "../router.js";
 import { state } from "../state.js";
+import { openInEditor, paintMeters, qualityBadge, qualityList } from "../shared.js";
 import { $, $$, copyText, debounce, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton } from "../ui.js";
 
 const LEVEL_ORDER = { critical: 5, high: 4, medium: 3, low: 2, informational: 1, "": 0 };
@@ -33,6 +34,9 @@ export async function rulesView(root, route) {
         <select class="select" id="fStatus" aria-label="Status"></select>
         <select class="select" id="fProduct" aria-label="Product"></select>
         <select class="select" id="fTactic" aria-label="Tactic"></select>
+        <select class="select" id="fGrade" aria-label="Quality grade">
+          <option value="">Any grade</option><option value="A">Grade A</option><option value="B">Grade B</option><option value="C">Grade C</option><option value="D">Grade D</option><option value="F">Grade F</option>
+        </select>
         <select class="select" id="fState" aria-label="State">
           <option value="">Any state</option><option value="ok">Clean</option><option value="issues">Has issues</option><option value="error">Has errors</option><option value="correlation">Correlations</option>
         </select>
@@ -74,7 +78,9 @@ export async function rulesView(root, route) {
     const product = $("#fProduct", root).value;
     const tactic = $("#fTactic", root).value;
     const st = $("#fState", root).value;
+    const grade = $("#fGrade", root).value;
     return rows.filter((r) => {
+      if (grade && r.quality?.grade !== grade) return false;
       if (level && r.level !== level) return false;
       if (status && r.status !== status) return false;
       if (product && r.logsource.product !== product) return false;
@@ -97,6 +103,7 @@ export async function rulesView(root, route) {
       if (sortKey === "issues") return (r.error ? 100 : 0) + r.issues.length;
       if (sortKey === "logsource") return logsourceText(r.logsource);
       if (sortKey === "attack") return r.techniques.length;
+      if (sortKey === "quality") return r.quality?.score ?? 0;
       return String(r[sortKey] || "").toLowerCase();
     };
     return [...list].sort((a, b) => (val(a) > val(b) ? sortDir : val(a) < val(b) ? -sortDir : 0));
@@ -108,7 +115,7 @@ export async function rulesView(root, route) {
     const th = (key, label) => `<th data-sort="${key}" class="${sortKey === key ? "is-sorted" : ""}" aria-sort="${sortKey === key ? (sortDir > 0 ? "ascending" : "descending") : "none"}">${label}${sortKey === key ? (sortDir > 0 ? " ↑" : " ↓") : ""}</th>`;
     $("#table", root).innerHTML = list.length
       ? `<table class="table">
-          <thead><tr>${th("title", "Rule")}${th("level", "Level")}${th("status", "Status")}${th("logsource", "Log source")}${th("attack", "ATT&amp;CK")}${th("issues", "Checks")}</tr></thead>
+          <thead><tr>${th("title", "Rule")}${th("level", "Level")}${th("status", "Status")}${th("logsource", "Log source")}${th("attack", "ATT&amp;CK")}${th("quality", "Quality")}${th("issues", "Checks")}</tr></thead>
           <tbody>${list
             .map(
               (r) => `<tr data-key="${esc(r.key)}" tabindex="0">
@@ -117,6 +124,7 @@ export async function rulesView(root, route) {
                 <td>${r.status ? `<span class="badge">${esc(r.status)}</span>` : ""}</td>
                 <td class="muted">${esc(logsourceText(r.logsource))}</td>
                 <td><div class="tags">${r.techniques.slice(0, 4).map((t) => `<span class="badge badge--accent">${esc(t)}</span>`).join("")}${r.techniques.length > 4 ? `<span class="badge">+${r.techniques.length - 4}</span>` : ""}</div></td>
+                <td>${qualityBadge(r.quality)}</td>
                 <td>${r.error ? '<span class="badge badge--bad">error</span>' : r.issues.length ? `<span class="badge badge--warn">${r.issues.length} issue${r.issues.length > 1 ? "s" : ""}</span>` : '<span class="badge badge--ok">clean</span>'}</td>
               </tr>`
             )
@@ -165,14 +173,17 @@ export async function rulesView(root, route) {
       </dl>
       <h3 class="section-title">Checks</h3>
       ${issues}
+      ${row.quality ? `<h3 class="section-title">Quality score</h3><div class="card"><div class="card__body">${qualityList(row.quality)}</div></div>` : ""}
       ${row.error ? "" : `<h3 class="section-title">Quick convert</h3>
       <div class="row"><select class="select" id="qcTarget" aria-label="Target">${targets.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select><button class="btn btn--primary" type="button" id="qcRun">${icons.play} Convert</button></div>
       <div class="mt-4" id="qcOut"></div>`}
-      <h3 class="section-title">Source <button class="btn btn--sm" type="button" id="copySrc">${icons.copy} Copy</button></h3>
+      <h3 class="section-title">Source <button class="btn btn--sm" type="button" id="copySrc">${icons.copy} Copy</button> <button class="btn btn--sm" type="button" id="editSrc">${icons.file} Edit</button></h3>
       <pre class="code code--tall">${esc(file?.content || "")}</pre>`;
     trackState({ key });
     openDrawer(row.title, body, (panel) => {
+      paintMeters(panel);
       $("#copySrc", panel)?.addEventListener("click", () => copyText(file?.content || ""));
+      $("#editSrc", panel)?.addEventListener("click", () => file && openInEditor(file.name, file.content, file.id));
       $("#qcRun", panel)?.addEventListener("click", () => quickConvert(panel, row, $("#qcTarget", panel).value));
     }, () => trackState({ key: undefined }));
   }

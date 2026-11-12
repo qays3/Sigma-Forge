@@ -133,8 +133,13 @@ def analyze(parsed_rules: List[ParsedRule]) -> Dict:
             if key:
                 by_key[key]["issues"].append({"severity": _severity(issue), "message": _issue_message(issue)})
 
+    for r in rows:
+        r["quality"] = quality(r)
     valid = [r for r in rows if not r["error"]]
+    grades = _count([{"g": r["quality"]["grade"]} for r in valid], "g")
     summary = {
+        "quality": round(sum(r["quality"]["score"] for r in valid) / len(valid)) if valid else 0,
+        "grades": grades,
         "correlations": sum(1 for r in valid if r["kind"] == "correlation"),
         "files": len({r["file"] for r in rows}),
         "rules": len(rows),
@@ -147,6 +152,46 @@ def analyze(parsed_rules: List[ParsedRule]) -> Dict:
         "categories": _count_nested(valid, "category"),
     }
     return {"summary": summary, "rules": rows}
+
+
+GENERIC_FP = {"", "unknown", "none", "n/a", "na", "-", "unlikely"}
+
+
+def quality(r: Dict) -> Dict:
+    if r.get("error"):
+        return {"score": 0, "grade": "F", "checks": [{"id": "parse", "label": "Rule parses", "ok": False, "points": 0, "max": 100}]}
+    import re
+
+    title = r.get("title") or ""
+    rid = r.get("id") or ""
+    desc = r.get("description") or ""
+    fps = [f for f in r.get("falsepositives") or [] if f.strip().lower() not in GENERIC_FP]
+    issues = r.get("issues") or []
+    serious = [i for i in issues if i.get("severity") in ("high", "critical", "medium")]
+    conditions = " ".join(r.get("conditions") or []).lower()
+    detections = r.get("detections") or []
+    has_filter = "not" in conditions or any(str(d).startswith("filter") for d in detections) or r.get("kind") == "correlation"
+    checks = [
+        ("title", "Clear title (10 or more characters)", len(title) >= 10, 8),
+        ("id", "Valid UUID id", bool(re.fullmatch(r"[0-9a-fA-F-]{36}", rid)), 6),
+        ("description", "Description explains the detection (40 or more characters)", len(desc) >= 40, 12),
+        ("references", "At least one reference", bool(r.get("references")), 10),
+        ("author", "Author set", bool(r.get("author")), 4),
+        ("date", "Date set", bool(r.get("date")), 4),
+        ("level", "Level set", bool(r.get("level")), 6),
+        ("status", "Status is test or stable", r.get("status") in ("test", "stable"), 6),
+        ("attack", "Tagged with an ATT&CK technique", bool(r.get("techniques")), 14),
+        ("falsepositives", "Real false positives listed (not Unknown)", bool(fps), 10),
+        ("filters", "Filters out known noise", has_filter, 8),
+        ("clean", "No medium or higher findings from the checks", not serious, 12),
+    ]
+    out = []
+    score = 0
+    for cid, label, ok, pts in checks:
+        score += pts if ok else 0
+        out.append({"id": cid, "label": label, "ok": bool(ok), "points": pts if ok else 0, "max": pts})
+    grade = "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 55 else "D" if score >= 40 else "F"
+    return {"score": score, "grade": grade, "checks": out}
 
 
 def _count(rows, field):

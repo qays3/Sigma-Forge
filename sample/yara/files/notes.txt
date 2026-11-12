@@ -1,0 +1,2 @@
+Weekly notes: patch the VPN gateway, rotate service account passwords, review firewall rules.
+Nothing suspicious in here, so no YARA rule should match this file.

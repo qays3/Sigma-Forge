@@ -26,10 +26,12 @@ async function render() {
   });
   document.getElementById("mainNav")?.classList.remove("is-open");
   document.getElementById("navToggle")?.setAttribute("aria-expanded", "false");
-  outlet.innerHTML = "";
+  const fresh = outlet.cloneNode(false);
+  outlet.replaceWith(fresh);
+  outlet = fresh;
   outlet.dataset.route = entry.name;
   current = (await entry.view(outlet, routeState())) || null;
-  document.title = entry.name === "workspace" ? "Sigma Forge" : `${entry.name[0].toUpperCase()}${entry.name.slice(1)} | Sigma Forge`;
+  document.title = entry.name === "workspace" ? "Sigma Forge" : `${entry.name === "yara" ? "YARA" : entry.name[0].toUpperCase() + entry.name.slice(1)} | Sigma Forge`;
   window.scrollTo({ top: 0 });
 }
 

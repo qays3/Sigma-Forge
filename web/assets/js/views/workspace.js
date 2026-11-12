@@ -1,9 +1,11 @@
 import { api } from "../api.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
+import { readJson, writeJson } from "../shared.js";
 import { $, $$, emptyState, esc, forging, icons, logo, plural, skeleton, toast } from "../ui.js";
 
 const YAML_RE = /\.ya?ml$/i;
+const GIT_KEY = "sigma-forge-git";
 
 async function readFiles(fileList) {
   const files = Array.from(fileList).filter((f) => YAML_RE.test(f.name));
@@ -83,6 +85,7 @@ export async function workspaceView(root) {
             <div class="tabs" role="tablist">
               <button class="tab is-active" type="button" role="tab" data-tab="files" aria-selected="true">Files</button>
               <button class="tab" type="button" role="tab" data-tab="paste" aria-selected="false">Paste</button>
+              <button class="tab" type="button" role="tab" data-tab="git" aria-selected="false">GitHub</button>
             </div>
             <div data-panel="files">
               <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop Sigma rule files here or choose files">
@@ -109,6 +112,19 @@ export async function workspaceView(root) {
                 <textarea class="textarea" id="pasteBody" spellcheck="false" placeholder="title: My rule&#10;logsource:&#10;  product: windows&#10;  category: process_creation&#10;detection:&#10;  selection:&#10;    Image|endswith: '\\whoami.exe'&#10;  condition: selection"></textarea>
               </label>
               <button class="btn btn--primary" type="button" id="addPaste">Add to workspace</button>
+            </div>
+            <div data-panel="git" hidden>
+              <p class="muted">Pull rules from a public GitHub repository. Paste owner/repo or a link to a folder. Saved sources can be synced again later to get the newest rules.</p>
+              <label class="field">
+                <span class="field__label">Repository</span>
+                <input class="input mono" id="gitRepo" placeholder="SigmaHQ/sigma or https://github.com/owner/repo/tree/main/rules" spellcheck="false">
+              </label>
+              <div class="grid grid--2 git__opts">
+                <label class="field"><span class="field__label">Branch or tag (optional)</span><input class="input mono" id="gitRef" placeholder="main" spellcheck="false"></label>
+                <label class="field"><span class="field__label">Folder (optional)</span><input class="input mono" id="gitPath" placeholder="rules/windows/process_creation" spellcheck="false"></label>
+              </div>
+              <div class="row"><button class="btn btn--primary" type="button" id="gitFetch">${icons.download} Fetch rules</button><span class="muted" id="gitMsg"></span></div>
+              <div id="gitSources" class="mt-4"></div>
             </div>
           </div>
         </div>
@@ -216,6 +232,71 @@ export async function workspaceView(root) {
     $("#pasteBody", root).value = "";
   });
 
+  const readSources = () => readJson(GIT_KEY, []);
+
+  function paintSources() {
+    const list = readSources();
+    $("#gitSources", root).innerHTML = list.length
+      ? `<div class="field__label">Saved sources</div><div class="card"><ul class="list">${list
+          .map((src, i) => `<li class="list__item"><div class="list__main"><div class="list__title mono">${esc(src.repo)}${src.path ? `/${esc(src.path)}` : ""}</div><div class="list__meta">${esc(src.ref || "default branch")} · ${esc(plural(src.count || 0, "rule"))}${src.synced ? ` · synced ${esc(new Date(src.synced).toLocaleString())}` : ""}</div></div><button class="btn btn--sm" type="button" data-gitsync="${i}">${icons.download} Sync</button><button class="icon-btn" type="button" data-gitdel="${i}" aria-label="Remove source">${icons.trash}</button></li>`)
+          .join("")}</ul></div>`
+      : "";
+  }
+
+  async function gitPull(repo, ref, path, btn) {
+    btn.disabled = true;
+    $("#gitMsg", root).textContent = "Downloading from GitHub";
+    try {
+      const res = await api.gitFetch(repo, ref, path);
+      if (!res.rules.length) {
+        toast("No Sigma rules found there", "bad");
+        $("#gitMsg", root).textContent = "";
+        return;
+      }
+      const full = `${res.owner}/${res.repo}`;
+      const scope = res.path ? `${res.prefix}${res.path}/` : res.prefix;
+      const removed = await store.removeWhere((r) => r.name.startsWith(scope));
+      const added = await store.add(res.rules);
+      const list = readSources().filter((s) => !(s.repo === full && (s.path || "") === (res.path || "")));
+      list.unshift({ repo: full, ref: ref || "", path: res.path || "", count: res.rules.length, synced: Date.now() });
+      writeJson(GIT_KEY, list.slice(0, 20));
+      paintSources();
+      $("#gitMsg", root).textContent = `${plural(res.rules.length, "rule")} from ${full} (${res.ref})${res.truncated ? ", limit reached" : ""}`;
+      toast(removed ? `Synced: ${plural(res.rules.length, "rule")}, replaced ${removed} old` : `Added ${plural(added, "rule")}`, "ok");
+    } catch (err) {
+      $("#gitMsg", root).textContent = "";
+      toast(err.message, "bad");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $("#gitFetch", root).addEventListener("click", (e) => {
+    const repo = $("#gitRepo", root).value.trim();
+    if (!repo) {
+      toast("Type a repository first", "bad");
+      return;
+    }
+    gitPull(repo, $("#gitRef", root).value.trim(), $("#gitPath", root).value.trim(), e.currentTarget);
+  });
+
+  $("#gitSources", root).addEventListener("click", (e) => {
+    const sync = e.target.closest("[data-gitsync]");
+    const del = e.target.closest("[data-gitdel]");
+    const list = readSources();
+    if (sync) {
+      const src = list[Number(sync.dataset.gitsync)];
+      if (src) gitPull(src.repo, src.ref, src.path, sync);
+    }
+    if (del) {
+      list.splice(Number(del.dataset.gitdel), 1);
+      writeJson(GIT_KEY, list);
+      paintSources();
+    }
+  });
+
+  paintSources();
+
   $("#clearAll", root).addEventListener("click", async () => {
     const rules = await store.all();
     if (!rules.length) return;
@@ -257,6 +338,7 @@ export async function workspaceView(root) {
           <div class="stat"><div class="stat__label">Errors</div><div class="stat__value ${s.errors ? "stat__value--bad" : ""}">${s.errors}</div><div class="stat__hint">cannot be converted</div></div>
           <div class="stat"><div class="stat__label">With issues</div><div class="stat__value ${s.with_issues ? "stat__value--warn" : ""}">${s.with_issues}</div><div class="stat__hint">validator findings</div></div>
           <div class="stat"><div class="stat__label">Correlations</div><div class="stat__value stat__value--accent">${s.correlations || 0}</div><div class="stat__hint">meta rules</div></div>
+          <div class="stat"><div class="stat__label">Quality</div><div class="stat__value">${s.quality ?? 0}<small>/100</small></div><div class="stat__hint">${Object.entries(s.grades || {}).filter(([, n]) => n).map(([g, n]) => `${esc(g)} ${n}`).join(" · ") || "average score"}</div></div>
         </div>
         <div class="grid grid--2">
           <div class="card"><div class="card__head"><h3 class="card__title">Levels</h3></div><div class="card__body">${barList(s.levels, s.valid)}</div></div>

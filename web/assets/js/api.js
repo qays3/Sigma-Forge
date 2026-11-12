@@ -48,6 +48,26 @@ async function upload(path, form) {
   return data;
 }
 
+async function fetchFile(path, body, fallback) {
+  let res;
+  try {
+    res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    throw new Error("Cannot reach the Sigma Forge server. Is it running?");
+  }
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      message = (await res.json()).detail || message;
+    } catch {
+      message = res.statusText || message;
+    }
+    throw new Error(message);
+  }
+  const match = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+  return { blob: await res.blob(), filename: match ? match[1] : fallback };
+}
+
 async function fetchZip(path, body) {
   let res;
   try {
@@ -95,7 +115,34 @@ export const api = {
   exportZip: (rules, target, format, options, mapping, pkg, name) => fetchZip("/api/export", { rules: strip(rules), target, format, options, field_mapping: mapping, package: pkg, name }),
   fields: (rules) => request("/api/fields", { method: "POST", body: { rules: strip(rules) } }),
   gaps: (rules) => request("/api/coverage/gaps", { method: "POST", body: { rules: strip(rules) } }),
-  sampleLogs: () => request("/api/samples/logs"),
+  sampleLogs: (set = "") => request(`/api/samples/logs${set ? `?set=${encodeURIComponent(set)}` : ""}`),
+  generateEvents: (rules) => request("/api/generate-events", { method: "POST", body: { rules: strip(rules) } }),
+  ruleGen: (event, logsource, fields, title = "") => request("/api/rulegen", { method: "POST", body: { event, logsource, fields, title } }),
+  addFilter: (content, title, filters) => request("/api/rules/add-filter", { method: "POST", body: { content, title, filters } }),
+  queryLanguages: () => request("/api/querygen/languages"),
+  queryGen: (query, language, title = "", level = "medium") => request("/api/querygen", { method: "POST", body: { query, language, title, level } }),
+  groups: () => request("/api/groups"),
+  atomic: (tid) => request(`/api/atomic/${encodeURIComponent(tid)}`),
+  report: (rules, title, group, collected) => fetchFile("/api/report", { rules: strip(rules), title, group, collected }, "sigma-forge-report.html"),
+  deployKinds: () => request("/api/deploy/kinds"),
+  deploy: (rules, kind, target, settings, options, mapping, dryRun) => request("/api/deploy", { method: "POST", body: { rules: strip(rules), kind, target, settings, options, field_mapping: mapping, dry_run: dryRun } }),
+  gitFetch: (repo, ref, path) => request("/api/git/fetch", { method: "POST", body: { repo, ref, path } }),
+  yara: {
+    status: () => request("/api/yara/status"),
+    samples: () => request("/api/samples/yara"),
+    check: (rules) => request("/api/yara/check", { method: "POST", body: { rules: strip(rules) } }),
+    scan(rules, files) {
+      const form = new FormData();
+      form.append("rules", JSON.stringify(strip(rules)));
+      files.forEach((f) => form.append("files", f, f.name));
+      return upload("/api/yara/scan", form);
+    },
+  },
+  hunt: {
+    status: () => request("/api/hunt/status"),
+    events: (rules, channels, hours, maxEvents, mode, mapping = {}) => request("/api/hunt/events", { method: "POST", body: { rules: strip(rules), channels, hours, max_events: maxEvents, mode, field_mapping: mapping } }),
+    yara: (rules, paths, recursive, maxFiles, maxSizeMb, extensions) => request("/api/hunt/yara", { method: "POST", body: { rules: strip(rules), paths, recursive, max_files: maxFiles, max_size_mb: maxSizeMb, extensions } }),
+  },
   test(rules, files, mode, mapping = {}) {
     const form = new FormData();
     form.append("rules", JSON.stringify(strip(rules)));
@@ -115,6 +162,6 @@ export const api = {
     search: (params) => request(`/api/library/search?${query(params)}`),
     rules: (paths) => request("/api/library/rules", { method: "POST", body: { paths } }),
   },
-  coverage: (rules) => request("/api/coverage", { method: "POST", body: { rules: strip(rules) } }),
+  coverage: (rules, group = "", collected = null) => request("/api/coverage", { method: "POST", body: { rules: strip(rules), group, collected } }),
   navigator: (rules, name, colors) => request("/api/coverage/navigator", { method: "POST", body: { rules: strip(rules), name, colors } }),
 };

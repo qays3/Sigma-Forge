@@ -32,7 +32,7 @@ def test_attack_pack_covers_every_technique():
 
 
 def test_logtest_on_sample_logs():
-    files = [("files", (p.name, p.read_bytes(), "application/json")) for p in sorted((ROOT / "sample" / "logs").glob("*"))]
+    files = [("files", (p.name, p.read_bytes(), "application/json")) for p in sorted((ROOT / "sample" / "logs").glob("*")) if p.is_file()]
     res = client.post("/api/test", data={"rules": json.dumps(rules("features")), "mode": "auto"}, files=files)
     assert res.status_code == 200, res.text
     data = res.json()

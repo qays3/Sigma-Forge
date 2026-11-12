@@ -5,6 +5,7 @@ requests>=2.32,<3.0
 regex>=2024.0
 python-multipart>=0.0.9
 evtx>=0.8,<1.0
+yara-python>=4.5
 PyYAML>=6.0
 pySigma>=1.5,<2.0
 pysigma-pipeline-sysmon>=2.0,<3.0

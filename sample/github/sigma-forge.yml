@@ -1,0 +1,25 @@
+name: Sigma rules
+
+on:
+  push:
+    paths: ["rules/**"]
+  pull_request:
+    paths: ["rules/**"]
+
+jobs:
+  sigma-forge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: qays3/Sigma-Forge@main
+        with:
+          rules: rules
+          min-quality: "55"
+          fail-on: high
+          test-generated: "true"
+          convert-to: "splunk sentinel_asim elastic_esql"
+          min-coverage: "0"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sigma-forge-output
+          path: sigma-forge-output

@@ -98,6 +98,7 @@ export async function convertView(root, route) {
         <div class="spacer"></div>
         <button class="btn" type="button" id="pickRules">${icons.file} Rules <span class="badge badge--accent" id="selCount"></span></button>
         <button class="btn" type="button" id="exportPkg">${icons.box} Export package</button>
+        <button class="btn" type="button" id="deployBtn" title="Push the rules to Splunk, Elastic, Sentinel or Wazuh">${icons.upload} Deploy</button>
         <button class="btn btn--primary" type="button" id="runConvert">${icons.play} Convert</button>
       </div>
     </div>`;
@@ -350,6 +351,99 @@ export async function convertView(root, route) {
     });
   }
   $("#exportPkg", root).addEventListener("click", openExport);
+  $("#deployBtn", root).addEventListener("click", openDeploy);
+
+  async function openDeploy() {
+    const chosen = rules.filter((r) => selected.has(r.id));
+    if (!chosen.length) {
+      toast("Select at least one rule", "bad");
+      return;
+    }
+    let kinds;
+    try {
+      kinds = (await api.deployKinds()).kinds;
+    } catch (err) {
+      toast(err.message, "bad");
+      return;
+    }
+    const saved = loadPrefs().deploy || {};
+    const startKind = Object.keys(kinds).find((k) => kinds[k].targets.includes(targetId)) || saved.kind || "splunk";
+    const body = `
+      <p class="muted">Sends ${esc(plural(chosen.length, "rule"))} straight to your platform with its API. Start with a dry run to see every request first. Tokens and passwords are never saved.</p>
+      <label class="field"><span class="field__label">Platform</span><select class="select" id="dpKind">${Object.entries(kinds).map(([k, v]) => `<option value="${esc(k)}" ${k === startKind ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></label>
+      <label class="field"><span class="field__label">Query language</span><select class="select" id="dpTarget"></select></label>
+      <div id="dpFields"></div>
+      <label class="check"><input type="checkbox" id="dpTls" checked> <span>Check the TLS certificate</span></label>
+      <label class="check"><input type="checkbox" id="dpEnable"> <span>Turn the rules on after upload</span></label>
+      <div class="row mt-4"><button class="btn" type="button" id="dpDry">${icons.play} Dry run</button><div class="spacer"></div><button class="btn btn--primary" type="button" id="dpGo">${icons.upload} Deploy now</button></div>
+      <div id="dpOut" class="mt-4"></div>`;
+    const FIELDS = {
+      splunk: [["url", "Management URL", "https://splunk.lab:8089"], ["token", "Token", "", "password"], ["username", "Or username", ""], ["password", "Password", "", "password"], ["app", "App", "search"], ["owner", "Owner", "nobody"], ["prefix", "Name prefix", "Sigma - "], ["cron", "Schedule (cron)", "*/15 * * * *"], ["earliest", "Search window", "-15m@m"]],
+      elastic: [["url", "Kibana URL", "https://kibana.lab:5601"], ["token", "API key", "", "password"], ["username", "Or username", ""], ["password", "Password", "", "password"], ["space", "Space (empty for default)", ""]],
+      sentinel: [["subscription", "Subscription id", ""], ["resource_group", "Resource group", ""], ["workspace", "Workspace name", ""], ["token", "Bearer token (az account get-access-token)", "", "password"], ["frequency", "Run every", "PT1H"], ["period", "Look back", "PT1H"]],
+      wazuh: [["url", "Manager API URL", "https://wazuh.lab:55000"], ["username", "Username", "wazuh"], ["password", "Password", "", "password"], ["token", "Or JWT token", "", "password"], ["filename", "Rules file", "sigma_forge_rules.xml"]],
+    };
+    openDrawer("Deploy rules", body, (panel) => {
+      const kindSel = $("#dpKind", panel);
+      const paint = () => {
+        const k = kindSel.value;
+        const keep = saved[k] || {};
+        $("#dpTarget", panel).innerHTML = kinds[k].targets
+          .map((id) => targets.find((t) => t.id === id))
+          .filter((t) => t && t.available)
+          .map((t) => `<option value="${esc(t.id)}" ${t.id === targetId ? "selected" : ""}>${esc(t.name)}</option>`)
+          .join("");
+        $("#dpFields", panel).innerHTML = FIELDS[k]
+          .map(([key, label, ph, type]) => `<label class="field"><span class="field__label">${esc(label)}</span><input class="input ${type ? "" : "mono"}" type="${type || "text"}" data-set="${key}" placeholder="${esc(ph)}" value="${type ? "" : esc(keep[key] ?? "")}" autocomplete="off" spellcheck="false"></label>`)
+          .join("") + (k === "wazuh" ? `<label class="check"><input type="checkbox" data-set="restart" ${keep.restart ? "checked" : ""}> <span>Restart the manager after upload</span></label>` : "");
+        $("#dpTls", panel).checked = keep.verify_tls !== false;
+        $("#dpEnable", panel).checked = !!keep.enable;
+        $("#dpOut", panel).innerHTML = "";
+      };
+      paint();
+      kindSel.addEventListener("change", paint);
+      const collect = () => {
+        const out = { verify_tls: $("#dpTls", panel).checked, enable: $("#dpEnable", panel).checked };
+        $$("[data-set]", panel).forEach((el) => {
+          out[el.dataset.set] = el.type === "checkbox" ? el.checked : el.value.trim();
+        });
+        return out;
+      };
+      const remember = (k, st) => {
+        const keep = { ...st };
+        delete keep.token;
+        delete keep.password;
+        const prefs = loadPrefs();
+        prefs.deploy = { ...(prefs.deploy || {}), kind: k, [k]: keep };
+        savePrefs(prefs);
+      };
+      const go = async (dry, btn) => {
+        const k = kindSel.value;
+        const st = collect();
+        remember(k, st);
+        btn.disabled = true;
+        $("#dpOut", panel).innerHTML = `${forging(dry ? "Planning requests" : `Deploying to ${kinds[k].name}`)}`;
+        try {
+          const res = await api.deploy(chosen, k, $("#dpTarget", panel).value, st, currentOptions(), currentMap(), dry);
+          const ok = res.results.filter((r) => r.status === "ok" || r.status === "planned").length;
+          const bad = res.results.filter((r) => r.status === "failed").length;
+          const skipped = res.results.filter((r) => r.status === "skipped").length;
+          $("#dpOut", panel).innerHTML = `
+            <div class="notice ${bad ? "notice--bad" : "notice--ok"}">${dry ? `${esc(plural(ok, "request"))} planned. Nothing was sent.` : `${ok} sent, ${bad} failed`}${skipped ? `, ${skipped} rules skipped (no query)` : ""}</div>
+            <div class="card mt-4"><ul class="list">${res.results
+              .map((r) => `<li class="list__item deploy__row"><div class="list__main"><div class="list__title">${esc(r.title)}</div>${r.url ? `<div class="list__meta mono">${esc(r.method)} ${esc(r.url)}</div>` : ""}${r.message ? `<div class="list__meta">${esc(r.message)}</div>` : ""}${r.body ? `<details><summary class="muted">Request body</summary><pre class="code">${esc(r.body)}</pre></details>` : ""}</div><span class="badge badge--${r.status === "ok" ? "ok" : r.status === "planned" ? "accent" : r.status === "failed" ? "bad" : "warn"}">${esc(r.status)}${r.code ? ` ${r.code}` : ""}</span></li>`)
+              .join("")}</ul></div>`;
+          if (!dry) toast(bad ? `${bad} requests failed` : `Deployed to ${kinds[k].name}`, bad ? "bad" : "ok");
+        } catch (err) {
+          $("#dpOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+        } finally {
+          btn.disabled = false;
+        }
+      };
+      $("#dpDry", panel).addEventListener("click", (e) => go(true, e.currentTarget));
+      $("#dpGo", panel).addEventListener("click", (e) => go(false, e.currentTarget));
+    });
+  }
 
   $("#runConvert", root).addEventListener("click", run);
   renderTargets();

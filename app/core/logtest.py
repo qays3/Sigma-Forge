@@ -518,6 +518,8 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
         entry["alerts"] = [_alert(a) for a in alerts[:max_samples]]
         entry["samples"] = [_sample(events[i]) for i in idx_rows[:max_samples]]
         matched_events.update(idx_rows)
+        if hit_rows and not is_corr:
+            entry["noise"] = _noise(db, sorted(set(hit_rows)), len(events), parsed.rule if parsed else None)
         results.append(entry)
 
     results.sort(key=lambda r: (0 if r["hits"] else 1, {"ok": 0, "skipped": 2}.get(r["status"], 1), r["title"].lower()))
@@ -540,6 +542,88 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
         "fields": len(db.columns),
         "results": results,
     }
+
+
+CONTEXT_FIELDS = [
+    "Image", "ParentImage", "CommandLine", "ParentCommandLine", "User", "Computer", "TargetFilename", "TargetObject",
+    "QueryName", "DestinationIp", "DestinationHostname", "DestinationPort", "ServiceName", "ImagePath", "SourceImage",
+    "TargetImage", "ImageLoaded", "IpAddress", "TargetUserName", "WorkstationName", "eventName", "sourceIPAddress",
+    "userIdentity.arn", "UserPrincipalName", "host", "src_ip", "dst_ip", "c-useragent", "cs-host",
+]
+
+
+def _rule_fields(rule) -> List[str]:
+    if rule is None:
+        return []
+    out: List[str] = []
+
+    def walk(node):
+        items = getattr(node, "detection_items", None)
+        if items is None:
+            field = getattr(node, "field", None)
+            if field and field not in out:
+                out.append(field)
+            return
+        for item in items:
+            walk(item)
+
+    for det in rule.detection.detections.values():
+        walk(det)
+    return out
+
+
+def _noise(db: "LogDatabase", rowids: List[int], total: int, rule) -> Dict[str, Any]:
+    hits = len(rowids)
+    rate = round(hits * 1000.0 / max(1, total), 1)
+    level = "quiet" if hits <= 2 else "noisy" if (rate >= 50 or hits >= 20) else "busy"
+    in_rule = {f.lower() for f in _rule_fields(rule)}
+    wanted = []
+    for name in _rule_fields(rule) + CONTEXT_FIELDS:
+        col = db.columns.get(name.lower())
+        if col and col not in wanted:
+            wanted.append(col)
+    placeholders = ",".join("?" for _ in rowids[:5000])
+    fields = []
+    for col in wanted:
+        try:
+            rows = db.conn.execute(f"SELECT {_quote(col)} FROM events WHERE rowid IN ({placeholders})", rowids[:5000]).fetchall()
+        except sqlite3.OperationalError:
+            continue
+        counts: Dict[str, int] = {}
+        for (value,) in rows:
+            if value is None or value == "":
+                continue
+            key = str(value)
+            counts[key] = counts.get(key, 0) + 1
+        if not counts:
+            continue
+        top = sorted(counts.items(), key=lambda x: -x[1])[:3]
+        entry = {"field": col, "distinct": len(counts), "top": [{"value": v, "count": c} for v, c in top], "in_rule": col.lower() in in_rule}
+        tails: Dict[str, int] = {}
+        for value, c in counts.items():
+            if ("\\" in value or "/" in value) and len(value) < 400:
+                sep = "\\" if "\\" in value else "/"
+                tail = sep + value.split(sep)[-1]
+                tails[tail] = tails.get(tail, 0) + c
+        if tails:
+            t, c = max(tails.items(), key=lambda x: x[1])
+            entry["tail"] = {"value": t, "count": c}
+        fields.append(entry)
+    fields.sort(key=lambda f: (f["in_rule"], -f["top"][0]["count"], f["distinct"]))
+    suggestions = []
+    if hits >= 2:
+        for f in fields:
+            if f["in_rule"]:
+                continue
+            v = f["top"][0]
+            tail = f.get("tail")
+            if v["count"] >= 2 and v["count"] / hits >= 0.3 and len(v["value"]) <= 300:
+                suggestions.append({"field": f["field"], "value": v["value"], "count": v["count"]})
+            elif tail and tail["count"] >= 2 and tail["count"] / hits >= 0.3:
+                suggestions.append({"field": f"{f['field']}|endswith", "value": tail["value"], "count": tail["count"]})
+            if len(suggestions) >= 3:
+                break
+    return {"hits": hits, "per_1000": rate, "level": level, "fields": fields[:6], "suggestions": suggestions}
 
 
 def _alert(alert: Dict[str, Any]) -> Dict[str, Any]:

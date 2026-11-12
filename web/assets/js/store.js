@@ -131,6 +131,21 @@ export const store = {
     emit();
   },
 
+  async removeWhere(test) {
+    const items = await this.all();
+    const gone = items.filter(test);
+    if (!gone.length) return 0;
+    const db = await openDb();
+    if (db) {
+      const os = tx(db, "readwrite");
+      await Promise.all(gone.map((r) => wrap(os.delete(r.id))));
+    }
+    const ids = new Set(gone.map((r) => r.id));
+    memory = items.filter((r) => !ids.has(r.id));
+    emit();
+    return gone.length;
+  },
+
   async clear() {
     const db = await openDb();
     if (db) await wrap(tx(db, "readwrite").clear());

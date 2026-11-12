@@ -12,6 +12,8 @@ import { compareView } from "./views/compare.js";
 import { testView } from "./views/test.js";
 import { libraryView } from "./views/library.js";
 import { mappingsView } from "./views/mappings.js";
+import { yaraView } from "./views/yara.js";
+import { huntView } from "./views/hunt.js";
 import { notFoundView } from "./views/notfound.js";
 
 const THEME_KEY = "sigma-forge-theme";
@@ -86,6 +88,8 @@ route("/compare", "compare", compareView);
 route("/test", "test", testView);
 route("/library", "library", libraryView);
 route("/mappings", "mappings", mappingsView);
+route("/yara", "yara", yaraView);
+route("/hunt", "hunt", huntView);
 route("*", "notfound", notFoundView);
 
 initTheme();
