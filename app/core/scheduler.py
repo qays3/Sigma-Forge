@@ -30,6 +30,9 @@ DEFAULT = {
     "seen": [],
     "history": [],
     "recent": [],
+    "health_watch": True,
+    "quiet_runs": 2,
+    "health": {},
 }
 
 
@@ -70,11 +73,14 @@ def public(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "history": cfg["history"][:30],
         "recent": cfg["recent"][:50],
         "running": _running,
+        "health_watch": cfg.get("health_watch", True),
+        "quiet_runs": cfg.get("quiet_runs", 2),
+        "health": [{"channel": k, **v} for k, v in sorted((cfg.get("health") or {}).items())],
     }
 
 
 def update(enabled: bool, every_minutes: int, channels: List[str], rules: Optional[List[Dict[str, str]]], min_level: str,
-           kind: str, url: Optional[str]) -> Dict[str, Any]:
+           kind: str, url: Optional[str], health_watch: bool = True, quiet_runs: int = 2) -> Dict[str, Any]:
     with _lock:
         cfg = load()
         cfg["enabled"] = bool(enabled)
@@ -88,6 +94,9 @@ def update(enabled: bool, every_minutes: int, channels: List[str], rules: Option
         if url is not None:
             hook["url"] = url.strip()
         cfg["webhook"] = hook
+        cfg["health_watch"] = bool(health_watch)
+        cfg["quiet_runs"] = max(1, min(int(quiet_runs), 50))
+        cfg["health"] = {k: v for k, v in (cfg.get("health") or {}).items() if k in cfg["channels"]}
         cfg["next_run"] = time.time() + 5 if cfg["enabled"] else 0
         save(cfg)
     ensure_thread()
@@ -128,6 +137,46 @@ def fingerprint(item: Dict[str, Any]) -> str:
     return hashlib.sha1(raw.encode("utf-8", "replace")).hexdigest()[:20]
 
 
+def check_health(cfg: Dict[str, Any], stats: List[Dict[str, Any]], now: Optional[str] = None) -> List[Dict[str, Any]]:
+    now = now or _now()
+    health = dict(cfg.get("health") or {})
+    limit = max(1, int(cfg.get("quiet_runs", 2)))
+    changes = []
+    for st in stats:
+        ch = st["channel"]
+        h = dict(health.get(ch) or {"last_seen": "", "quiet_runs": 0, "alerted": False, "last_count": 0})
+        count = int(st.get("events") or 0)
+        h["last_count"] = count
+        h["error"] = st.get("error") or ""
+        if count > 0:
+            if h.get("alerted"):
+                changes.append({"channel": ch, "state": "back", "since": h.get("quiet_since", ""), "events": count})
+            h.update(last_seen=now, quiet_runs=0, alerted=False, quiet_since="")
+        elif h.get("last_seen"):
+            h["quiet_runs"] = int(h.get("quiet_runs", 0)) + 1
+            if h["quiet_runs"] == 1:
+                h["quiet_since"] = now
+            if h["quiet_runs"] >= limit and not h.get("alerted"):
+                h["alerted"] = True
+                changes.append({"channel": ch, "state": "quiet", "since": h.get("quiet_since", ""), "last_seen": h["last_seen"], "error": h["error"]})
+        h["state"] = "quiet" if h.get("alerted") else ("ok" if count > 0 else ("waiting" if not h.get("last_seen") else "dropping"))
+        health[ch] = h
+    cfg["health"] = health
+    return changes
+
+
+def _health_alert(cfg: Dict[str, Any], changes: List[Dict[str, Any]]) -> str:
+    quiet = [c for c in changes if c["state"] == "quiet"]
+    back = [c for c in changes if c["state"] == "back"]
+    lines = [f'{c["channel"]} sent no events since {c["since"]} (last event {c["last_seen"]})' + (f': {c["error"]}' if c.get("error") else "") for c in quiet]
+    lines += [f'{c["channel"]} is sending events again ({c["events"]} this run)' for c in back]
+    if quiet:
+        title = f"{APP_NAME}: {len(quiet)} log source{'s' if len(quiet) != 1 else ''} went quiet"
+    else:
+        title = f"{APP_NAME}: {len(back)} log source{'s' if len(back) != 1 else ''} came back"
+    return send(cfg, title, lines, [{"channel": c["channel"], "state": c["state"], "since": c.get("since", "")} for c in changes])
+
+
 def run_once(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     from app.core.hunt import collect
     from app.core.logtest import LogInputError, run_test
@@ -144,6 +193,16 @@ def run_once(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         hours = cfg["every_minutes"] / 60 + 0.1
         blobs, stats = collect(cfg["channels"], hours, 50000)
         failed = [s["error"] for s in stats if s["error"]]
+        if cfg.get("health_watch", True):
+            changes = check_health(cfg, stats, entry["time"])
+            if changes:
+                err = _health_alert(cfg, changes)
+                entry["health"] = [f'{c["channel"]} {c["state"]}' for c in changes]
+                entry["health_sent"] = "ok" if not err else err
+            with _lock:
+                latest = load()
+                latest["health"] = cfg["health"]
+                save(latest)
         if not blobs:
             entry["error"] = "; ".join(failed) or "No events in this window"
             return entry

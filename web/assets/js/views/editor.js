@@ -6,6 +6,9 @@ import { store } from "../store.js";
 import { takeIncoming, clearHistory, diffHtml, diffStats, fmtTime, lineDiff, paintMeters, pushHistory, qualityBadge, qualityList, readHistory } from "../shared.js";
 import { $, $$, closeDrawer, copyText, debounce, download, esc, forging, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
 import { ruleFromEvent } from "./results.js";
+import { correlationPane, wizardPane } from "./builders.js";
+import { sigmahqPane, testsPane } from "./editortools.js";
+import { unitTests } from "../localdata.js";
 
 const DRAFT_KEY = "sigma-forge-draft";
 const PREF_KEY = "sigma-forge-editor";
@@ -241,6 +244,8 @@ export async function editorView(root, route) {
             <button class="tab is-active" type="button" data-tab="checks">Checks <span class="tab__count" id="edIssueCount">0</span></button>
             <button class="tab" type="button" data-tab="query">Query</button>
             <button class="tab" type="button" data-tab="attack">ATT&amp;CK</button>
+            <button class="tab" type="button" data-tab="tests">Tests <span class="tab__count" id="edTestCount">0</span></button>
+            <button class="tab" type="button" data-tab="sigmahq">SigmaHQ</button>
           </div>
           <div class="editor__pane" data-pane="checks" id="edChecks"></div>
           <div class="editor__pane" data-pane="query" id="edQuery" hidden>
@@ -252,6 +257,8 @@ export async function editorView(root, route) {
             <div id="edQueryOut"></div>
           </div>
           <div class="editor__pane" data-pane="attack" id="edAttack" hidden></div>
+          <div class="editor__pane" data-pane="tests" id="edTests" hidden></div>
+          <div class="editor__pane" data-pane="sigmahq" id="edShq" hidden></div>
         </div>
       </div>
     </section>`;
@@ -433,6 +440,7 @@ export async function editorView(root, route) {
     seq += 1;
     const current = { ...file(), seq };
     saveDraft();
+    paintTestCount();
     if (!text.value.trim()) {
       renderChecks(null);
       renderAttack(null);
@@ -463,7 +471,39 @@ export async function editorView(root, route) {
     $$("#edTabs .tab", root).forEach((t) => t.classList.toggle("is-active", t === tab));
     $$(".editor__pane", root).forEach((p) => (p.hidden = p.dataset.pane !== tab.dataset.tab));
     trackState({ tab: tab.dataset.tab });
+    if (tab.dataset.tab === "tests") tests.paint();
+    if (tab.dataset.tab === "sigmahq") shq.run();
   });
+  const tests = testsPane($("#edTests", root), () => file(), () => paintTestCount());
+  const shq = sigmahqPane($("#edShq", root), () => file(), (change) => {
+    if (change.name) {
+      unitTests.rename(file().name, change.name);
+      nameInput.value = change.name;
+      saveDraft();
+      paintHistCount();
+      paintTestCount();
+    }
+    if (change.content) {
+      pushHistory(file().name, text.value, change.note || "");
+      setText(change.content);
+      paintGutter();
+      paintHistCount();
+      refresh();
+    }
+  });
+  function paintTestCount() {
+    $("#edTestCount", root).textContent = String(unitTests.count(file().name));
+  }
+  const paneOn = (id) => !$(id, root).hidden;
+  const laterShq = debounce(() => {
+    if (paneOn("#edShq")) shq.run();
+  }, 900);
+  text.addEventListener("input", laterShq);
+  nameInput.addEventListener("input", debounce(() => {
+    paintTestCount();
+    if (paneOn("#edTests")) tests.paint();
+    laterShq();
+  }, 300));
 
   $("#edTarget", root).addEventListener("change", () => {
     fillFormats();
@@ -578,6 +618,7 @@ export async function editorView(root, route) {
     setText(content);
     paintGutter();
     paintHistCount();
+    paintTestCount();
     refresh();
   }
 
@@ -643,7 +684,11 @@ export async function editorView(root, route) {
         <button class="tab is-active" type="button" data-fq="query">From a query</button>
         <button class="tab" type="button" data-fq="event">From an event</button>
         <button class="tab" type="button" data-fq="ioc">From IOCs</button>
+        <button class="tab" type="button" data-fq="wizard">Wizard</button>
+        <button class="tab" type="button" data-fq="corr">Correlation</button>
       </div>
+      <div data-fqpane="wizard" class="mt-4" id="fqWizard" hidden></div>
+      <div data-fqpane="corr" class="mt-4" id="fqCorr" hidden></div>
       <div data-fqpane="query" class="mt-4">
         <p class="muted">Paste a search from Splunk, Microsoft Sentinel or Defender, Elastic or Kibana. Sigma Forge reads the filters, maps the fields to Sigma names and guesses the log source.</p>
         <label class="field"><span class="field__label">Query language</span><select class="select" id="fqLang">${Object.entries(langs).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("")}</select></label>
@@ -669,7 +714,7 @@ export async function editorView(root, route) {
       lucene: 'event.code:1 AND process.name:("mshta.exe" OR "wscript.exe") AND process.command_line:*http*',
       eql: 'process where process.name : "vssadmin.exe" and process.args : ("delete", "shadows")',
     };
-    openDrawer("New rule from a query or an event", body, (panel) => {
+    openDrawer("New rule", body, (panel) => {
       $("#fqExamples", panel).innerHTML = `Try: ${Object.keys(EXAMPLES).map((k) => `<button class="link-btn" type="button" data-ex="${k}">${esc(k === "kql" ? "KQL" : k === "eql" ? "EQL" : k === "lucene" ? "Kibana" : "Splunk")}</button>`).join(" ")}`;
       let last = null;
       let lastIoc = null;
@@ -678,6 +723,19 @@ export async function editorView(root, route) {
         if (tab) {
           $$("#fqTabs .tab", panel).forEach((t) => t.classList.toggle("is-active", t === tab));
           $$("[data-fqpane]", panel).forEach((p) => (p.hidden = p.dataset.fqpane !== tab.dataset.fq));
+          const openBuilt = (name, yaml) => {
+            closeDrawer();
+            loadText(name, yaml);
+            toast("Rule loaded. Check it, then save.", "ok");
+          };
+          if (tab.dataset.fq === "wizard" && !$("#fqWizard", panel).dataset.ready) {
+            $("#fqWizard", panel).dataset.ready = "1";
+            wizardPane($("#fqWizard", panel), openBuilt);
+          }
+          if (tab.dataset.fq === "corr" && !$("#fqCorr", panel).dataset.ready) {
+            $("#fqCorr", panel).dataset.ready = "1";
+            correlationPane($("#fqCorr", panel), openBuilt);
+          }
           return;
         }
         const ex = e.target.closest("[data-ex]");
@@ -801,6 +859,7 @@ export async function editorView(root, route) {
   });
 
   paintHistCount();
+  paintTestCount();
   paintGutter();
   $("#edChecks", root).innerHTML = forging("Checking the rule");
   try {

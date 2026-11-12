@@ -21,6 +21,7 @@ WAZUH_MAX_RULES_PER_SIGMA = int(os.getenv("SIGMA_FORGE_WAZUH_MAX_SPLIT", "64"))
 
 MAX_LOG_BYTES = int(os.getenv("SIGMA_FORGE_MAX_LOG_BYTES", str(64 * 1024 * 1024)))
 MAX_LOG_EVENTS = int(os.getenv("SIGMA_FORGE_MAX_LOG_EVENTS", "250000"))
+MAX_UNZIP_BYTES = int(os.getenv("SIGMA_FORGE_MAX_UNZIP_BYTES", str(512 * 1024 * 1024)))
 LOG_QUERY_SECONDS = float(os.getenv("SIGMA_FORGE_LOG_QUERY_SECONDS", "10"))
 SIGMAHQ_DIR = Path(os.getenv("SIGMA_FORGE_SIGMAHQ_DIR", str(DATA_DIR / "sigmahq")))
 SIGMAHQ_URL = os.getenv("SIGMA_FORGE_SIGMAHQ_URL", "https://github.com/SigmaHQ/sigma/releases/latest/download/sigma_all_rules.zip")

@@ -5,6 +5,7 @@ import { state } from "../state.js";
 import { fileChips } from "../shared.js";
 import { $, debounce, emptyState, esc, forging, icons, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 import { renderResults } from "./results.js";
+import { siemSendDrawer } from "./tools.js";
 
 const MODES = [
   ["auto", "Match log source when known", "Events with a known Windows channel only hit rules for that log source. Other events are tested against every rule."],
@@ -29,13 +30,14 @@ export async function testView(root, route) {
         <div class="setup__main">
           <label class="dropzone dropzone--row" id="logDrop" for="logInput">
             ${logo(40, "dropzone__logo")}
-            <span class="dropzone__body"><span class="dropzone__title">Drop log files here</span><span class="dropzone__text">.evtx, .json, .jsonl, .ndjson up to 64 MB</span></span>
-            <input class="hidden-input" type="file" id="logInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.log,.txt">
+            <span class="dropzone__body"><span class="dropzone__title">Drop log files here</span><span class="dropzone__text">.evtx, .json, .jsonl, .ndjson or a triage .zip, up to 64 MB</span></span>
+            <input class="hidden-input" type="file" id="logInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.log,.txt,.zip">
           </label>
           <div class="setup__actions">
             <button class="btn btn--sm" type="button" id="sampleLogs">${icons.spark} Sample logs</button>
             <button class="btn btn--sm" type="button" id="baselineLogs" title="A normal week of Sysmon events with known noise">${icons.box} Baseline week</button>
             <button class="btn btn--sm" type="button" id="genEvents" title="Build events that each selected rule should catch">${icons.play} Generate test events</button>
+            <button class="btn btn--sm" type="button" id="sendSiem" title="Replay these logs into Splunk, Elastic or a syslog collector">${icons.send} Send to SIEM</button>
             <button class="btn btn--sm btn--ghost" type="button" id="clearLogs">${icons.trash} Clear</button>
           </div>
           <ul class="filechips" id="logList"></ul>
@@ -114,6 +116,13 @@ export async function testView(root, route) {
     if (!btn) return;
     files.splice(Number(btn.dataset.drop), 1);
     paintFiles();
+  });
+  $("#sendSiem", root).addEventListener("click", () => {
+    if (!files.length) {
+      toast("Add log files first", "bad");
+      return;
+    }
+    siemSendDrawer(files);
   });
   $("#clearLogs", root).addEventListener("click", () => {
     files = [];

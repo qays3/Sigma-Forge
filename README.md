@@ -47,16 +47,22 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 26. [Deploy to your SIEM](#deploy-to-your-siem)
 27. [GitHub sync](#github-sync)
 28. [Command line and GitHub Action](#command-line-and-github-action)
-29. [SigmaHQ library](#sigmahq-library)
-30. [Field mapping](#field-mapping)
-31. [Export packages](#export-packages)
-32. [API](#api)
-33. [Configuration](#configuration)
-34. [Architecture](#architecture)
-35. [Project layout](#project-layout)
-36. [Development](#development)
-37. [Known limits](#known-limits)
-38. [Credits](#credits)
+29. [Logging setup and log health](#logging-setup-and-log-health)
+30. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
+31. [Wizard and correlation builder](#wizard-and-correlation-builder)
+32. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
+33. [Threat report to coverage](#threat-report-to-coverage)
+34. [Cases](#cases)
+35. [SigmaHQ library](#sigmahq-library)
+36. [Field mapping](#field-mapping)
+37. [Export packages](#export-packages)
+38. [API](#api)
+39. [Configuration](#configuration)
+40. [Architecture](#architecture)
+41. [Project layout](#project-layout)
+42. [Development](#development)
+43. [Known limits](#known-limits)
+44. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -116,6 +122,21 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Query cost** | Each converted query is rated fast, ok or slow, with the reasons. |
 | **Workspace sharing** | One file with rules, YARA, mappings, allow list and settings for a teammate. |
 | **Demo mode** | `SIGMA_FORGE_DEMO=1` turns off machine and network actions for a public demo site. |
+| **Logging setup** | A Sysmon config built from your rules (only the events they read), plus the `auditpol` and registry commands for Security audit, command line and PowerShell logging. |
+| **Mapping from logs** | Drop a sample of your own logs. Field names and values are matched to the fields your rules use, and saved as a mapping profile. |
+| **Log health watch** | The scheduled hunt alerts when a log that used to send events goes quiet, and again when it comes back. |
+| **Import from a SIEM** | Turn Splunk `savedsearches.conf`, Microsoft Sentinel analytics exports and Elastic rule exports into Sigma rules, with titles, levels and ATT&CK tags kept. |
+| **Push to GitHub** | Send rules to a repository as a new branch with a pull request, using a token that is never saved. |
+| **SigmaHQ check** | The file name, field order, style, tags and dates checked against the SigmaHQ contribution guide, with a one click style fix. |
+| **Rule unit tests** | Events a rule must match and events it must not, kept per rule, run from the editor, the inventory or the CLI. |
+| **Verdicts and precision** | Mark each hit as a real threat or a false positive. Each rule gets a precision score and filter ideas from what its false positives share. |
+| **Inventory** | Every rule with quality, tests, precision, last fired and what needs attention, plus a CSV export. |
+| **Rule wizard** | Build a rule by answering questions: log source, fields, values and exclusions, with the YAML written live. |
+| **Correlation builder** | Pick rules, a type, a time window and group by fields. The correlation YAML is written and checked for you. |
+| **Threat report to coverage** | Paste a report. ATT&CK techniques and IOCs are pulled out, checked against your rules, and SigmaHQ rules are suggested for the gaps. |
+| **Send to a SIEM** | Replay log files into Splunk HEC, Elasticsearch or syslog (Wazuh, QRadar) to check the real rules fire there too. |
+| **Cases** | Turn hits into a case with status, owner, severity and notes, and export it as an HTML report. |
+| **Triage zips** | Every log upload takes a `.zip` of EVTX and JSON files, with zip bomb guards. |
 | **Review** | Sortable and filterable rule table with a quality grade column and a detail drawer: metadata, findings, quality checks, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
@@ -200,6 +221,34 @@ A two minute tour of every page: loading the samples, converting to Sentinel and
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/yara-hit.png" alt="YARA match"><p align="center"><b>YARA match</b>: strings, offsets and hex</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/light.png" alt="Light theme"><p align="center"><b>Light theme</b></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/inventory.png" alt="Inventory"><p align="center"><b>Inventory</b>: what needs attention</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/cases.png" alt="Cases"><p align="center"><b>Cases</b>: hits, owner and notes</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/wizard.png" alt="Rule wizard"><p align="center"><b>Rule wizard</b>: answer, get YAML</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/correlation.png" alt="Correlation builder"><p align="center"><b>Correlation builder</b></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/unit-tests.png" alt="Unit tests"><p align="center"><b>Unit tests</b>: must match, must not match</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/sigmahq-check.png" alt="SigmaHQ check"><p align="center"><b>SigmaHQ check</b>: ready to contribute</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/feedback.png" alt="Verdicts"><p align="center"><b>Verdicts</b>: precision and filter ideas</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/threat-report.png" alt="Threat report"><p align="center"><b>Threat report</b>: techniques, IOCs, gaps</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/sysmon-config.png" alt="Logging setup"><p align="center"><b>Logging setup</b>: Sysmon and audit policy</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/mapping-suggest.png" alt="Mapping from logs"><p align="center"><b>Mapping from logs</b></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/siem-import.png" alt="Import from a SIEM"><p align="center"><b>Import</b>: Splunk, Sentinel, Elastic to Sigma</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/siem-send.png" alt="Send to a SIEM"><p align="center"><b>Send</b>: replay logs into a SIEM</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/github-push.png" alt="Push to GitHub"><p align="center"><b>Push to GitHub</b>: branch and pull request</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/schedule-health.png" alt="Log health"><p align="center"><b>Log health watch</b></p></td>
   </tr>
 </table>
 
@@ -1544,7 +1593,13 @@ Every check also runs without the web app. Use the `sigma-forge` script (Linux a
 ./sigma-forge from-query 'DeviceProcessEvents | where FileName =~ "certutil.exe"' -o certutil.yml
 ./sigma-forge hunt rules/ --channels sysmon security powershell --hours 24
 ./sigma-forge yara yara_rules/ --scan ~/Downloads --fail-on-hit
+./sigma-forge unit rules/
+./sigma-forge sigmahq rules/
+./sigma-forge sysmon rules/ -o sysmon.xml
+./sigma-forge import savedsearches.conf sentinel.json rules.ndjson -o imported/
 ```
+
+`unit` reads a `<rule>.tests.json` file next to each rule, with a `match` list and a `nomatch` list of events. The editor Tests tab downloads this file for you.
 
 Every command exits with 1 when a check fails and writes a Markdown summary to `--summary` (or to the GitHub job summary when it runs in GitHub Actions).
 
@@ -1574,6 +1629,40 @@ jobs:
 ```
 
 It validates the rules, fails a pull request when a rule can never fire on its own generated events, converts them, builds a Navigator layer and an HTML coverage report in `sigma-forge-output/`, and checks your YARA rules.
+
+## Logging setup and log health
+
+**Coverage, Logging setup** reads your rules and writes a Sysmon config that keeps only the events they look at. Rules that use keywords, regex or `not` on their own need every event of that type, so that type logs everything, and the note says which rule asked for it. The same panel lists the `auditpol` subcategories for the Security event ids your rules use, the registry keys for command line in event 4688 and PowerShell script block and module logging, and a `.cmd` file to run as admin.
+
+The scheduled hunt has a **Log health watch**. When a log that sent events goes quiet for the number of runs you pick, one alert is sent, and another when it comes back.
+
+## Unit tests, verdicts and the inventory
+
+The editor **Tests** tab keeps events a rule must match and events it must not. **Save as test** on any matching event adds it in one click. **Run tests** shows pass or fail for each event.
+
+Each matching event in a test or hunt has **Real threat** and **False positive** buttons. A rule gets a precision score from your verdicts, and the values its false positives share become filter ideas.
+
+The **Inventory** page puts it together: quality, tests, precision, last fired and hits for every rule, with the rules that need attention first. Verdicts, tests and run stats stay in the browser.
+
+## Wizard and correlation builder
+
+**Editor, New from..., Wizard** asks what log has the activity, what must be true and what is normal, and writes the rule as you type. **Correlation** picks rules, a type (`event_count`, `value_count`, `temporal`, `temporal_ordered`), a time window and group by fields. Rules without a `name:` get one so the correlation can point to them.
+
+## SIEM import, send and GitHub push
+
+**Workspace, From SIEM** takes Splunk `savedsearches.conf`, a Sentinel analytics export (ARM JSON or the YAML from the Sentinel repo) and an Elastic rules `.ndjson` export. Every search goes through the query to rule converter, keeping the title, level and ATT&CK tags.
+
+**Test, Send to SIEM** replays the loaded logs into Splunk HEC, Elasticsearch bulk or syslog over UDP or TCP (Wazuh, QRadar). **Preview** shows the first events as they will be sent.
+
+**Workspace, GitHub, Push your rules** creates a branch, writes the rules into a folder and opens a pull request. Use a fine grained token with Contents and Pull requests write access. The token is not stored. Push and send are off in demo mode.
+
+## Threat report to coverage
+
+**Coverage, Threat report** reads pasted text for technique ids and technique names, plus IOCs. Each technique shows covered, partly (a parent or sibling technique has a rule) or gap, with SigmaHQ rules to add for the gaps. The IOCs become rules in one click, and the techniques can go straight to Purple.
+
+## Cases
+
+**Create case** on any test or hunt result keeps the hits of the rules you pick. A case has status, severity, owner, summary and notes, and exports as an HTML report.
 
 ## SigmaHQ library
 
@@ -1657,6 +1746,20 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `POST` | `/api/hunt/schedule/run` | Run the scheduled hunt now |
 | `POST` | `/api/hunt/schedule/test` | Send a test message to the webhook |
 | `POST` | `/api/purple` | Purple team score: rules, technique ids and lab logs (multipart form) |
+| `POST` | `/api/sysmon/config` | Sysmon config, audit policy and logging commands from rules |
+| `POST` | `/api/mappings/suggest` | Field mapping suggested from sample logs (multipart form) |
+| `POST` | `/api/import/siem` | Splunk, Sentinel or Elastic exports to Sigma rules (multipart form) |
+| `POST` | `/api/github/push` | Push rules to a branch and open a pull request |
+| `POST` | `/api/rules/sigmahq` | SigmaHQ contribution checks |
+| `POST` | `/api/rules/sigmahq/fix` | Fix SigmaHQ style: field order, 4 space indent, tags |
+| `POST` | `/api/rules/unit` | Run match and no match test events per rule |
+| `GET` | `/api/wizard/taxonomy` | Log sources and known fields for the wizard |
+| `POST` | `/api/wizard/build` | Build a rule from a wizard spec |
+| `POST` | `/api/correlation/build` | Build a correlation rule from picked rules |
+| `POST` | `/api/threat/report` | Techniques and IOCs from report text, with coverage |
+| `GET` | `/api/siem/targets` | Where events can be sent |
+| `POST` | `/api/siem/send` | Send log files to Splunk HEC, Elasticsearch or syslog (multipart form) |
+| `POST` | `/api/cases/report` | HTML report for a case |
 | `POST` | `/api/rules/ioc` | Sigma and YARA rules from a list of IOCs |
 | `POST` | `/api/rules/explain` | Plain sentences for each rule |
 | `POST` | `/api/rules/autofix` | Fix common problems in a rule |
@@ -1707,6 +1810,7 @@ Set these as environment variables. See [`.env.example`](.env.example).
 | `SIGMA_FORGE_WAZUH_MAX_SPLIT` | `64` | Most Wazuh rules made from one Sigma rule |
 | `SIGMA_FORGE_MAX_LOG_BYTES` | `67108864` | Largest total upload for a log test (64 MB) |
 | `SIGMA_FORGE_MAX_LOG_EVENTS` | `250000` | Most events in one log test |
+| `SIGMA_FORGE_MAX_UNZIP_BYTES` | `536870912` | Largest unpacked size of uploaded zip files (512 MB) |
 | `SIGMA_FORGE_LOG_QUERY_SECONDS` | `10` | Time limit for each rule query in a log test |
 | `SIGMA_FORGE_SIGMAHQ_DIR` | `data/sigmahq` | Where the SigmaHQ library is stored |
 | `SIGMA_FORGE_SIGMAHQ_URL` | latest release zip | Where **Sync now** downloads the library from |
@@ -1786,7 +1890,8 @@ Sigma-Forge/
 │   ├── schemas.py               Request models
 │   ├── cli.py                   sigma-forge command line
 │   ├── api/
-│   │   └── routes.py            /api endpoints
+│   │   ├── routes.py            /api endpoints
+│   │   └── extra.py             Logging setup, import, push, tests, builders, cases
 │   └── core/
 │       ├── parsing.py           Load YAML into pySigma rules
 │       ├── analyzer.py          Metadata and validators
@@ -1812,6 +1917,15 @@ Sigma-Forge/
 │       ├── scheduler.py         Scheduled hunts and webhooks
 │       ├── ruletools.py         IOCs to rules, explain, auto fix, allow list, SigmaHQ updates
 │       ├── cost.py              Query cost checks
+│       ├── sysmon.py            Sysmon config and audit policy from rules
+│       ├── fieldsuggest.py      Field mapping from sample logs
+│       ├── siemimport.py        Splunk, Sentinel and Elastic exports to Sigma
+│       ├── siemsend.py          Splunk HEC, Elasticsearch and syslog senders
+│       ├── githubpush.py        Branch, commit and pull request on GitHub
+│       ├── sigmahq.py           SigmaHQ contribution checks and style fix
+│       ├── unittests.py         Match and no match tests per rule
+│       ├── builders.py          Rule wizard and correlation builder
+│       ├── threatreport.py      Threat report to techniques, IOCs and coverage
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
 │           └── mapping.py       Log source and field mapping
@@ -1830,9 +1944,11 @@ Sigma-Forge/
 │       │   ├── ui.js            Helpers, drawer, toasts, skeletons
 │       │   ├── mappings.js      Field mapping profiles
 │       │   ├── shared.js        History, diff, quality and editor helpers
+│       │   ├── localdata.js     Unit tests, verdicts, run stats and cases in the browser
 │       │   └── views/           workspace, convert, coverage, rules, editor,
 │       │                        compare, test, hunt, purple, yara, library, mappings,
-│       │                        results (shared test results), yarakit
+│       │                        results (shared test results), yarakit, inventory, cases,
+│       │                        builders, editortools, tools (drawers for the new tools)
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups
@@ -1888,6 +2004,9 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 * **Live logs** read up to 50,000 events per scan. The Windows Security log needs administrator rights, and auditd and the auth log need root on Linux.
 * **Scheduled hunts** only run while Sigma Forge is running. Keep it running as a service for round the clock alerts.
 * **YARA process scans** skip processes the operating system protects, even as admin.
+* **SIEM import** uses the query to rule converter, so searches with `stats`, joins or macros keep only their filters. Check each imported rule.
+* **The Sysmon config** includes events, it does not filter noise out. Merge it with your own excludes before you roll it out.
+* **Verdicts, unit tests, inventory stats and cases** live in the browser. Use workspace sharing to move them.
 * **Deploy** was built against the public API docs of each platform. Try a dry run and a small set of rules first on your version.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 

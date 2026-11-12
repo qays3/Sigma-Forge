@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from app.config import MAX_LOG_BYTES, MAX_LOG_EVENTS, LOG_QUERY_SECONDS
+from app.config import MAX_LOG_BYTES, MAX_LOG_EVENTS, MAX_UNZIP_BYTES, LOG_QUERY_SECONDS
 from app.core.converter import convert
 from app.core.parsing import parse_inputs
 
@@ -265,12 +265,56 @@ def _records_from_evtx(data: bytes) -> Iterable[Any]:
             pass
 
 
+ZIP_MEMBER_EXT = (".evtx", ".json", ".jsonl", ".ndjson", ".log", ".txt")
+MAX_ZIP_MEMBERS = 2000
+
+
+def _expand_zip(name: str, data: bytes, budget: List[int]) -> List[Tuple[str, bytes]]:
+    import io
+    import zipfile
+
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile:
+        raise LogInputError(f"{name} is not a valid zip file")
+    out: List[Tuple[str, bytes]] = []
+    infos = [i for i in zf.infolist() if not i.is_dir() and "__MACOSX" not in i.filename and not i.filename.split("/")[-1].startswith(".")]
+    if len(infos) > MAX_ZIP_MEMBERS:
+        raise LogInputError(f"{name} has more than {MAX_ZIP_MEMBERS} files")
+    for info in infos:
+        low = info.filename.lower()
+        if not low.endswith(ZIP_MEMBER_EXT):
+            continue
+        if info.flag_bits & 0x1:
+            raise LogInputError(f"{name} is password protected. Unzip it first.")
+        if info.compress_size and info.file_size / max(1, info.compress_size) > 400 and info.file_size > 10 * 1048576:
+            raise LogInputError(f"{info.filename} in {name} looks like a zip bomb")
+        if info.file_size > budget[0]:
+            raise LogInputError(f"Files in {name} are larger than {MAX_UNZIP_BYTES // 1048576} MB unpacked")
+        with zf.open(info) as fh:
+            blob = fh.read(budget[0] + 1)
+        if len(blob) > budget[0]:
+            raise LogInputError(f"Files in {name} are larger than {MAX_UNZIP_BYTES // 1048576} MB unpacked")
+        budget[0] -= len(blob)
+        out.append((f"{name}:{info.filename}", blob))
+    if not out:
+        raise LogInputError(f"{name} has no .evtx, .json or .jsonl files")
+    return out
+
+
 def load_events(files: List[Tuple[str, bytes]]) -> List[Dict[str, Any]]:
     total = sum(len(data) for _, data in files)
     if total > MAX_LOG_BYTES:
         raise LogInputError(f"Log files are {total // 1048576} MB. The limit is {MAX_LOG_BYTES // 1048576} MB.")
-    events: List[Dict[str, Any]] = []
+    budget = [MAX_UNZIP_BYTES]
+    expanded: List[Tuple[str, bytes]] = []
     for name, data in files:
+        if name.lower().endswith(".zip") or data[:4] == b"PK\x03\x04":
+            expanded.extend(_expand_zip(name, data, budget))
+        else:
+            expanded.append((name, data))
+    events: List[Dict[str, Any]] = []
+    for name, data in expanded:
         is_evtx = name.lower().endswith(".evtx") or data[:8] == b"ElfFile\x00"
         if is_evtx:
             records = _records_from_evtx(data)
@@ -278,10 +322,14 @@ def load_events(files: List[Tuple[str, bytes]]) -> List[Dict[str, Any]]:
             try:
                 text = data.decode("utf-8-sig")
             except UnicodeDecodeError:
+                if ":" in name:
+                    continue
                 raise LogInputError(f"{name} is not UTF-8 text, JSON or EVTX")
             try:
                 records = _records_from_json_text(text)
             except LogInputError as exc:
+                if ":" in name and name.lower().endswith((".log", ".txt")):
+                    continue
                 raise LogInputError(f"{name}: {exc}")
         for record in records:
             record = _strip_wrapper(record)
@@ -430,7 +478,7 @@ def _sample(event: Dict[str, Any], idx: int = -1, procs=None) -> Dict[str, Any]:
     return out
 
 
-def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", max_samples: int = 5, options=None) -> Dict[str, Any]:
+def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", max_samples: int = 5, options=None, keep_rows: bool = False) -> Dict[str, Any]:
     if mode not in ("auto", "strict", "off"):
         mode = "auto"
     started = time.monotonic()
@@ -526,6 +574,8 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
             idx_rows = [r[0] for r in db.conn.execute(f"SELECT _idx FROM events WHERE rowid IN ({placeholders}) ORDER BY rowid", list(set(hit_rows)))]
         entry["hits"] = len(alerts) if is_corr else len(idx_rows)
         entry["events"] = len(idx_rows)
+        if keep_rows:
+            entry["rows"] = idx_rows
         entry["alerts"] = [_alert(a) for a in alerts[:max_samples]]
         entry["samples"] = [_sample(events[i], i, procs) for i in idx_rows[:max_samples]]
         matched_events.update(idx_rows)

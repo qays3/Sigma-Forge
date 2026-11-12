@@ -36,8 +36,8 @@ export async function huntView(root) {
           <div class="setup__grid">
             <label class="dropzone dropzone--row" id="evtxDrop" for="evtxInput">
               ${logo(40, "dropzone__logo")}
-              <span class="dropzone__body"><span class="dropzone__title">Drop .evtx files here</span><span class="dropzone__text">Security, Sysmon, PowerShell and more, up to 64 MB</span></span>
-              <input class="hidden-input" type="file" id="evtxInput" multiple accept=".evtx,.json,.jsonl">
+              <span class="dropzone__body"><span class="dropzone__title">Drop .evtx files here</span><span class="dropzone__text">Security, Sysmon, PowerShell and more, or a triage .zip, up to 64 MB</span></span>
+              <input class="hidden-input" type="file" id="evtxInput" multiple accept=".evtx,.json,.jsonl,.zip">
             </label>
             <div class="setup__note">Export a log on any Windows machine with<code class="mono">wevtutil epl Security C:\\Temp\\Security.evtx</code></div>
           </div>
@@ -387,12 +387,15 @@ export async function huntView(root) {
       <div class="setup__bar">
         <label class="inline-field"><span class="field__label">Every</span><select class="select" id="schEvery">${[5, 15, 30, 60, 180, 720].map((m) => `<option value="${m}" ${m === sch.every_minutes ? "selected" : ""}>${m < 60 ? `${m} minutes` : `${m / 60} hour${m > 60 ? "s" : ""}`}</option>`).join("")}</select></label>
         <label class="inline-field"><span class="field__label">Alert from</span><select class="select" id="schLevel">${LEVELS.map((l) => `<option value="${l}" ${l === sch.min_level ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label class="check mb-0" title="Alert when a log that used to send events goes quiet, and when it comes back"><input type="checkbox" id="schHealth" ${sch.health_watch ? "checked" : ""}> Log health watch</label>
+        <label class="inline-field"><span class="field__label">Quiet after</span><select class="select" id="schQuiet">${[1, 2, 3, 4, 6, 12].map((n) => `<option value="${n}" ${n === sch.quiet_runs ? "selected" : ""}>${n} empty run${n > 1 ? "s" : ""}</option>`).join("")}</select></label>
         <button class="btn btn--sm" type="button" id="schTest">Send a test message</button>
         <div class="spacer"></div>
         ${sch.enabled ? '<button class="btn" type="button" id="schOff">Turn off</button>' : ""}
         <button class="btn btn--primary" type="button" id="schSave">${sch.enabled ? "Save" : "Turn on"}</button>
       </div>
-      ${sch.history.length ? `<details class="mt-4"><summary class="field__label">Run history</summary><ul class="list">${sch.history.slice(0, 12).map((h) => `<li class="list__item"><div class="list__main"><div class="list__title mono">${esc(h.time)}</div><div class="list__meta">${h.events} events · ${h.fired} rules fired · ${h.new} new hits${h.sent ? ` · sent: ${esc(h.sent)}` : ""}</div>${h.error ? `<div class="list__meta">${esc(h.error)}</div>` : ""}</div><span class="badge ${h.error && !h.events ? "badge--bad" : h.new ? "badge--warn" : "badge--ok"}">${h.new ? `${h.new} new` : h.error && !h.events ? "error" : "clean"}</span></li>`).join("")}</ul></details>` : ""}
+      ${sch.health_watch && sch.health.length ? `<div class="field__label mt-4">Log health</div><div class="health">${sch.health.map((h) => `<div class="health__item health__item--${esc(h.state || "waiting")}"><span class="health__dot"></span><div><div class="health__name">${esc(h.channel)}</div><div class="muted">${h.state === "quiet" ? `Quiet since ${esc(h.quiet_since || "")}` : h.state === "dropping" ? `${esc(plural(h.quiet_runs, "empty run"))}` : h.state === "ok" ? `${h.last_count} events last run` : "Waiting for the first events"}${h.error ? ` · ${esc(h.error)}` : ""}</div></div></div>`).join("")}</div>` : ""}
+      ${sch.history.length ? `<details class="mt-4"><summary class="field__label">Run history</summary><ul class="list">${sch.history.slice(0, 12).map((h) => `<li class="list__item"><div class="list__main"><div class="list__title mono">${esc(h.time)}</div><div class="list__meta">${h.events} events · ${h.fired} rules fired · ${h.new} new hits${h.sent ? ` · sent: ${esc(h.sent)}` : ""}${h.health ? ` · logs: ${esc(h.health.join(", "))}` : ""}</div>${h.error ? `<div class="list__meta">${esc(h.error)}</div>` : ""}</div><span class="badge ${h.error && !h.events ? "badge--bad" : h.new ? "badge--warn" : "badge--ok"}">${h.new ? `${h.new} new` : h.error && !h.events ? "error" : "clean"}</span></li>`).join("")}</ul></details>` : ""}
       ${sch.recent.length ? `<details class="mt-4"><summary class="field__label">Recent alerts</summary><ul class="list">${sch.recent.slice(0, 20).map((r) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(r.rule)}</div><div class="list__meta mono">${esc(r.ts)} · ${esc(r.host)} · ${esc(r.summary)}</div></div>${levelBadge(r.level)}</li>`).join("")}</ul></details>` : ""}`;
     const save = async (enabled, btn) => {
       const channels = $$("[data-sch]", box).filter((b) => b.checked).map((b) => b.dataset.sch);
@@ -406,6 +409,8 @@ export async function huntView(root) {
           min_level: $("#schLevel", box).value,
           kind: $("#schKind", box).value,
           url: $("#schUrl", box).value.trim() || null,
+          health_watch: $("#schHealth", box).checked,
+          quiet_runs: Number($("#schQuiet", box).value),
         });
         toast(enabled ? "Scheduled hunt saved" : "Scheduled hunt turned off", "ok");
         paintSchedule();

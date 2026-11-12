@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { mappings } from "../mappings.js";
-import { trackState } from "../router.js";
+import { navigate, trackState } from "../router.js";
+import { suggestMappingDrawer } from "./tools.js";
 import { state } from "../state.js";
 import { allowlist } from "../allowlist.js";
 import { $, $$, download, esc, icons, openDrawer, plural, toast } from "../ui.js";
@@ -144,6 +145,10 @@ export async function mappingsView(root, route) {
             <ul class="list" id="mapList"></ul>
           </div>
           <div class="card mt-4">
+            <div class="card__head"><span class="card__title">Suggest from my logs</span></div>
+            <div class="card__body"><p class="muted">Drop a sample of your logs and get a mapping built from the field names and values.</p><button class="btn btn--sm btn--primary" type="button" id="mapSuggest">${icons.spark} Suggest a mapping</button></div>
+          </div>
+          <div class="card mt-4">
             <div class="card__head"><span class="card__title">Start from a preset</span></div>
             <ul class="list">${Object.entries(PRESETS)
               .map(([k, p]) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(p.name)}</div><div class="list__meta">${esc(plural(Object.keys(p.map).length, "field"))}</div></div><button class="btn btn--sm" type="button" data-preset="${k}">Use</button></li>`)
@@ -156,6 +161,14 @@ export async function mappingsView(root, route) {
       <div class="card allow" id="allowCard"></div>
     </section>`;
 
+  $("#mapSuggest", root).addEventListener("click", async () => {
+    const rules = await state.rules();
+    if (!rules.length) {
+      toast("Add rules to the workspace first", "bad");
+      return;
+    }
+    suggestMappingDrawer(rules, (saved) => navigate("/mappings", { profile: saved.id }));
+  });
   let current = mappings.get(route.profile) || mappings.active() || mappings.all()[0] || blank();
   let rows = [];
 

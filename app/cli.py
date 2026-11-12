@@ -179,6 +179,90 @@ def cmd_export(args) -> int:
     return 0
 
 
+def cmd_unit(args) -> int:
+    from app.core.unittests import run_units
+
+    items = []
+    tests = {}
+    for raw in args.paths:
+        p = Path(raw)
+        files = sorted(f for f in p.rglob("*") if f.suffix.lower() in EXT and f.is_file()) if p.is_dir() else [p]
+        for f in files:
+            side = f.with_name(f.stem + ".tests.json")
+            if not side.is_file():
+                continue
+            items.append(RuleInput(name=f.as_posix(), content=f.read_text(encoding="utf-8", errors="replace")))
+            tests[f.as_posix()] = json.loads(side.read_text(encoding="utf-8"))
+    if not items:
+        print("No rules with a .tests.json file next to them", file=sys.stderr)
+        return 2
+    res = run_units(items, tests, args.mode)
+    for r in res["rules"]:
+        mark = "PASS" if not r["failed"] and r["status"] == "ok" else "FAIL"
+        print(f"{mark}  {r['passed']}/{r['passed'] + r['failed']}  {r['name']}" + (f"  {r['message']}" if r["message"] else ""))
+        for c in r["cases"]:
+            if not c["ok"] or args.verbose:
+                want = "should match" if c["kind"] == "match" else "should not match"
+                print(f"        {'ok ' if c['ok'] else 'BAD'} {want} #{c['index'] + 1}: {c['label']}")
+    print(f"\n{res['passed']} cases passed, {res['failed']} failed, in {len(res['rules'])} rules.")
+    _summary(args.summary, [f"## {APP_NAME} rule unit tests", "", f"{res['passed']} passed, {res['failed']} failed."]
+             + [f"* failed: `{r['name']}`" for r in res["rules"] if r["failed"] or r["status"] != "ok"])
+    return 1 if res["failed"] or res["rules_failed"] else 0
+
+
+def cmd_sysmon(args) -> int:
+    from app.core.sysmon import build
+
+    res = build(_collect(args.paths))
+    if res["xml"]:
+        if args.output:
+            Path(args.output).write_text(res["xml"], encoding="utf-8")
+            print(f"Saved {args.output}")
+        else:
+            print(res["xml"])
+    for t in res["types"]:
+        print(f"# {t['event']}: {t['rules']} rules, {t['conditions']} conditions" + (" (logs all events)" if t["all"] else ""), file=sys.stderr)
+    if res["script"]:
+        print("\n# Audit policy and logging commands, run as admin:", file=sys.stderr)
+        print(res["script"], file=sys.stderr)
+    return 0
+
+
+def cmd_sigmahq(args) -> int:
+    from app.core.sigmahq import check_inputs
+
+    res = check_inputs(_collect(args.paths))
+    bad = 0
+    for r in res["rules"]:
+        if r["errors"]:
+            bad += 1
+        if r["errors"] or r["warnings"] or args.verbose:
+            print(f"{r['score']:>3}  {r['name']}" + (f"  -> rename to {r['suggested_name']}" if r["suggested_name"] else ""))
+            for c in r["checks"]:
+                if c["level"] != "info" or args.verbose:
+                    print(f"       {c['level']:<5} {c['text']}")
+    print(f"\n{res['ready']} of {res['total']} rules are ready for SigmaHQ, {bad} have errors.")
+    return 1 if bad else 0
+
+
+def cmd_import(args) -> int:
+    from app.core.siemimport import import_rules
+
+    files = [(Path(f).name, Path(f).read_text(encoding="utf-8-sig")) for f in args.files]
+    res = import_rules(files, args.kind, args.include_disabled)
+    out = Path(args.output)
+    out.mkdir(parents=True, exist_ok=True)
+    for r in res["rules"]:
+        (out / r["name"]).write_text(r["content"], encoding="utf-8")
+        print(f"ok    {r['name']}  ({r['kind']})")
+    for f in res["failed"]:
+        print(f"fail  {f['name']}: {f['error']}", file=sys.stderr)
+    for e in res["errors"]:
+        print(f"error {e['name']}: {e['error']}", file=sys.stderr)
+    print(f"\n{res['converted']} of {res['found']} converted into {out}, {res['skipped']} disabled skipped.")
+    return 1 if res["failed"] or res["errors"] else 0
+
+
 def cmd_from_query(args) -> int:
     from app.core.querygen import convert_query
 
@@ -327,6 +411,30 @@ def main(argv=None) -> int:
     p.add_argument("--fail-on-hit", action="store_true", help="Exit 1 when any file matches")
     p.add_argument("--summary", default="")
     p.set_defaults(func=cmd_yara)
+
+    p = sub.add_parser("unit", help="Run rule unit tests from <rule>.tests.json files")
+    p.add_argument("paths", nargs="+", help="Rule files or folders")
+    p.add_argument("--mode", default="off", choices=["auto", "strict", "off"])
+    p.add_argument("--summary", default="")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_unit)
+
+    p = sub.add_parser("sysmon", help="Build a Sysmon config and audit policy from your rules")
+    p.add_argument("paths", nargs="+", help="Rule files or folders")
+    p.add_argument("-o", "--output", default="")
+    p.set_defaults(func=cmd_sysmon)
+
+    p = sub.add_parser("sigmahq", help="Check rules against SigmaHQ contribution rules")
+    p.add_argument("paths", nargs="+", help="Rule files or folders")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_sigmahq)
+
+    p = sub.add_parser("import", help="Turn Splunk, Sentinel or Elastic rule exports into Sigma rules")
+    p.add_argument("files", nargs="+", help="savedsearches.conf, Sentinel JSON or YAML, Elastic ndjson")
+    p.add_argument("--kind", default="auto", choices=["auto", "splunk", "sentinel", "elastic"])
+    p.add_argument("--include-disabled", action="store_true")
+    p.add_argument("-o", "--output", default="imported")
+    p.set_defaults(func=cmd_import)
 
     args = parser.parse_args(argv)
     if getattr(args, "fail_on", None) == "never":

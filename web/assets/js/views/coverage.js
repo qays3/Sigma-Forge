@@ -3,6 +3,7 @@ import { navigate, trackState } from "../router.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
 import { paintMeters, readJson, writeJson } from "../shared.js";
+import { sysmonDrawer, threatDrawer } from "./tools.js";
 import { $, $$, cssVar, debounce, download, downloadBlob, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const COLLECTED_KEY = "sigma-forge-collected";
@@ -41,6 +42,8 @@ export async function coverageView(root, route) {
         <select class="select cov__group" id="groupSel" aria-label="Threat group"><option value="">Threat group: none</option></select>
         <button class="btn" type="button" id="readyBtn" title="Tick the log sources you really collect">${icons.grid} Log readiness</button>
         <button class="btn" type="button" id="reportBtn" title="Download a printable coverage report">${icons.file} Report</button>
+        <button class="btn" type="button" id="threatBtn" title="Find the techniques in a threat report and check your coverage">${icons.spark} Threat report</button>
+        <button class="btn" type="button" id="sysmonBtn" title="Sysmon config and audit policy built from your rules">${icons.box} Logging setup</button>
         <label class="check mb-0"><input type="checkbox" id="coveredOnly"> <span>Covered only</span></label>
         <div class="cov__notes" id="covNotes"></div>
         <div class="legend" aria-hidden="true">
@@ -264,6 +267,8 @@ export async function coverageView(root, route) {
     reload();
   });
 
+  $("#threatBtn", root).addEventListener("click", () => threatDrawer(rules));
+  $("#sysmonBtn", root).addEventListener("click", () => sysmonDrawer(rules));
   $("#readyBtn", root).addEventListener("click", () => {
     const all = coverage.all_logsources || coverage.logsources || [];
     const picked = new Set(collected || []);

@@ -1,5 +1,7 @@
 import { api } from "../api.js";
-import { openInEditor, pretty } from "../shared.js";
+import { cases, feedback, fileOf, ruleStats, unitTests } from "../localdata.js";
+import { navigate } from "../router.js";
+import { openInEditor, pretty, writeJson } from "../shared.js";
 import { state } from "../state.js";
 import { $, $$, copyText, debounce, downloadBlob, esc, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
 
@@ -108,6 +110,7 @@ export function renderResults(out, res, extra = "", opts = {}) {
         <button class="seg__btn" type="button" data-view="timeline" ${(res.timeline?.items || []).length ? "" : "disabled"}>Timeline <span class="tab__count">${(res.timeline?.items || []).length}</span></button>
       </div>
       <div class="spacer"></div>
+      <button class="btn btn--sm" type="button" data-role="case" ${(res.timeline?.items || []).length ? "" : "disabled"}>${icons.file} Create case</button>
       <button class="btn btn--sm" type="button" data-role="report">${icons.download} Hunt report</button>
     </div>
     <div data-pane="timeline" hidden></div>
@@ -136,6 +139,8 @@ export function renderResults(out, res, extra = "", opts = {}) {
     </div>
     </div>`;
   out.querySelectorAll(".bar__fill").forEach((el) => el.style.setProperty("width", `${el.dataset.width}%`));
+  if (!opts.noStats) ruleStats.record(res);
+  $("[data-role=case]", out).addEventListener("click", () => createCase(res, opts));
   const tabs = $("[data-role=tabs]", out);
   const filter = $("[data-role=filter]", out);
   const apply = () => {
@@ -203,6 +208,78 @@ export function renderResults(out, res, extra = "", opts = {}) {
   };
 }
 
+function createCase(res, opts) {
+  const hits = cases.hitsFrom(res);
+  const rank = { critical: 5, high: 4, medium: 3, low: 2, informational: 1 };
+  const top = hits.reduce((a, h) => ((rank[h.level] || 0) > (rank[a] || 0) ? h.level : a), "low");
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const fired = (res.results || []).filter((r) => r.hits && r.kind !== "correlation");
+  openDrawer("Create case", `
+    <label class="field"><span class="field__label">Title</span><input class="input" id="csTitle" value="${esc(opts.title || "Hunt")} ${esc(stamp)}"></label>
+    <div class="grid grid--2 mt-4">
+      <label class="field"><span class="field__label">Severity</span><select class="select" id="csSev">${["low", "medium", "high", "critical"].map((l) => `<option ${l === (top === "informational" ? "low" : top) ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field"><span class="field__label">Owner</span><input class="input" id="csOwner" placeholder="Who looks at it"></label>
+    </div>
+    <label class="field mt-4"><span class="field__label">Summary</span><textarea class="input textarea" id="csSum" rows="3" placeholder="What happened, in a few words"></textarea></label>
+    <div class="field__label mt-4">Rules to include</div>
+    <div class="case__pick">${fired.map((r) => `<label class="check"><input type="checkbox" data-ck="${esc(r.key)}" checked> <span>${esc(r.title)}</span> <span class="muted">${esc(plural(r.hits, "hit"))}</span></label>`).join("")}</div>
+    <div class="row mt-4"><button class="btn btn--primary" type="button" id="csSave">${icons.file} Save case</button><span class="muted">${esc(plural(hits.length, "hit"))} on ${esc(plural(new Set(hits.map((h) => h.host)).size, "host"))}</span></div>`, (panel) => {
+    $("#csSave", panel).addEventListener("click", () => {
+      const keys = $$("[data-ck]", panel).filter((b) => b.checked).map((b) => b.dataset.ck);
+      if (!keys.length) {
+        toast("Pick at least one rule", "bad");
+        return;
+      }
+      const c = cases.save({
+        title: $("#csTitle", panel).value.trim() || "Case",
+        severity: $("#csSev", panel).value,
+        owner: $("#csOwner", panel).value.trim(),
+        summary: $("#csSum", panel).value.trim(),
+        hits: cases.hitsFrom(res, keys),
+        notes: [{ time: stamp, text: `Created from ${opts.title || "a run"} with ${plural(keys.length, "rule")}.` }],
+      });
+      writeJson("sigma-forge-case-focus", c.id);
+      toast("Case saved", "ok");
+      navigate("/cases");
+    });
+  });
+}
+
+function feedbackBar(file, event) {
+  const v = feedback.verdict(file, event);
+  return `<div class="fb" data-fb><span class="fb__label">Was this real?</span><button class="fb__btn ${v === "tp" ? "is-tp" : ""}" type="button" data-verdict="tp">Real threat</button><button class="fb__btn ${v === "fp" ? "is-fp" : ""}" type="button" data-verdict="fp">False positive</button></div>`;
+}
+
+function precisionSection(file) {
+  const p = feedback.precision(file);
+  if (!p) return "";
+  const sugg = feedback.suggestFilters(file);
+  return `
+    <h3 class="section-title">Your verdicts</h3>
+    <div class="card"><div class="card__body">
+      <div class="noise__head"><span class="badge badge--${p.value >= 80 ? "ok" : p.value >= 50 ? "warn" : "bad"}">${p.value}% precision</span><span><strong>${p.tp}</strong> real, <strong>${p.fp}</strong> false positive</span></div>
+      ${sugg.length ? `<div class="noise__sugg"><div class="field__label">Shared by your false positives</div>${sugg.map((s, i) => `<label class="check"><input type="checkbox" data-fpsugg="${i}" ${i === 0 ? "checked" : ""}> <span class="fb__val"><span class="mono">${esc(s.field)}: ${esc(s.value.length > 140 ? `${s.value.slice(0, 140)}...` : s.value)}</span> <span class="muted">${s.count} of ${p.fp}</span></span></label>`).join("")}<div class="row mt-4"><button class="btn btn--primary btn--sm" type="button" id="fpFilter">${icons.file} Add filter, open in editor</button></div></div>` : ""}
+    </div></div>`;
+}
+
+async function filterInEditor(r, picked, btn) {
+  const rules = await state.rules();
+  const file = state.fileFor(r.key, rules);
+  if (!file) {
+    toast("This rule is no longer in the workspace", "bad");
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const res = await api.addFilter(file.content, r.title, picked.map((p) => ({ field: p.field, value: p.value })));
+    openInEditor(file.name, res.content, file.id);
+    toast("Filter added. Check it, then save.", "ok");
+  } catch (err) {
+    toast(err.message, "bad");
+    btn.disabled = false;
+  }
+}
+
 function noiseSection(r) {
   const n = r.noise;
   if (!n || r.kind === "correlation") return "";
@@ -234,6 +311,7 @@ function noiseSection(r) {
 
 export function showDetails(r) {
   const samples = r.samples || [];
+  const file = fileOf(r.key);
   const alerts = r.alerts || [];
   const body = `
     <dl class="meta">
@@ -245,40 +323,56 @@ export function showDetails(r) {
     ${r.message ? `<div class="card"><div class="notice notice--bad">${esc(r.message)}</div></div>` : ""}
     ${(r.warnings || []).length ? `<div class="card mt-4">${r.warnings.map((w) => `<div class="notice notice--warn">${esc(w)}</div>`).join("")}</div>` : ""}
     ${noiseSection(r)}
+    <div data-role="precision">${precisionSection(file)}</div>
     ${alerts.length ? `<h3 class="section-title">Alerts</h3>${alerts.map((a) => `<div class="card"><pre class="code">${esc(pretty(a))}</pre></div>`).join("")}` : ""}
     ${samples.length ? `<h3 class="section-title">Matching events${r.hits > samples.length ? ` (first ${samples.length} of ${r.events || r.hits})` : ""}</h3>${samples
       .map(
-        (s, i) => `<div class="card test__event"><div class="card__head"><span class="card__sub">${esc(s.source)} · ${esc([s.logsource.product, s.logsource.service, s.logsource.category].filter(Boolean).join(" / ") || "unknown source")}</span><button class="btn btn--sm" type="button" data-rulegen="${i}">${icons.spark} Make a rule from this event</button></div>${s.lineage ? `<div class="card__body">${processTree(s.lineage)}</div>` : ""}<details class="test__raw" ${s.lineage ? "" : "open"}><summary>Raw event</summary><pre class="code">${esc(pretty(s.event))}</pre></details></div>`
+        (s, i) => `<div class="card test__event"><div class="card__head"><span class="card__sub">${esc(s.source)} · ${esc([s.logsource.product, s.logsource.service, s.logsource.category].filter(Boolean).join(" / ") || "unknown source")}</span><span class="row"><button class="btn btn--sm btn--ghost" type="button" data-unit="${i}" title="Keep this event as a unit test that must match">${icons.check} Save as test</button><button class="btn btn--sm" type="button" data-rulegen="${i}">${icons.spark} Make a rule from this event</button></span></div>${r.kind === "correlation" ? "" : `<div class="card__body card__body--tight" data-fbi="${i}">${feedbackBar(file, s.event)}</div>`}${s.lineage ? `<div class="card__body">${processTree(s.lineage)}</div>` : ""}<details class="test__raw" ${s.lineage ? "" : "open"}><summary>Raw event</summary><pre class="code">${esc(pretty(s.event))}</pre></details></div>`
       )
       .join("")}` : r.status === "ok" ? '<p class="muted">No event matched this rule.</p>' : ""}
     ${r.query ? `<h3 class="section-title">SQLite query</h3><div class="card"><pre class="code">${esc(r.query)}</pre><div class="row test__copy"><button class="btn btn--sm" type="button" id="copyQuery">${icons.copy} Copy query</button></div></div>` : ""}`;
   openDrawer(r.title, body, (panel) => {
     paintDepth(panel);
     $("#copyQuery", panel)?.addEventListener("click", () => copyText(r.query, "Query copied"));
-    $("#addFilter", panel)?.addEventListener("click", async (e) => {
+    $("#addFilter", panel)?.addEventListener("click", (e) => {
       const btn = e.currentTarget;
       const picked = $$("[data-sugg]", panel).filter((b) => b.checked).map((b) => r.noise.suggestions[Number(b.dataset.sugg)]);
       if (!picked.length) {
         toast("Pick at least one filter", "bad");
         return;
       }
-      const rules = await state.rules();
-      const file = state.fileFor(r.key, rules);
-      if (!file) {
-        toast("This rule is no longer in the workspace", "bad");
+      filterInEditor(r, picked, btn);
+    });
+    const bindFp = () => {
+      $("#fpFilter", panel)?.addEventListener("click", (e) => {
+        const sugg = feedback.suggestFilters(file);
+        const picked = $$("[data-fpsugg]", panel).filter((b) => b.checked).map((b) => sugg[Number(b.dataset.fpsugg)]);
+        if (!picked.length) {
+          toast("Pick at least one filter", "bad");
+          return;
+        }
+        filterInEditor(r, picked, e.currentTarget);
+      });
+    };
+    bindFp();
+    panel.addEventListener("click", (e) => {
+      const vb = e.target.closest("[data-verdict]");
+      if (vb) {
+        const box = vb.closest("[data-fbi]");
+        const s = samples[Number(box.dataset.fbi)];
+        feedback.mark(file, s.event, vb.dataset.verdict);
+        box.innerHTML = feedbackBar(file, s.event);
+        $("[data-role=precision]", panel).innerHTML = precisionSection(file);
+        bindFp();
         return;
       }
-      btn.disabled = true;
-      try {
-        const res = await api.addFilter(file.content, r.title, picked.map((p) => ({ field: p.field, value: p.value })));
-        openInEditor(file.name, res.content, file.id);
-        toast("Filter added. Check it, then save.", "ok");
-      } catch (err) {
-        toast(err.message, "bad");
-        btn.disabled = false;
+      const ub = e.target.closest("[data-unit]");
+      if (ub) {
+        const cur = unitTests.add(file, "match", samples[Number(ub.dataset.unit)].event);
+        ub.disabled = true;
+        toast(`Saved. ${file} has ${plural(cur.match.length + cur.nomatch.length, "test")}.`, "ok");
+        return;
       }
-    });
-    panel.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-rulegen]");
       if (!btn) return;
       const s = samples[Number(btn.dataset.rulegen)];

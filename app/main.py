@@ -3,6 +3,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.extra import router as extra_router
 from app.api.routes import router
 from app.config import APP_NAME, APP_VERSION, HOST, PORT, WEB_DIR
 
@@ -16,6 +17,7 @@ app = FastAPI(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.include_router(router)
+app.include_router(extra_router)
 app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
 
 INDEX = WEB_DIR / "index.html"

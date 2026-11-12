@@ -15,6 +15,8 @@ import { mappingsView } from "./views/mappings.js";
 import { yaraView } from "./views/yara.js";
 import { huntView } from "./views/hunt.js";
 import { purpleView } from "./views/purple.js";
+import { inventoryView } from "./views/inventory.js";
+import { casesView } from "./views/cases.js";
 import { notFoundView } from "./views/notfound.js";
 
 const THEME_KEY = "sigma-forge-theme";
@@ -126,6 +128,8 @@ route("/mappings", "mappings", mappingsView);
 route("/yara", "yara", yaraView);
 route("/hunt", "hunt", huntView);
 route("/purple", "purple", purpleView);
+route("/inventory", "inventory", inventoryView);
+route("/cases", "cases", casesView);
 route("*", "notfound", notFoundView);
 
 initTheme();

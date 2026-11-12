@@ -199,3 +199,37 @@ def build_hunt_report(result: Dict, title: str = "", scope: str = "") -> str:
 <title>{_e(title)}</title><style>{CSS}</style></head>
 <body><header><div class="eb">{_e(APP_NAME)} hunt report</div><h1>{_e(title)}</h1><p>Generated {stamp}. Verdict: {_e(verdict[0])}.</p></header>
 <div class="wrap">{body}<footer>Made with {_e(APP_NAME)} {_e(APP_VERSION)}. Print this page or save it as PDF from your browser.</footer></div></body></html>"""
+
+
+def build_case_report(case: Dict) -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    title = str(case.get("title") or "Case")[:200]
+    hits = case.get("hits") or []
+    notes = case.get("notes") or []
+    parts: List[str] = ['<div class="kpis">']
+    for label, value in [("Status", case.get("status", "open")), ("Severity", case.get("severity", "medium")),
+                         ("Owner", case.get("owner") or "Not set"), ("Hits", len(hits))]:
+        parts.append(f'<div class="kpi"><b>{_e(value)}</b><span>{_e(label)}</span></div>')
+    parts.append("</div>")
+    if case.get("summary"):
+        parts.append(f"<h2>Summary</h2><p>{_e(case['summary'])}</p>")
+    meta = [("Created", case.get("created")), ("Updated", case.get("updated")), ("Hosts", ", ".join(case.get("hosts") or [])),
+            ("Techniques", ", ".join(case.get("techniques") or []))]
+    parts.append("<table><tbody>" + "".join(f'<tr><th>{_e(k)}</th><td class="mono">{_e(v or "")}</td></tr>' for k, v in meta) + "</tbody></table>")
+    if hits:
+        parts.append("<h2>Hits</h2><table><thead><tr><th>Time</th><th>Host</th><th>Rule</th><th>Level</th><th>Detail</th></tr></thead><tbody>")
+        for h in hits[:500]:
+            parts.append(f'<tr><td class="mono">{_e(h.get("ts", ""))}</td><td class="mono">{_e(h.get("host", ""))}</td><td>{_e(h.get("rule", ""))}</td>'
+                         f'<td><span class="pill {LEVEL_CLASS.get(h.get("level") or "", "")}">{_e(h.get("level", ""))}</span></td><td class="mono">{_e(h.get("summary", ""))}</td></tr>')
+        parts.append("</tbody></table>")
+    if notes:
+        parts.append("<h2>Notes</h2><table><thead><tr><th>Time</th><th>Note</th></tr></thead><tbody>")
+        for n in notes[:500]:
+            parts.append(f'<tr><td class="mono">{_e(n.get("time", ""))}</td><td>{_e(n.get("text", ""))}</td></tr>')
+        parts.append("</tbody></table>")
+    body = "\n".join(parts)
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{_e(title)}</title><style>{CSS}</style></head>
+<body><header><div class="eb">{_e(APP_NAME)} case</div><h1>{_e(title)}</h1><p>Generated {stamp}.</p></header>
+<div class="wrap">{body}<footer>Made with {_e(APP_NAME)} {_e(APP_VERSION)}. Print this page or save it as PDF from your browser.</footer></div></body></html>"""

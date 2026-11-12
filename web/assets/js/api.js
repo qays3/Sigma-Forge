@@ -189,4 +189,35 @@ export const api = {
   },
   coverage: (rules, group = "", collected = null) => request("/api/coverage", { method: "POST", body: { rules: strip(rules), group, collected } }),
   navigator: (rules, name, colors) => request("/api/coverage/navigator", { method: "POST", body: { rules: strip(rules), name, colors } }),
+  sysmon: (rules) => request("/api/sysmon/config", { method: "POST", body: { rules: strip(rules) } }),
+  suggestMapping(rules, files) {
+    const form = new FormData();
+    form.append("rules", JSON.stringify(strip(rules)));
+    files.forEach((f) => form.append("files", f, f.name));
+    return upload("/api/mappings/suggest", form);
+  },
+  importSiem(files, kind = "auto", includeDisabled = false) {
+    const form = new FormData();
+    form.append("kind", kind);
+    form.append("include_disabled", String(includeDisabled));
+    files.forEach((f) => form.append("files", f, f.name));
+    return upload("/api/import/siem", form);
+  },
+  githubPush: (body) => request("/api/github/push", { method: "POST", body: { ...body, rules: strip(body.rules) } }),
+  sigmahq: (rules) => request("/api/rules/sigmahq", { method: "POST", body: { rules: strip(rules) } }),
+  sigmahqFix: (content, name) => request("/api/rules/sigmahq/fix", { method: "POST", body: { content, name } }),
+  unitTests: (rules, tests, mode = "off") => request("/api/rules/unit", { method: "POST", body: { rules: strip(rules), tests, mode } }),
+  taxonomy: () => request("/api/wizard/taxonomy"),
+  wizard: (spec) => request("/api/wizard/build", { method: "POST", body: { spec } }),
+  correlation: (spec, rules) => request("/api/correlation/build", { method: "POST", body: { spec, rules: strip(rules) } }),
+  threatReport: (text, rules) => request("/api/threat/report", { method: "POST", body: { text, rules: strip(rules) } }),
+  siemTargets: () => request("/api/siem/targets"),
+  siemSend(fields, files, events = "") {
+    const form = new FormData();
+    Object.entries(fields).forEach(([k, v]) => form.append(k, String(v)));
+    if (events) form.append("events", events);
+    files.forEach((f) => form.append("files", f, f.name));
+    return upload("/api/siem/send", form);
+  },
+  caseReport: (c) => fetchFile("/api/cases/report", { case: c }, "case-report.html"),
 };

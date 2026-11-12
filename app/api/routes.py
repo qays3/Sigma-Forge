@@ -568,7 +568,7 @@ def schedule_set(req: ScheduleRequest, request: Request):
         raise HTTPException(status_code=400, detail="Pick at least one rule")
     if req.url and not req.url.lower().startswith(("https://", "http://")):
         raise HTTPException(status_code=400, detail="The webhook must start with https://")
-    return scheduler.update(req.enabled, req.every_minutes, req.channels, rules, req.min_level, req.kind, req.url)
+    return scheduler.update(req.enabled, req.every_minutes, req.channels, rules, req.min_level, req.kind, req.url, req.health_watch, req.quiet_runs)
 
 
 @router.post("/hunt/schedule/run")

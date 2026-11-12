@@ -148,6 +148,8 @@ class ScheduleRequest(BaseModel):
     min_level: str = "medium"
     kind: str = "slack"
     url: Optional[str] = Field(default=None, max_length=2000)
+    health_watch: bool = True
+    quiet_runs: int = Field(default=2, ge=1, le=50)
 
 
 class ProcessScanRequest(BaseModel):
@@ -167,3 +169,40 @@ class AutofixRequest(BaseModel):
 
 class PurpleRequestMeta(BaseModel):
     techniques: List[str] = Field(default_factory=list)
+
+
+class GithubPushRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=500)
+    repo: str = Field(min_length=3, max_length=300)
+    rules: List[RuleInput] = Field(min_length=1, max_length=200)
+    branch: str = Field(default="", max_length=200)
+    base: str = Field(default="", max_length=200)
+    folder: str = Field(default="rules", max_length=300)
+    message: str = Field(default="", max_length=300)
+    title: str = Field(default="", max_length=300)
+    body: str = Field(default="", max_length=60000)
+    draft: bool = False
+
+
+class UnitTestRequest(BaseModel):
+    rules: List[RuleInput]
+    tests: Dict[str, Any] = Field(default_factory=dict)
+    mode: str = "off"
+
+
+class WizardRequest(BaseModel):
+    spec: Dict[str, Any]
+
+
+class CorrelationRequest(BaseModel):
+    spec: Dict[str, Any]
+    rules: List[RuleInput] = Field(min_length=1, max_length=20)
+
+
+class ThreatReportRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=1000000)
+    rules: List[RuleInput] = Field(default_factory=list)
+
+
+class CaseReportRequest(BaseModel):
+    case: Dict[str, Any]

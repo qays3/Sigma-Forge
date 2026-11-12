@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
 import { readJson, writeJson } from "../shared.js";
+import { githubPushPanel, importSiemDrawer } from "./tools.js";
 import { $, $$, emptyState, esc, forging, icons, logo, plural, skeleton, toast } from "../ui.js";
 
 const YAML_RE = /\.ya?ml$/i;
@@ -125,6 +126,8 @@ export async function workspaceView(root) {
               </div>
               <div class="row"><button class="btn btn--primary" type="button" id="gitFetch">${icons.download} Fetch rules</button><span class="muted" id="gitMsg"></span></div>
               <div id="gitSources" class="mt-4"></div>
+              <h3 class="section-title">Push your rules to GitHub</h3>
+              <div id="ghPush"></div>
             </div>
           </div>
         </div>
@@ -133,6 +136,7 @@ export async function workspaceView(root) {
           <div class="card__head">
             <div><h2 class="card__title">Workspace files</h2><div class="card__sub" id="fileSub">Loading</div></div>
             <div class="row">
+              <button class="btn btn--sm" type="button" id="wsSiem" title="Turn Splunk, Sentinel or Elastic rules into Sigma">${icons.upload} From SIEM</button>
               <button class="btn btn--sm" type="button" id="wsExport" title="Rules, YARA, mappings, allow list and settings in one file for a teammate">${icons.download} Share</button>
               <label class="btn btn--sm" for="wsImport" title="Load a workspace file from a teammate">${icons.upload} Import</label>
               <input class="hidden-input" type="file" id="wsImport" accept=".json,.sigmaforge">
@@ -148,6 +152,9 @@ export async function workspaceView(root) {
     </section>`;
 
   const fileInput = $("#fileInput", root);
+  $("#wsSiem", root).addEventListener("click", () => importSiemDrawer());
+  const ghPush = githubPushPanel($("#ghPush", root), () => state.rules());
+  const offPush = store.onChange(() => ghPush.paintCount());
   const folderInput = $("#folderInput", root);
   const dropzone = $("#dropzone", root);
 
@@ -407,5 +414,10 @@ export async function workspaceView(root) {
 
   const off = store.onChange(refresh);
   refresh();
-  return { destroy: off };
+  return {
+    destroy() {
+      off();
+      offPush();
+    },
+  };
 }

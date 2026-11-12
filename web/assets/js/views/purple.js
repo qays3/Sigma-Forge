@@ -38,8 +38,8 @@ export async function purpleView(root) {
           <div class="field__label mt-4">2. Logs from the lab run</div>
           <label class="dropzone dropzone--row" id="ppDrop" for="ppInput">
             ${logo(40, "dropzone__logo")}
-            <span class="dropzone__body"><span class="dropzone__title">Drop the logs here</span><span class="dropzone__text">.evtx, .json, .jsonl up to 64 MB</span></span>
-            <input class="hidden-input" type="file" id="ppInput" multiple accept=".evtx,.json,.jsonl,.ndjson">
+            <span class="dropzone__body"><span class="dropzone__title">Drop the logs here</span><span class="dropzone__text">.evtx, .json, .jsonl or a .zip, up to 64 MB</span></span>
+            <input class="hidden-input" type="file" id="ppInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.zip">
           </label>
           <div class="setup__actions"><button class="btn btn--sm" type="button" id="ppSample">${icons.spark} Sample attack chain logs</button></div>
           <ul class="filechips" id="ppFiles"></ul>
