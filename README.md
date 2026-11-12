@@ -137,6 +137,7 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Send to a SIEM** | Replay log files into Splunk HEC, Elasticsearch or syslog (Wazuh, QRadar) to check the real rules fire there too. |
 | **Cases** | Turn hits into a case with status, owner, severity and notes, and export it as an HTML report. |
 | **Triage zips** | Every log upload takes a `.zip` of EVTX and JSON files, with zip bomb guards. |
+| **Guides** | A Guides page in the app with step by step guides for every page and tool, searchable, with a button that opens the tool. |
 | **Review** | Sortable and filterable rule table with a quality grade column and a detail drawer: metadata, findings, quality checks, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
@@ -225,6 +226,10 @@ A two minute tour of every page: loading the samples, converting to Sentinel and
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/inventory.png" alt="Inventory"><p align="center"><b>Inventory</b>: what needs attention</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/cases.png" alt="Cases"><p align="center"><b>Cases</b>: hits, owner and notes</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/guides.png" alt="Guides"><p align="center"><b>Guides</b>: step by step for every tool</p></td>
+    <td width="50%"></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/wizard.png" alt="Rule wizard"><p align="center"><b>Rule wizard</b>: answer, get YAML</p></td>
@@ -323,6 +328,8 @@ Examples:
 ```
 
 ## How to use it
+
+The app has a **Guides** page (Help, Guides in the menu) with step by step guides for every page and tool. The short version is below.
 
 ```mermaid
 flowchart LR
@@ -1945,10 +1952,11 @@ Sigma-Forge/
 │       │   ├── mappings.js      Field mapping profiles
 │       │   ├── shared.js        History, diff, quality and editor helpers
 │       │   ├── localdata.js     Unit tests, verdicts, run stats and cases in the browser
+│       │   ├── guides-data.js   Text of the in app Guides page
 │       │   └── views/           workspace, convert, coverage, rules, editor,
 │       │                        compare, test, hunt, purple, yara, library, mappings,
 │       │                        results (shared test results), yarakit, inventory, cases,
-│       │                        builders, editortools, tools (drawers for the new tools)
+│       │                        builders, editortools, tools (drawers for the new tools), guides
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups
