@@ -1814,7 +1814,7 @@ The Library page has two sources. Pick one at the top.
 
 Sigma Forge downloads `yara-forge-rules-<package>.zip` from the latest [release](https://github.com/YARAHQ/yara-forge/releases), splits it into single rules and indexes them by name, description, author, repository, tags, score and date. Offline, download the zip yourself and use **Upload zip**. Search, filter by repository, tag and score, sort by score or date, and open any rule to see its meta, license and a link to its source. **Add to YARA** puts each rule on the YARA page as `yaraforge/<repository>/<rule>.yar`, with the `import` lines and any private rules it needs, so every file compiles on its own. The index is stored in `data/yaraforge` (or `SIGMA_FORGE_STATE_DIR/yaraforge`).
 
-Both lists load 50 rules at a time. **Show 50 more** loads the next rules and **Show all** loads the whole list. **Select page** picks the next 50 rules you do not have yet, so you can press it again after each add.
+Both lists show 200 rules per page, with page numbers (1 2 3 … last) and arrows under the list. **Select page** picks every rule on the page you do not have yet.
 
 Every table in the app with more than 200 rows shows 200 rows per page, with page numbers (1 2 3 … last) and arrows under it.
 

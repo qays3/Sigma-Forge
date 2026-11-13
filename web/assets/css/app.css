@@ -6509,3 +6509,7 @@ a.chip:hover {
 .table tr.is-paged-out {
   display: none !important;
 }
+
+.pager:empty {
+  display: none;
+}

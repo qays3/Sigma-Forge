@@ -1,11 +1,12 @@
 import { api } from "../api.js";
+import { pagerHtml } from "../pager.js";
 import { navigate, trackState } from "../router.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
 import { yaraLibrary } from "./yaralib.js";
 import { $, $$, debounce, emptyState, esc, forging, icons, levelBadge, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 
-const PAGE = 50;
+const PAGE = 200;
 const LEVELS = ["critical", "high", "medium", "low", "informational"];
 const STATUSES = ["stable", "test", "experimental", "deprecated", "unsupported"];
 
@@ -32,7 +33,7 @@ export async function libraryView(root, route) {
 
   let status;
   let filters = { q: "", technique: "", level: "", product: "", category: "", service: "", status: "", group: "", ...(route.filters || {}) };
-  let offset = 0;
+  let page = 1;
   let rows = [];
   let total = 0;
   let picked = new Set();
@@ -217,7 +218,7 @@ export async function libraryView(root, route) {
           <button class="btn btn--sm btn--primary" type="button" id="libAdd" disabled>${icons.upload} Add to workspace</button>
         </div>
         <ul class="list" id="libList"></ul>
-        <div class="card__body lib__more" id="libMore"></div>
+        <nav class="pager" id="libMore" aria-label="Pages"></nav>
       </div>`;
     const read = () => {
       filters = {
@@ -231,7 +232,7 @@ export async function libraryView(root, route) {
         service: filters.service,
       };
       trackState({ filters });
-      search(true);
+      search(1);
     };
     const later = debounce(read, 250);
     ["#libQ", "#libTech", "#libCategory"].forEach((id) => $(id, root).addEventListener("input", later));
@@ -247,31 +248,21 @@ export async function libraryView(root, route) {
       const btn = e.target.closest("[data-view]");
       if (btn) showRule(btn.dataset.view);
     });
-    $("#libPickPage", root).addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      const free = () => rows.filter((r) => !haveNames.has(`sigmahq/${r.path}`) && !picked.has(r.path));
-      btn.disabled = true;
-      for (let i = 0; i < 20 && free().length < PAGE && rows.length < total; i++) {
-        const before = rows.length;
-        await search(false);
-        if (rows.length === before) break;
-      }
-      btn.disabled = false;
-      const next = free().slice(0, PAGE);
+    $("#libPickPage", root).addEventListener("click", () => {
+      const next = rows.filter((r) => !haveNames.has(`sigmahq/${r.path}`) && !picked.has(r.path));
       if (!next.length) {
-        toast("Every rule in this list is already selected or in the workspace", "info");
+        toast("Every rule on this page is already selected or added", "info");
         return;
       }
       next.forEach((r) => picked.add(r.path));
       paintRows();
-      $(`#libList [data-path="${CSS.escape(next[0].path)}"]`, root)?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     $("#libAdd", root).addEventListener("click", () => addRules([...picked]));
     $("#libMore", root).addEventListener("click", (e) => {
-      if (e.target.closest("#libLoadMore")) search(false);
-      if (e.target.closest("#libLoadAll")) search(false, true);
+      const b = e.target.closest("[data-page]");
+      if (b && !b.disabled) search(Number(b.dataset.page), true);
     });
-    search(true);
+    search(1);
   }
 
   function paintPicked() {
@@ -301,29 +292,22 @@ export async function libraryView(root, route) {
           .join("")
       : `<li class="list__item">${emptyState("No rules match", "Try fewer filters or another technique id.")}</li>`;
     $("#libCount", root).textContent = `${total.toLocaleString()} rules match`;
-    $("#libMore", root).innerHTML = rows.length < total ? `<button class="btn" type="button" id="libLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button><button class="btn" type="button" id="libLoadAll">Show all ${total.toLocaleString()}</button>` : "";
+    $("#libMore", root).innerHTML = total > PAGE ? pagerHtml(page, Math.ceil(total / PAGE), total, PAGE) : "";
     paintPicked();
   }
 
   let token = 0;
-  async function search(reset, all = false) {
+  async function search(n = 1, scroll = false) {
     const mine = ++token;
-    if (reset) {
-      offset = 0;
-      rows = [];
-      $("#libList", root).innerHTML = skeleton.rows(8);
-    }
+    page = n;
+    $("#libList", root).innerHTML = skeleton.rows(8);
+    if (scroll) $("#libList", root).closest(".card")?.scrollIntoView({ block: "start", behavior: "smooth" });
     try {
-      if (all) $("#libMore", root).innerHTML = `<span class="muted">Loading all rules</span>`;
-      do {
-        const res = await api.library.search({ ...filters, limit: all ? 1000 : PAGE, offset });
-        if (mine !== token) return;
-        total = res.total;
-        rows = reset ? res.rules : rows.concat(res.rules);
-        reset = false;
-        offset = rows.length;
-        if (!res.rules.length) break;
-      } while (all && rows.length < total);
+      const res = await api.library.search({ ...filters, limit: PAGE, offset: (page - 1) * PAGE });
+      if (mine !== token) return;
+      total = res.total;
+      rows = res.rules;
+      if (!rows.length && page > 1 && total) return search(Math.ceil(total / PAGE));
       paintRows();
     } catch (err) {
       $("#libList", root).innerHTML = `<li class="list__item"><div class="notice notice--bad">${esc(err.message)}</div></li>`;

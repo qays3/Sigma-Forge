@@ -1,9 +1,10 @@
 import { api } from "../api.js";
+import { pagerHtml } from "../pager.js";
 import { readJson, writeJson } from "../shared.js";
 import { $, debounce, emptyState, esc, forging, icons, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 import { yaraStore } from "./yarakit.js";
 
-const PAGE = 50;
+const PAGE = 200;
 const KEY = "sigma-forge-yaralib";
 
 export function yaraLibrary(host) {
@@ -11,7 +12,7 @@ export function yaraLibrary(host) {
   let status = null;
   let rows = [];
   let total = 0;
-  let offset = 0;
+  let page = 1;
   let picked = new Set();
   let poll = null;
   let token = 0;
@@ -105,12 +106,12 @@ export function yaraLibrary(host) {
           <button class="btn btn--sm btn--primary" type="button" id="ylAdd" disabled>${icons.upload} Add to YARA</button>
         </div>
         <ul class="list" id="ylList"></ul>
-        <div class="card__body lib__more" id="ylMore"></div>
+        <nav class="pager" id="ylMore" aria-label="Pages"></nav>
       </div>`;
     const read = () => {
       Object.assign(prefs, { q: $("#ylQ", host).value.trim(), repo: $("#ylRepo", host).value, tag: $("#ylTag", host).value, min: Number($("#ylMin", host).value), sort: $("#ylSort", host).value });
       writeJson(KEY, prefs);
-      search(true);
+      search(1);
     };
     $("#ylQ", host).addEventListener("input", debounce(read, 250));
     ["#ylRepo", "#ylTag", "#ylMin", "#ylSort"].forEach((id) => $(id, host).addEventListener("change", read));
@@ -125,32 +126,21 @@ export function yaraLibrary(host) {
       const v = e.target.closest("[data-view]");
       if (v) view(v.dataset.view);
     });
-    $("#ylPage", host).addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      const free = () => rows.filter((r) => !haveRules.has(r.name) && !picked.has(r.name));
-      btn.disabled = true;
-      for (let i = 0; i < 20 && free().length < PAGE && rows.length < total; i++) {
-        const before = rows.length;
-        await search(false);
-        if (rows.length === before) break;
-      }
-      btn.disabled = false;
-      if (!alive) return;
-      const next = free().slice(0, PAGE);
+    $("#ylPage", host).addEventListener("click", () => {
+      const next = rows.filter((r) => !haveRules.has(r.name) && !picked.has(r.name));
       if (!next.length) {
-        toast("Every rule in this list is already selected or in YARA", "info");
+        toast("Every rule on this page is already selected or added", "info");
         return;
       }
       next.forEach((r) => picked.add(r.name));
       paint();
-      $(`#ylList [data-name="${CSS.escape(next[0].name)}"]`, host)?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     $("#ylAdd", host).addEventListener("click", () => add([...picked]));
     $("#ylMore", host).addEventListener("click", (e) => {
-      if (e.target.closest("#ylLoadMore")) search(false);
-      if (e.target.closest("#ylLoadAll")) search(false, true);
+      const b = e.target.closest("[data-page]");
+      if (b && !b.disabled) search(Number(b.dataset.page), true);
     });
-    search(true);
+    search(1);
   }
 
   function paintPicked() {
@@ -183,28 +173,21 @@ export function yaraLibrary(host) {
         }).join("")
       : `<li class="list__item">${emptyState("No rules match", "Try other words or fewer filters.")}</li>`;
     $("#ylCount", host).textContent = `${total.toLocaleString()} rules match`;
-    $("#ylMore", host).innerHTML = rows.length < total ? `<button class="btn" type="button" id="ylLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button><button class="btn" type="button" id="ylLoadAll">Show all ${total.toLocaleString()}</button>` : "";
+    $("#ylMore", host).innerHTML = total > PAGE ? pagerHtml(page, Math.ceil(total / PAGE), total, PAGE) : "";
     paintPicked();
   }
 
-  async function search(reset, all = false) {
+  async function search(n = 1, scroll = false) {
     const mine = ++token;
-    if (reset) {
-      offset = 0;
-      rows = [];
-      $("#ylList", host).innerHTML = skeleton.rows(8);
-    }
+    page = n;
+    $("#ylList", host).innerHTML = skeleton.rows(8);
+    if (scroll) $("#ylList", host).closest(".card")?.scrollIntoView({ block: "start", behavior: "smooth" });
     try {
-      if (all) $("#ylMore", host).innerHTML = `<span class="muted">Loading all rules</span>`;
-      do {
-        const res = await api.yaraLib.search({ q: prefs.q, repo: prefs.repo, tag: prefs.tag, min_score: prefs.min || 0, sort: prefs.sort, limit: all ? 1000 : PAGE, offset });
-        if (mine !== token || !alive) return;
-        total = res.total;
-        rows = reset ? res.rules : rows.concat(res.rules);
-        reset = false;
-        offset = rows.length;
-        if (!res.rules.length) break;
-      } while (all && rows.length < total);
+      const res = await api.yaraLib.search({ q: prefs.q, repo: prefs.repo, tag: prefs.tag, min_score: prefs.min || 0, sort: prefs.sort, limit: PAGE, offset: (page - 1) * PAGE });
+      if (mine !== token || !alive) return;
+      total = res.total;
+      rows = res.rules;
+      if (!rows.length && page > 1 && total) return search(Math.ceil(total / PAGE));
       paint();
     } catch (err) {
       $("#ylList", host).innerHTML = `<li class="list__item"><div class="notice notice--bad">${esc(err.message)}</div></li>`;

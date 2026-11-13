@@ -460,7 +460,7 @@ export const GUIDES = [
       { title: "Sync YARA", text: "On YARA rules pick a set: Core (high quality, low false positives), Extended (more hunting rules) or Full (everything that passed the checks). Press Sync now, or upload a yara-forge-rules zip when offline." },
       { title: "Search", text: "Sigma: by text, technique, level, status, product, category or service. YARA: by text (name, description, author, malware family), repository, tag and score, sorted by repository, score or date." },
       { title: "Look at a rule", text: "View shows the full rule. For YARA it also shows the repository, author, score, reference, license and a link to the source on GitHub." },
-      { title: "Add", text: "Tick rules or press Select page, then Add to workspace (Sigma) or Add to YARA. Select page picks the next 50 rules you do not have yet, so you can press it again after each add. Show 50 more loads the next rules, Show all loads the whole list. YARA rules go to the YARA page under yaraforge/<repository>/, with the imports and any private rules they need." },
+      { title: "Add", text: "Tick rules or press Select page, then Add to workspace (Sigma) or Add to YARA. The list shows 200 rules per page with page numbers and arrows at the bottom. Select page picks every rule on the page you do not have yet. YARA rules go to the YARA page under yaraforge/<repository>/, with the imports and any private rules they need." },
       { title: "Check for updates", text: "Check my rules for updates finds older copies of SigmaHQ rules in your workspace, with a diff and Update." },
     ],
     tips: ["Library sync is off in demo mode.", "YARA Forge rules keep their license link. Check it before you share them."],
