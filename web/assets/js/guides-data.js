@@ -360,7 +360,7 @@ export const GUIDES = [
       { title: "Set log readiness", text: "Press Log readiness and tick the log sources you collect. Blind spots are techniques covered by rules whose logs you do not have." },
       { title: "Export", text: "Navigator layer saves a file for ATT&CK Navigator. Report saves a printable HTML coverage report." },
     ],
-    tips: ["The bottom of the page shows coverage by log source and the biggest gaps compared with SigmaHQ."],
+    tips: ["At the bottom, Coverage by log source and Biggest gaps (compared with SigmaHQ) open and close with a click. The page remembers which ones you left open."],
     related: ["threat-report", "logging-setup", "purple"],
   },
   {

@@ -11,11 +11,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="/assets/css/root.css?v=6.1">
-  <link rel="stylesheet" href="/assets/css/app.css?v=6.1">
-  <script type="module" src="/assets/js/app.js?v=6.1"></script>
+  <link rel="stylesheet" href="/assets/css/root.css?v=6.3">
+  <link rel="stylesheet" href="/assets/css/app.css?v=6.3">
+  <script type="module" src="/assets/js/app.js?v=6.3"></script>
 </head>
 <body>
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="navShine" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop class="shine__a" offset="0"/>
+          <stop class="shine__b" offset="0.4"/>
+          <stop class="shine__c" offset="0.7"/>
+          <stop class="shine__d" offset="1"/>
+          <animateTransform attributeName="gradientTransform" type="translate" values="-6 -6; 6 6; -6 -6" dur="5s" repeatCount="indefinite"/>
+        </linearGradient>
+      </defs>
+    </svg>
   <div class="splash" id="splash" role="status" aria-live="polite">
     <img class="splash__logo" src="/assets/img/logo.gif" alt="" width="148" height="148">
     <div class="splash__name">Sigma <span>Forge</span></div>

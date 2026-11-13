@@ -6,6 +6,8 @@ import { paintMeters, readJson, writeJson } from "../shared.js";
 import { sysmonDrawer, threatDrawer } from "./tools.js";
 import { $, $$, cssVar, debounce, download, downloadBlob, emptyState, esc, forging, icons, levelBadge, openDrawer, plural, skeleton, toast } from "../ui.js";
 
+const FOLD_KEY = "sigma-forge-coverage-fold";
+
 const COLLECTED_KEY = "sigma-forge-collected";
 const GROUP_KEY = "sigma-forge-group";
 
@@ -366,9 +368,11 @@ export async function coverageView(root, route) {
     const box = $("#covExtra", root);
     const sources = coverage.logsources || [];
     const maxRules = Math.max(1, ...sources.map((x) => x.rules));
+    const open = readJson(FOLD_KEY, {});
+    const head = (title, sub, id) => `<summary class="fold__head"><span class="fold__chev" aria-hidden="true"></span><span class="fold__text"><span class="card__title">${title}</span><span class="card__sub" ${id ? `id="${id}"` : ""}>${sub}</span></span><span class="fold__hint" data-open="Hide" data-closed="Show"></span></summary>`;
     box.innerHTML = `
-      <div class="card">
-        <div class="card__head"><span class="card__title">Coverage by log source</span><span class="card__sub">${esc(plural(sources.length, "source"))}</span></div>
+      <details class="card fold" data-fold="sources" ${open.sources ? "open" : ""}>
+        ${head("Coverage by log source", `${esc(plural(sources.length, "source"))} · rules and techniques per source`)}
         <div class="card__body card__body--flush table-wrap">
           <table class="table">
             <thead><tr><th>Log source</th><th>Rules</th><th>Techniques</th><th>Levels</th></tr></thead>
@@ -379,11 +383,16 @@ export async function coverageView(root, route) {
               .join("")}</tbody>
           </table>
         </div>
-      </div>
-      <div class="card" id="gapCard">
-        <div class="card__head"><span class="card__title">Biggest gaps</span><span class="card__sub">from SigmaHQ</span></div>
+      </details>
+      <details class="card fold" id="gapCard" data-fold="gaps" ${open.gaps ? "open" : ""}>
+        ${head("Biggest gaps", "techniques SigmaHQ covers and you do not", "gapSub")}
         <div class="card__body">${skeleton.rows(5)}</div>
-      </div>`;
+      </details>`;
+    $$("details[data-fold]", box).forEach((d) =>
+      d.addEventListener("toggle", () => {
+        writeJson(FOLD_KEY, { ...readJson(FOLD_KEY, {}), [d.dataset.fold]: d.open });
+      })
+    );
     box.querySelectorAll(".cov__srcbar span").forEach((el) => el.style.setProperty("width", `${el.dataset.width}%`));
     const card = $("#gapCard", box);
     let gaps;
@@ -397,7 +406,7 @@ export async function coverageView(root, route) {
       $(".card__body", card).innerHTML = `<p class="muted">Sync the SigmaHQ library to see which techniques the community covers that you do not, and which log sources would close the most gaps.</p><a class="btn btn--primary" href="/library" data-link>${icons.download} Open library</a>`;
       return;
     }
-    $(".card__sub", card).textContent = `${gaps.missing} techniques SigmaHQ covers and you do not`;
+    $("#gapSub", card).textContent = `${gaps.missing} techniques SigmaHQ covers and you do not`;
     $(".card__body", card).outerHTML = `
       <ul class="list">${gaps.techniques
         .slice(0, 8)
@@ -405,7 +414,7 @@ export async function coverageView(root, route) {
           (t) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(t.id)} ${esc(t.name)}</div><div class="list__meta">${esc(t.tactics.join(", "))}${t.parent_covered ? " · parent covered" : ""}</div></div><span class="badge badge--accent">${esc(plural(t.library_rules, "rule"))}</span><button class="btn btn--sm" type="button" data-gap="${esc(t.id)}">Browse</button></li>`
         )
         .join("")}</ul>
-      <div class="card__head"><span class="card__title">Log sources that close the most gaps</span></div>
+      <div class="card__head fold__sub"><span class="card__title">Log sources that close the most gaps</span></div>
       <div class="card__body"><div class="tags">${gaps.logsources
         .slice(0, 12)
         .map((x) => `<button class="chip chip--accent" type="button" data-src="${esc(JSON.stringify({ product: x.product, category: x.category, service: x.service }))}" title="${esc(plural(x.rules, "rule"))}">${esc(x.label)} · ${x.techniques}</button>`)
