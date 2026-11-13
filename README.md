@@ -169,107 +169,135 @@ A two minute tour of every page: loading the samples, converting to Sentinel and
 <table>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/workspace.png" alt="Workspace"><p align="center"><b>Workspace</b>: load rules and see an overview</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert to Splunk"><p align="center"><b>Convert</b>: Splunk SPL from the sample pack</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rules"><p align="center"><b>Rules</b>: Sigma file list and editor on one page</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/convert-target.png" alt="Convert to Sentinel"><p align="center"><b>Targets</b>: 31 platforms with tips for each</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="ATT&CK heat map"><p align="center"><b>Coverage</b>: ATT&amp;CK heat map</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/rules-table.png" alt="Rules table"><p align="center"><b>Rules table</b>: search, filter and sort</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/add-rules.png" alt="Add rules"><p align="center"><b>Add rules</b>: files, folders, paste, GitHub, samples</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/coverage-technique.png" alt="Technique detail"><p align="center"><b>Technique</b>: sub techniques and rules</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/rules.png" alt="Rules table"><p align="center"><b>Rules</b>: search, filter and sort</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/editor.png" alt="Editor"><p align="center"><b>Editor</b>: live checks and queries as you type</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/response.png" alt="Response steps"><p align="center"><b>Response steps</b>: what to do when a rule fires</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/coverage-sources.png" alt="Coverage by log source"><p align="center"><b>Log sources and gaps</b>: what SigmaHQ covers that you do not</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/editor.png" alt="Rule editor"><p align="center"><b>Editor</b>: live checks and queries as you type</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/compare.png" alt="Compare targets"><p align="center"><b>Compare</b>: one rule on four platforms</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/test.png" alt="Test on logs"><p align="center"><b>Test</b>: run rules on EVTX and JSON logs</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/test-detail.png" alt="Test hit detail"><p align="center"><b>Hits</b>: the events a rule matched</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/library.png" alt="SigmaHQ library"><p align="center"><b>Library</b>: search and import SigmaHQ rules</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/mappings.png" alt="Field mapping"><p align="center"><b>Mappings</b>: rename fields to match your data</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/export.png" alt="Export package"><p align="center"><b>Export</b>: ready to deploy packages</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/history.png" alt="History"><p align="center"><b>History</b>: diff and restore saved versions</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/autofix.png" alt="Auto fix and explain"><p align="center"><b>Auto fix and explain</b></p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/rule-detail.png" alt="Rule detail"><p align="center"><b>Rule detail</b>: convert any rule in one click</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/quality.png" alt="Quality score"><p align="center"><b>Quality</b>: a score and grade from 12 checks</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/threat-group.png" alt="Threat group coverage"><p align="center"><b>Threat group</b>: what APT29 uses and what you miss</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/readiness.png" alt="Log readiness"><p align="center"><b>Log readiness</b>: blind spots from missing logs</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/atomic.png" alt="Atomic Red Team tests"><p align="center"><b>Atomic Red Team</b>: tests for each technique</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/noise.png" alt="Noise check"><p align="center"><b>Noise check</b>: hits per 1000 events and filters</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/rule-from-event.png" alt="Rule from an event"><p align="center"><b>Rule from an event</b>: pick fields, get a rule</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/query-to-rule.png" alt="Query to rule"><p align="center"><b>Query to rule</b>: Splunk, KQL or Elastic to Sigma</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/history.png" alt="Version history"><p align="center"><b>History</b>: diff and restore saved versions</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/deploy.png" alt="Deploy"><p align="center"><b>Deploy</b>: dry run, then push to your SIEM</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/hunt.png" alt="Hunt"><p align="center"><b>Hunt</b>: scan this machine with YARA and Sigma</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/yara.png" alt="YARA editor"><p align="center"><b>YARA</b>: write, check and scan</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/timeline.png" alt="Timeline"><p align="center"><b>Timeline</b>: attack path, hosts and hits in order</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/process-tree.png" alt="Process tree"><p align="center"><b>Process tree</b>: what started what</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/purple.png" alt="Purple team score"><p align="center"><b>Purple team</b>: detected, missed or no rule</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/schedule.png" alt="Scheduled hunt"><p align="center"><b>Scheduled hunt</b>: new hits to your chat</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/ioc.png" alt="IOCs to rules"><p align="center"><b>IOCs to rules</b>: Sigma and YARA from a list</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/autofix.png" alt="Auto fix"><p align="center"><b>Auto fix and explain</b></p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/allowlist.png" alt="Allow list"><p align="center"><b>Allow list</b>: known good values as filters</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/cost.png" alt="Query cost"><p align="center"><b>Query cost</b>: fast, ok or slow</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/yara-hit.png" alt="YARA match"><p align="center"><b>YARA match</b>: strings, offsets and hex</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/light.png" alt="Light theme"><p align="center"><b>Light theme</b></p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/inventory.png" alt="Inventory"><p align="center"><b>Inventory</b>: what needs attention</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/cases.png" alt="Cases"><p align="center"><b>Cases</b>: hits, owner and notes</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/guides.png" alt="Guides"><p align="center"><b>Guides</b>: step by step for every tool</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/fire-check.png" alt="Fire check"><p align="center"><b>Fire check</b>: silent rules and how to fix them</p></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/wizard.png" alt="Rule wizard"><p align="center"><b>Rule wizard</b>: answer, get YAML</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/correlation.png" alt="Correlation builder"><p align="center"><b>Correlation builder</b></p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/quality.png" alt="Quality"><p align="center"><b>Quality</b>: a score and grade from 12 checks</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/unit-tests.png" alt="Unit tests"><p align="center"><b>Unit tests</b>: must match, must not match</p></td>
     <td width="50%"><img src="web/assets/img/screenshots/sigmahq-check.png" alt="SigmaHQ check"><p align="center"><b>SigmaHQ check</b>: ready to contribute</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/feedback.png" alt="Verdicts"><p align="center"><b>Verdicts</b>: precision and filter ideas</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/threat-report.png" alt="Threat report"><p align="center"><b>Threat report</b>: techniques, IOCs, gaps</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/wizard.png" alt="Rule wizard"><p align="center"><b>Rule wizard</b>: answer, get YAML</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/correlation.png" alt="Correlation builder"><p align="center"><b>Correlation builder</b></p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/sysmon-config.png" alt="Logging setup"><p align="center"><b>Logging setup</b>: Sysmon and audit policy</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/query-to-rule.png" alt="Query to rule"><p align="center"><b>Query to rule</b>: Splunk, KQL or Elastic to Sigma</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/ioc.png" alt="IOCs to rules"><p align="center"><b>IOCs to rules</b>: Sigma and YARA from a list</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/yara.png" alt="YARA"><p align="center"><b>YARA</b>: file list, editor and scan</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/yara-files.png" alt="YARA files"><p align="center"><b>YARA files</b>: folders and search across rule names</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/yara-hit.png" alt="YARA match"><p align="center"><b>YARA match</b>: strings, offsets and hex</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/library.png" alt="Sigma library"><p align="center"><b>Sigma library</b>: search and import SigmaHQ rules</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/yara-library.png" alt="YARA library"><p align="center"><b>YARA library</b>: YARA Forge rules by repository, tag and score</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/convert.png" alt="Convert"><p align="center"><b>Convert</b>: Splunk SPL from the sample pack</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/convert-target.png" alt="Targets"><p align="center"><b>Targets</b>: 31 platforms with tips for each</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/cost.png" alt="Query cost"><p align="center"><b>Query cost</b>: fast, ok or slow</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/export.png" alt="Export"><p align="center"><b>Export</b>: ready to deploy packages</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/deploy.png" alt="Deploy"><p align="center"><b>Deploy</b>: dry run, then push, or check drift</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/compare.png" alt="Compare"><p align="center"><b>Compare</b>: one rule on four platforms</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/mappings.png" alt="Mappings"><p align="center"><b>Mappings</b>: rename fields to match your data</p></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="web/assets/img/screenshots/mapping-suggest.png" alt="Mapping from logs"><p align="center"><b>Mapping from logs</b></p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/allowlist.png" alt="Allow list"><p align="center"><b>Allow list</b>: known good values as filters</p></td>
   </tr>
   <tr>
-    <td width="50%"><img src="web/assets/img/screenshots/siem-import.png" alt="Import from a SIEM"><p align="center"><b>Import</b>: Splunk, Sentinel, Elastic to Sigma</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/siem-send.png" alt="Send to a SIEM"><p align="center"><b>Send</b>: replay logs into a SIEM</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage.png" alt="Coverage"><p align="center"><b>Coverage</b>: ATT&amp;CK heat map</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage-technique.png" alt="Technique"><p align="center"><b>Technique</b>: sub techniques and rules</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/coverage-sources.png" alt="Log sources and gaps"><p align="center"><b>Log sources and gaps</b>: open and close sections</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/atomic.png" alt="Atomic Red Team"><p align="center"><b>Atomic Red Team</b>: tests for each technique</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/threat-group.png" alt="Threat group"><p align="center"><b>Threat group</b>: what APT29 uses and what you miss</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/readiness.png" alt="Log readiness"><p align="center"><b>Log readiness</b>: blind spots from missing logs</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/threat-report.png" alt="Threat report"><p align="center"><b>Threat report</b>: techniques, IOCs, gaps</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/sysmon-config.png" alt="Logging setup"><p align="center"><b>Logging setup</b>: Sysmon and audit policy</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/test.png" alt="Test"><p align="center"><b>Test</b>: run rules on EVTX and JSON logs</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/test-detail.png" alt="Hits"><p align="center"><b>Hits</b>: the events a rule matched</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/attack-logs.png" alt="Attack logs"><p align="center"><b>Attack logs</b>: built in events per ATT&amp;CK technique</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/noise.png" alt="Noise check"><p align="center"><b>Noise check</b>: hits per 1000 events and filters</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/feedback.png" alt="Verdicts"><p align="center"><b>Verdicts</b>: precision and filter ideas</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/rule-from-event.png" alt="Rule from an event"><p align="center"><b>Rule from an event</b>: pick fields, get a rule</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/timeline.png" alt="Timeline"><p align="center"><b>Timeline</b>: attack path, hosts and hits in order</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/process-tree.png" alt="Process tree"><p align="center"><b>Process tree</b>: what started what</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/siem-send.png" alt="Send"><p align="center"><b>Send</b>: replay logs into a SIEM</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/fire-check.png" alt="Fire check"><p align="center"><b>Fire check</b>: silent rules and how to fix them</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/fire-check-schedule.png" alt="Nightly fire check"><p align="center"><b>Nightly fire check</b>: alert when a rule stops firing</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/purple.png" alt="Purple team"><p align="center"><b>Purple team</b>: detected, missed or no rule</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/hunt.png" alt="Hunt"><p align="center"><b>Hunt</b>: scan this machine with YARA and Sigma</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/hunt-jobs.png" alt="Background scans"><p align="center"><b>Background scans</b>: each tab runs on its own, with cancel</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/schedule.png" alt="Scheduled hunt"><p align="center"><b>Scheduled hunt</b>: new hits to your chat</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/schedule-health.png" alt="Log health watch"><p align="center"><b>Log health watch</b></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/cases.png" alt="Cases"><p align="center"><b>Cases</b>: hits, owner, notes and response steps</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/inventory.png" alt="Inventory"><p align="center"><b>Inventory</b>: what needs attention</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/siem-import.png" alt="Import"><p align="center"><b>Import</b>: Splunk, Sentinel, Elastic to Sigma</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/cti-feeds.png" alt="Threat intel feeds"><p align="center"><b>Threat intel feeds</b>: MISP and OTX to rules with an end date</p></td>
   </tr>
   <tr>
     <td width="50%"><img src="web/assets/img/screenshots/github-push.png" alt="Push to GitHub"><p align="center"><b>Push to GitHub</b>: branch and pull request</p></td>
-    <td width="50%"><img src="web/assets/img/screenshots/schedule-health.png" alt="Log health"><p align="center"><b>Log health watch</b></p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/ci-workflow.png" alt="CI workflow"><p align="center"><b>CI workflow</b>: detection as code for your repository</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/login.png" alt="Team mode"><p align="center"><b>Team mode</b>: sign in</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/reviews.png" alt="Reviews"><p align="center"><b>Reviews</b>: approve before deploy</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/team.png" alt="Users and audit log"><p align="center"><b>Users and audit log</b>: roles for the whole team</p></td>
+    <td width="50%"><img src="web/assets/img/screenshots/guides.png" alt="Guides"><p align="center"><b>Guides</b>: step by step for every tool</p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="web/assets/img/screenshots/light.png" alt="Light theme"><p align="center"><b>Light theme</b></p></td>
+    <td width="50%"></td>
   </tr>
 </table>
 
