@@ -343,68 +343,65 @@ body {
 
 .theme-switch {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  place-items: center;
   flex: none;
-  width: 66px;
-  height: 34px;
-  padding: 0 9px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-pill);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--amber);
+  background: var(--amber-softer);
+  border: 1px solid var(--amber-line);
+  border-radius: var(--r-2);
   cursor: pointer;
-  transition: border-color var(--dur-1) var(--ease);
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
 }
 
 .theme-switch:hover {
-  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  border-color: var(--amber);
 }
 
-.theme-switch__knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 26px;
-  height: 26px;
-  background: var(--amber);
-  border-radius: 50%;
-  box-shadow: 0 2px 8px var(--amber-soft);
-  transform: translateX(32px);
-  transition: transform var(--dur-2) var(--ease);
+.theme-switch:active {
+  transform: scale(0.94);
 }
 
-[data-theme="light"] .theme-switch__knob {
-  transform: translateX(0);
+.theme-switch:focus-visible {
+  outline: 2px solid var(--amber-line);
+  outline-offset: 2px;
 }
 
 .theme-switch__icon {
-  position: relative;
-  z-index: 1;
-  width: 14px;
-  height: 14px;
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: color var(--dur-2) var(--ease);
+  transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
 }
 
 .theme-switch__sun {
-  color: var(--mut);
-}
-
-.theme-switch__moon {
-  color: var(--amber-contrast);
-}
-
-[data-theme="light"] .theme-switch__sun {
-  color: var(--amber-contrast);
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
 }
 
 [data-theme="light"] .theme-switch__moon {
-  color: var(--mut);
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+
+[data-theme="light"] .theme-switch__sun {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-switch__icon {
+    transition: none;
+  }
 }
 
 .nav-toggle {
