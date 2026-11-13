@@ -21,55 +21,54 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 
 1. [What is Sigma Forge](#what-is-sigma-forge)
 2. [Features](#features)
-3. [Demo video](#demo-video)
-4. [Screenshots](#screenshots)
-5. [Quick start](#quick-start)
-6. [Setup script options](#setup-script-options)
-7. [How to use it](#how-to-use-it)
-8. [Sample pack](#sample-pack)
-9. [Supported targets](#supported-targets)
-10. [Target guide](#target-guide)
-11. [Automatic fallbacks](#automatic-fallbacks)
-12. [Correlation rules](#correlation-rules)
-13. [ATT&CK coverage](#attck-coverage)
-14. [Threat groups, log readiness and reports](#threat-groups-log-readiness-and-reports)
-15. [Testing rules on logs](#testing-rules-on-logs)
-16. [Noise check and filters](#noise-check-and-filters)
-17. [Building rules: from a query, from an event](#building-rules-from-a-query-from-an-event)
-18. [Rule quality score and version history](#rule-quality-score-and-version-history)
-19. [IOCs, explain, auto fix and SigmaHQ updates](#iocs-explain-auto-fix-and-sigmahq-updates)
-20. [Allow list and query cost](#allow-list-and-query-cost)
-21. [Workspace sharing and the public demo](#workspace-sharing-and-the-public-demo)
-22. [Hunt: scan this machine](#hunt-scan-this-machine)
-23. [Timeline, process tree and hunt report](#timeline-process-tree-and-hunt-report)
-24. [Purple team score](#purple-team-score)
-25. [YARA](#yara)
-26. [Deploy to your SIEM](#deploy-to-your-siem)
-27. [GitHub sync](#github-sync)
-28. [Command line and GitHub Action](#command-line-and-github-action)
-29. [Fire check: prove rules fire on the platform](#fire-check-prove-rules-fire-on-the-platform)
-30. [Built in attack logs](#built-in-attack-logs)
-31. [Drift check](#drift-check)
-32. [Detection as code CI](#detection-as-code-ci)
-33. [Threat intel feeds](#threat-intel-feeds)
-34. [Response steps](#response-steps)
-35. [Team mode and safe hosting](#team-mode-and-safe-hosting)
-36. [Logging setup and log health](#logging-setup-and-log-health)
-37. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
-38. [Wizard and correlation builder](#wizard-and-correlation-builder)
-39. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
-40. [Threat report to coverage](#threat-report-to-coverage)
-41. [Cases](#cases)
-42. [Sigma and YARA library](#sigma-and-yara-library)
-43. [Field mapping](#field-mapping)
-44. [Export packages](#export-packages)
-45. [API](#api)
-46. [Configuration](#configuration)
-47. [Architecture](#architecture)
-48. [Project layout](#project-layout)
-49. [Development](#development)
-50. [Known limits](#known-limits)
-51. [Credits](#credits)
+3. [Screenshots](#screenshots)
+4. [Quick start](#quick-start)
+5. [Setup script options](#setup-script-options)
+6. [How to use it](#how-to-use-it)
+7. [Sample pack](#sample-pack)
+8. [Supported targets](#supported-targets)
+9. [Target guide](#target-guide)
+10. [Automatic fallbacks](#automatic-fallbacks)
+11. [Correlation rules](#correlation-rules)
+12. [ATT&CK coverage](#attck-coverage)
+13. [Threat groups, log readiness and reports](#threat-groups-log-readiness-and-reports)
+14. [Testing rules on logs](#testing-rules-on-logs)
+15. [Noise check and filters](#noise-check-and-filters)
+16. [Building rules: from a query, from an event](#building-rules-from-a-query-from-an-event)
+17. [Rule quality score and version history](#rule-quality-score-and-version-history)
+18. [IOCs, explain, auto fix and SigmaHQ updates](#iocs-explain-auto-fix-and-sigmahq-updates)
+19. [Allow list and query cost](#allow-list-and-query-cost)
+20. [Workspace sharing and the public demo](#workspace-sharing-and-the-public-demo)
+21. [Hunt: scan this machine](#hunt-scan-this-machine)
+22. [Timeline, process tree and hunt report](#timeline-process-tree-and-hunt-report)
+23. [Purple team score](#purple-team-score)
+24. [YARA](#yara)
+25. [Deploy to your SIEM](#deploy-to-your-siem)
+26. [GitHub sync](#github-sync)
+27. [Command line and GitHub Action](#command-line-and-github-action)
+28. [Fire check: prove rules fire on the platform](#fire-check-prove-rules-fire-on-the-platform)
+29. [Built in attack logs](#built-in-attack-logs)
+30. [Drift check](#drift-check)
+31. [Detection as code CI](#detection-as-code-ci)
+32. [Threat intel feeds](#threat-intel-feeds)
+33. [Response steps](#response-steps)
+34. [Team mode and safe hosting](#team-mode-and-safe-hosting)
+35. [Logging setup and log health](#logging-setup-and-log-health)
+36. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
+37. [Wizard and correlation builder](#wizard-and-correlation-builder)
+38. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
+39. [Threat report to coverage](#threat-report-to-coverage)
+40. [Cases](#cases)
+41. [Sigma and YARA library](#sigma-and-yara-library)
+42. [Field mapping](#field-mapping)
+43. [Export packages](#export-packages)
+44. [API](#api)
+45. [Configuration](#configuration)
+46. [Architecture](#architecture)
+47. [Project layout](#project-layout)
+48. [Development](#development)
+49. [Known limits](#known-limits)
+50. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -157,12 +156,6 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Review** | Sortable and filterable rule table with a quality grade column and a detail drawer: metadata, findings, quality checks, source and a one click convert to any target. |
 | **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, `pip install .`, Docker with a hardened compose file, or a Windows build. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
-
-## Demo video
-
-<a href="media/sigma-forge-demo.mp4"><img src="media/sigma-forge-demo.jpg" alt="Watch the Sigma Forge demo video" width="100%"></a>
-
-A two minute tour of every page: loading the samples, converting to Sentinel and exporting a package, writing a rule in the editor, testing rules on sample logs, the full ATT&CK coverage map, the SigmaHQ library, comparing platforms, reviewing rules and setting a field mapping. Click the picture to open [`media/sigma-forge-demo.mp4`](media/sigma-forge-demo.mp4) (1080p, 60 fps, with sound).
 
 ## Screenshots
 
@@ -2154,7 +2147,6 @@ Sigma-Forge/
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups
 │   └── atomic/atomics.json      Atomic Red Team test index
-├── media/                       Demo video and its preview picture
 ├── sample/
 │   ├── rules/                   Sample pack by feature (windows, linux, network,
 │   │                            cloud, modifiers, correlation, collections, broken)
