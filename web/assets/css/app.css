@@ -2589,6 +2589,8 @@ body {
 
 .lib__more {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: center;
   border-top: 1px solid var(--border);
 }
@@ -6435,4 +6437,75 @@ a.chip:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-3);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.pager__info {
+  width: 100%;
+  text-align: center;
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.pager__btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pager__btn:hover:not(:disabled) {
+  border-color: var(--amber-line);
+  color: var(--text-strong);
+}
+
+.pager__btn.is-active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--amber-contrast);
+}
+
+.pager__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pager__btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pager__gap {
+  color: var(--mut);
+  padding: 0 2px;
+}
+
+@media (max-width: 600px) {
+  .pager__btn {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 6px;
+  }
+}
+
+.table tr.is-paged-out {
+  display: none !important;
 }

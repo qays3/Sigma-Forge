@@ -269,6 +269,7 @@ export async function libraryView(root, route) {
     $("#libAdd", root).addEventListener("click", () => addRules([...picked]));
     $("#libMore", root).addEventListener("click", (e) => {
       if (e.target.closest("#libLoadMore")) search(false);
+      if (e.target.closest("#libLoadAll")) search(false, true);
     });
     search(true);
   }
@@ -300,12 +301,12 @@ export async function libraryView(root, route) {
           .join("")
       : `<li class="list__item">${emptyState("No rules match", "Try fewer filters or another technique id.")}</li>`;
     $("#libCount", root).textContent = `${total.toLocaleString()} rules match`;
-    $("#libMore", root).innerHTML = rows.length < total ? `<button class="btn" type="button" id="libLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button>` : "";
+    $("#libMore", root).innerHTML = rows.length < total ? `<button class="btn" type="button" id="libLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button><button class="btn" type="button" id="libLoadAll">Show all ${total.toLocaleString()}</button>` : "";
     paintPicked();
   }
 
   let token = 0;
-  async function search(reset) {
+  async function search(reset, all = false) {
     const mine = ++token;
     if (reset) {
       offset = 0;
@@ -313,11 +314,16 @@ export async function libraryView(root, route) {
       $("#libList", root).innerHTML = skeleton.rows(8);
     }
     try {
-      const res = await api.library.search({ ...filters, limit: PAGE, offset });
-      if (mine !== token) return;
-      total = res.total;
-      rows = reset ? res.rules : rows.concat(res.rules);
-      offset = rows.length;
+      if (all) $("#libMore", root).innerHTML = `<span class="muted">Loading all rules</span>`;
+      do {
+        const res = await api.library.search({ ...filters, limit: all ? 1000 : PAGE, offset });
+        if (mine !== token) return;
+        total = res.total;
+        rows = reset ? res.rules : rows.concat(res.rules);
+        reset = false;
+        offset = rows.length;
+        if (!res.rules.length) break;
+      } while (all && rows.length < total);
       paintRows();
     } catch (err) {
       $("#libList", root).innerHTML = `<li class="list__item"><div class="notice notice--bad">${esc(err.message)}</div></li>`;

@@ -289,7 +289,7 @@ def library_search(
     service: str = Query("", max_length=60),
     status: str = Query("", max_length=20),
     group: str = Query("", max_length=60),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
     try:
@@ -343,7 +343,7 @@ def yaralib_search(
     tag: str = Query("", max_length=80),
     min_score: int = Query(0, ge=0, le=100),
     sort: str = Query("", max_length=10),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ):
     from app.core import yaralib

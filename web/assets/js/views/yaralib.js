@@ -148,6 +148,7 @@ export function yaraLibrary(host) {
     $("#ylAdd", host).addEventListener("click", () => add([...picked]));
     $("#ylMore", host).addEventListener("click", (e) => {
       if (e.target.closest("#ylLoadMore")) search(false);
+      if (e.target.closest("#ylLoadAll")) search(false, true);
     });
     search(true);
   }
@@ -182,11 +183,11 @@ export function yaraLibrary(host) {
         }).join("")
       : `<li class="list__item">${emptyState("No rules match", "Try other words or fewer filters.")}</li>`;
     $("#ylCount", host).textContent = `${total.toLocaleString()} rules match`;
-    $("#ylMore", host).innerHTML = rows.length < total ? `<button class="btn" type="button" id="ylLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button>` : "";
+    $("#ylMore", host).innerHTML = rows.length < total ? `<button class="btn" type="button" id="ylLoadMore">Show ${Math.min(PAGE, total - rows.length)} more</button><button class="btn" type="button" id="ylLoadAll">Show all ${total.toLocaleString()}</button>` : "";
     paintPicked();
   }
 
-  async function search(reset) {
+  async function search(reset, all = false) {
     const mine = ++token;
     if (reset) {
       offset = 0;
@@ -194,11 +195,16 @@ export function yaraLibrary(host) {
       $("#ylList", host).innerHTML = skeleton.rows(8);
     }
     try {
-      const res = await api.yaraLib.search({ q: prefs.q, repo: prefs.repo, tag: prefs.tag, min_score: prefs.min || 0, sort: prefs.sort, limit: PAGE, offset });
-      if (mine !== token) return;
-      total = res.total;
-      rows = reset ? res.rules : rows.concat(res.rules);
-      offset = rows.length;
+      if (all) $("#ylMore", host).innerHTML = `<span class="muted">Loading all rules</span>`;
+      do {
+        const res = await api.yaraLib.search({ q: prefs.q, repo: prefs.repo, tag: prefs.tag, min_score: prefs.min || 0, sort: prefs.sort, limit: all ? 1000 : PAGE, offset });
+        if (mine !== token || !alive) return;
+        total = res.total;
+        rows = reset ? res.rules : rows.concat(res.rules);
+        reset = false;
+        offset = rows.length;
+        if (!res.rules.length) break;
+      } while (all && rows.length < total);
       paint();
     } catch (err) {
       $("#ylList", host).innerHTML = `<li class="list__item"><div class="notice notice--bad">${esc(err.message)}</div></li>`;

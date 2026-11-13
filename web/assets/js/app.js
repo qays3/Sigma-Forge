@@ -1,6 +1,7 @@
 import { api } from "./api.js";
 import { animateFavicon } from "./favicon.js";
 import { route, startRouter } from "./router.js";
+import { startPager } from "./pager.js";
 import { store } from "./store.js";
 import { $, hideSplash, initDrawer, plural, splashText } from "./ui.js";
 import { workspaceView } from "./views/workspace.js";
@@ -127,6 +128,7 @@ async function boot() {
     paintUserBox();
   }
   await Promise.all([checkEngine(), updateCount(), checkDemo()]);
+  startPager();
   startRouter($("#main"));
   const wait = Math.max(0, 900 - (Date.now() - started));
   setTimeout(hideSplash, wait);
