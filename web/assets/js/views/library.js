@@ -247,9 +247,24 @@ export async function libraryView(root, route) {
       const btn = e.target.closest("[data-view]");
       if (btn) showRule(btn.dataset.view);
     });
-    $("#libPickPage", root).addEventListener("click", () => {
-      rows.forEach((r) => !haveNames.has(`sigmahq/${r.path}`) && picked.add(r.path));
+    $("#libPickPage", root).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const free = () => rows.filter((r) => !haveNames.has(`sigmahq/${r.path}`) && !picked.has(r.path));
+      btn.disabled = true;
+      for (let i = 0; i < 20 && free().length < PAGE && rows.length < total; i++) {
+        const before = rows.length;
+        await search(false);
+        if (rows.length === before) break;
+      }
+      btn.disabled = false;
+      const next = free().slice(0, PAGE);
+      if (!next.length) {
+        toast("Every rule in this list is already selected or in the workspace", "info");
+        return;
+      }
+      next.forEach((r) => picked.add(r.path));
       paintRows();
+      $(`#libList [data-path="${CSS.escape(next[0].path)}"]`, root)?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     $("#libAdd", root).addEventListener("click", () => addRules([...picked]));
     $("#libMore", root).addEventListener("click", (e) => {

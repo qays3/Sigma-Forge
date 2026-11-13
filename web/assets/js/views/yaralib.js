@@ -125,9 +125,25 @@ export function yaraLibrary(host) {
       const v = e.target.closest("[data-view]");
       if (v) view(v.dataset.view);
     });
-    $("#ylPage", host).addEventListener("click", () => {
-      rows.forEach((r) => !haveRules.has(r.name) && picked.add(r.name));
+    $("#ylPage", host).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const free = () => rows.filter((r) => !haveRules.has(r.name) && !picked.has(r.name));
+      btn.disabled = true;
+      for (let i = 0; i < 20 && free().length < PAGE && rows.length < total; i++) {
+        const before = rows.length;
+        await search(false);
+        if (rows.length === before) break;
+      }
+      btn.disabled = false;
+      if (!alive) return;
+      const next = free().slice(0, PAGE);
+      if (!next.length) {
+        toast("Every rule in this list is already selected or in YARA", "info");
+        return;
+      }
+      next.forEach((r) => picked.add(r.name));
       paint();
+      $(`#ylList [data-name="${CSS.escape(next[0].name)}"]`, host)?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
     $("#ylAdd", host).addEventListener("click", () => add([...picked]));
     $("#ylMore", host).addEventListener("click", (e) => {
