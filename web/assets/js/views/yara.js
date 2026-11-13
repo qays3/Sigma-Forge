@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { fileChips } from "../shared.js";
 import { $, debounce, download, emptyState, esc, forging, icons, logo, plural, skeleton, toast } from "../ui.js";
+import { addRulesDrawer } from "./addrules.js";
 import { b64File, renderYaraScan, yaraStore } from "./yarakit.js";
 
 const TEMPLATE = `rule New_Rule
@@ -32,15 +33,19 @@ export async function yaraView(root) {
         <div class="page-head__side" id="yaraStatus"></div>
       </div>
       <div class="card yara">
-        <div class="yara__head">
-          <div class="yara__tabs" id="yList" role="tablist" aria-label="YARA rule files"></div>
-          <div class="yara__tools">
+        <aside class="yfiles" aria-label="YARA rule files">
+          <div class="yfiles__tools">
             <button class="btn btn--sm" type="button" id="yNew">${icons.file} New</button>
-            <button class="btn btn--sm" type="button" id="yImport">${icons.upload} Import</button>
-            <button class="btn btn--sm btn--primary" type="button" id="ySamples">${icons.spark} Load samples</button>
+            <button class="btn btn--sm btn--primary" type="button" id="yAdd" title="Upload files or folders, paste a rule, pull from GitHub or load samples">${icons.upload} Add rules</button>
+            <a class="btn btn--sm" href="/library" data-link id="yLib">${icons.download} Library</a>
           </div>
-          <input class="hidden-input" type="file" id="yInput" accept=".yar,.yara,.txt" multiple>
-        </div>
+          <div class="yfiles__search">
+            <input class="input input--sm" type="search" id="yFind" placeholder="Search files and rule names" aria-label="Search YARA files" spellcheck="false">
+          </div>
+          <div class="yfiles__sum muted" id="ySum"></div>
+          <div class="yfiles__list" id="yList" role="tree"></div>
+        </aside>
+        <div class="yara__main">
         <div class="editor__bar">
           <input class="input editor__name" id="yName" aria-label="File name" spellcheck="false">
           <span class="muted" id="yaraCount"></span>
@@ -54,6 +59,7 @@ export async function yaraView(root) {
           <textarea class="editor__text" id="yText" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="YARA rule"></textarea>
         </div>
         <div class="editor__status" id="yCheck"></div>
+        </div>
       </div>
       <h2 class="section-title mt-5">Scan files</h2>
       <div class="card setup setup--stack">
@@ -96,15 +102,44 @@ export async function yaraView(root) {
   }
   text.addEventListener("scroll", () => ($("#yGutter", root).scrollTop = text.scrollTop));
 
+  const r0 = (name) => name.slice(name.lastIndexOf("/") + 1).replace(/\.(yar|yara)$/i, "");
+  const ruleNames = (f) => [...f.content.matchAll(/^\s*(?:private\s+|global\s+)*rule\s+(\w+)/gm)].map((m) => m[1]);
+  const closed = new Set(JSON.parse(sessionStorage.getItem("sigma-forge-yara-closed") || "[]"));
   function paintList() {
+    const q = $("#yFind", root).value.trim().toLowerCase();
+    const totalRules = files.reduce((n, f) => n + ruleNames(f).length, 0);
     $("#yaraCount", root).textContent = plural(files.length, "file");
-    const ruleCount = (f) => (f.content.match(/^\s*(?:private\s+|global\s+)*rule\s+\w+/gm) || []).length;
-    $("#yList", root).innerHTML = files.length
-      ? files.map((f) => `<button class="ytab ${f.name === current ? "is-active" : ""}" type="button" role="tab" aria-selected="${f.name === current}" data-open="${esc(f.name)}"><span class="ytab__name">${esc(f.name)}</span><span class="ytab__count">${ruleCount(f)}</span></button>`).join("") + (current ? "" : '<span class="ytab is-active is-new"><span class="ytab__name">unsaved</span></span>')
-      : '<span class="muted yara__empty">No YARA files yet. Press New or Load samples.</span>';
+    const rows = files.map((f) => {
+      const names = ruleNames(f);
+      const base = r0(f.name);
+      const hits = q ? names.filter((n) => n.toLowerCase().includes(q) && !(names.length === 1 && base === n)) : [];
+      const show = !q || f.name.toLowerCase().includes(q) || hits.length;
+      return { f, names, hits, show };
+    }).filter((r) => r.show);
+    $("#ySum", root).textContent = q ? `${plural(rows.length, "file")} match` : `${plural(files.length, "file")} · ${plural(totalRules, "rule")}`;
+    const groups = new Map();
+    rows.forEach((r) => {
+      const i = r.f.name.lastIndexOf("/");
+      const dir = i > 0 ? r.f.name.slice(0, i) : "";
+      if (!groups.has(dir)) groups.set(dir, []);
+      groups.get(dir).push(r);
+    });
+    const item = (r) => {
+      const base = r.f.name.slice(r.f.name.lastIndexOf("/") + 1);
+      const hl = (t) => {
+        if (!q) return esc(t);
+        const i = t.toLowerCase().indexOf(q);
+        return i < 0 ? esc(t) : `${esc(t.slice(0, i))}<mark>${esc(t.slice(i, i + q.length))}</mark>${esc(t.slice(i + q.length))}`;
+      };
+      return `<button class="yfile ${r.f.name === current ? "is-active" : ""}" type="button" role="treeitem" aria-selected="${r.f.name === current}" data-open="${esc(r.f.name)}" title="${esc(r.f.name)}"><svg class="yfile__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span class="yfile__name">${hl(base)}</span><span class="yfile__count">${r.names.length}</span></button>${r.hits.length ? `<div class="yfile__hits">${r.hits.slice(0, 5).map((n) => `<button class="yfile__hit mono" type="button" data-open="${esc(r.f.name)}" data-rule="${esc(n)}">${hl(n)}</button>`).join("")}${r.hits.length > 5 ? `<span class="muted">and ${r.hits.length - 5} more</span>` : ""}</div>` : ""}`;
+    };
+    const dirs = [...groups.keys()].sort((a, b) => (a === "" ? -1 : b === "" ? 1 : a.localeCompare(b)));
+    $("#yList", root).innerHTML = (current ? "" : '<div class="yfile is-active is-new"><span class="yfile__name">unsaved file</span></div>') + (rows.length
+      ? dirs.map((d) => d === "" ? groups.get(d).map(item).join("") : `<details class="ydir" data-dir="${esc(d)}" ${closed.has(d) && !q ? "" : "open"}><summary class="ydir__head"><svg class="ydir__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/></svg><span class="ydir__name">${esc(d)}</span><span class="yfile__count">${groups.get(d).length}</span></summary><div class="ydir__body">${groups.get(d).map(item).join("")}</div></details>`).join("")
+      : `<p class="muted yara__empty">${files.length ? "No file or rule matches." : "No YARA files yet. Press Add rules to upload files or folders, paste a rule, pull from GitHub or load samples, or use the Library."}</p>`);
   }
 
-  function open(name) {
+  function open(name, rule = "") {
     const f = files.find((x) => x.name === name);
     current = f ? f.name : "";
     nameInput.value = f ? f.name : "new_rule.yar";
@@ -112,6 +147,15 @@ export async function yaraView(root) {
     paintList();
     paintGutter();
     check();
+    if (rule && f) {
+      const m = new RegExp(`^\\s*(?:private\\s+|global\\s+)*rule\\s+${rule}\\b`, "m").exec(f.content);
+      if (m) {
+        const line = f.content.slice(0, m.index).split("\n").length - 1;
+        text.focus();
+        text.setSelectionRange(m.index, m.index);
+        text.scrollTop = Math.max(0, line * parseFloat(getComputedStyle(text).lineHeight || "20") - 40);
+      }
+    }
   }
 
   async function check() {
@@ -152,7 +196,7 @@ export async function yaraView(root) {
   });
 
   function cleanName() {
-    const n = (nameInput.value.trim() || "new_rule.yar").replace(/[\\/]+/g, "_");
+    const n = (nameInput.value.trim() || "new_rule.yar").replace(/\\+/g, "/").split("/").filter((p) => p && p !== "." && p !== "..").join("/") || "new_rule.yar";
     return /\.(yar|yara)$/i.test(n) ? n : `${n}.yar`;
   }
 
@@ -182,31 +226,28 @@ export async function yaraView(root) {
     open(files[0]?.name || "");
   });
   $("#yDownload", root).addEventListener("click", () => download(cleanName(), text.value));
-  $("#yImport", root).addEventListener("click", () => $("#yInput", root).click());
-  $("#yInput", root).addEventListener("change", async (e) => {
-    const list = Array.from(e.target.files || []);
-    for (const f of list) files = yaraStore.upsert({ name: f.name.replace(/\.txt$/i, ".yar"), content: await f.text() });
-    e.target.value = "";
-    toast(`Imported ${plural(list.length, "file")}`, "ok");
-    open(list.length ? list[list.length - 1].name.replace(/\.txt$/i, ".yar") : current);
-  });
-  $("#ySamples", root).addEventListener("click", async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    try {
-      const res = await yaraStore.loadSamples();
-      files = res.list;
-      toast(`Loaded ${plural(res.list.length, "YARA file")}`, "ok");
-      open(files[0]?.name || "");
-    } catch (err) {
-      toast(err.message, "bad");
-    } finally {
-      btn.disabled = false;
-    }
-  });
+  $("#yAdd", root).addEventListener("click", () =>
+    addRulesDrawer("yara", (name) => {
+      files = yaraStore.all();
+      open(name && files.some((f) => f.name === name) ? name : current || files[0]?.name || "");
+    })
+  );
   $("#yList", root).addEventListener("click", (e) => {
     const btn = e.target.closest("[data-open]");
-    if (btn) open(btn.dataset.open);
+    if (btn) open(btn.dataset.open, btn.dataset.rule || "");
+  });
+  $("#yList", root).addEventListener("toggle", (e) => {
+    const d = e.target.closest("[data-dir]");
+    if (!d || !$("#yFind", root) || $("#yFind", root).value.trim()) return;
+    if (d.open) closed.delete(d.dataset.dir);
+    else closed.add(d.dataset.dir);
+    sessionStorage.setItem("sigma-forge-yara-closed", JSON.stringify([...closed]));
+  }, true);
+  $("#yFind", root).addEventListener("input", debounce(paintList, 120));
+  $("#yLib", root).addEventListener("click", () => {
+    try {
+      localStorage.setItem("sigma-forge-library-source", "yara");
+    } catch {}
   });
 
   function paintFiles() {

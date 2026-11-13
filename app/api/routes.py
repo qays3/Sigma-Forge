@@ -38,6 +38,7 @@ from app.schemas import (
     ReportRequest,
     RuleGenRequest,
     RuleInput,
+    YaraLibRequest,
     RulesRequest,
 )
 
@@ -305,6 +306,64 @@ def library_rules(req: LibraryAddRequest):
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.get("/yaralib/status")
+def yaralib_status():
+    from app.core import yaralib
+
+    return yaralib.status()
+
+
+@router.post("/yaralib/sync")
+def yaralib_sync(package: str = Query("core", max_length=20)):
+    from app.core import yaralib
+
+    _no_demo("Library sync")
+    try:
+        return yaralib.start_sync(package)
+    except yaralib.YaraLibError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/yaralib/upload")
+async def yaralib_upload(file: UploadFile = File(...)):
+    from app.core import yaralib
+
+    _no_demo("Library upload")
+    data = await file.read(yaralib.MAX_ZIP_BYTES + 1)
+    try:
+        return yaralib.install_zip(data)
+    except yaralib.YaraLibError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/yaralib/search")
+def yaralib_search(
+    q: str = Query("", max_length=200),
+    repo: str = Query("", max_length=120),
+    tag: str = Query("", max_length=80),
+    min_score: int = Query(0, ge=0, le=100),
+    sort: str = Query("", max_length=10),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    from app.core import yaralib
+
+    try:
+        return yaralib.search(q, repo, tag, min_score, sort, limit, offset)
+    except yaralib.YaraLibError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@router.post("/yaralib/rules")
+def yaralib_rules(req: YaraLibRequest):
+    from app.core import yaralib
+
+    try:
+        return {"rules": yaralib.read_rules(req.names)}
+    except yaralib.YaraLibError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
 @router.get("/groups")
 def threat_groups():
     from app.core.threat import groups_index
@@ -389,7 +448,7 @@ def git_fetch(req: GitFetchRequest):
     from app.core.gitsync import GitError, fetch
 
     try:
-        return fetch(req.repo, req.ref, req.path)
+        return fetch(req.repo, req.ref, req.path, req.kind)
     except GitError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -521,6 +580,125 @@ def hunt_yara(req: HuntYaraRequest, request: Request):
                           req.max_size_mb * 1024 * 1024, extensions=req.extensions)
     except YaraError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _mapped(rules, allowlist, field_mapping):
+    try:
+        mapping = clean_mapping(field_mapping or {})
+    except MappingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    items = _allow(rules, allowlist)
+    if mapping:
+        from app.core.fieldmap import map_inputs
+
+        items, _ = map_inputs(items, mapping)
+    return [{"name": i.name, "content": i.content} for i in items]
+
+
+def _job(kind, params, label="", scope=""):
+    from app.core.huntjobs import JobError, start
+
+    try:
+        return start(kind, params, label, scope)
+    except JobError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@router.get("/hunt/jobs")
+def hunt_jobs(request: Request):
+    from app.core.huntjobs import all_jobs
+
+    _local_only(request)
+    return all_jobs()
+
+
+@router.post("/hunt/jobs/live")
+def hunt_job_live(req: HuntEventsRequest, request: Request):
+    from app.core.hunt import os_kind
+
+    _local_only(request)
+    if os_kind() not in ("windows", "linux", "macos"):
+        raise HTTPException(status_code=400, detail="Live log scan works on Windows, Linux and macOS. Upload .evtx files instead.")
+    if not req.rules:
+        raise HTTPException(status_code=400, detail="Add at least one rule")
+    rules = _mapped(req.rules, req.allowlist, req.field_mapping)
+    return _job("live", {"rules": rules, "channels": req.channels, "hours": req.hours, "max_events": req.max_events, "mode": req.mode},
+                "Live event logs", f"{', '.join(req.channels)}, last {req.hours:g} hours")
+
+
+@router.post("/hunt/jobs/evtx")
+async def hunt_job_evtx(
+    request: Request,
+    rules: str = Form(...),
+    mode: str = Form("auto"),
+    field_mapping: str = Form("{}"),
+    allowlist: str = Form("[]"),
+    files: list[UploadFile] = File(...),
+):
+    _local_only(request)
+    try:
+        raw = [RuleInput(**r) for r in json.loads(rules)]
+        allow = json.loads(allowlist or "[]")
+        fmap = json.loads(field_mapping or "{}")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=f"Bad request: {exc}")
+    if not raw:
+        raise HTTPException(status_code=400, detail="Add at least one rule")
+    items = _mapped(raw, allow, fmap)
+    blobs = [(u.filename or "events.json", await u.read()) for u in files[:20]]
+    return _job("evtx", {"rules": items, "files": blobs, "mode": mode}, "Uploaded logs", ", ".join(n for n, _ in blobs))
+
+
+@router.post("/hunt/jobs/yara")
+def hunt_job_yara(req: HuntYaraRequest, request: Request):
+    _local_only(request)
+    if not req.rules:
+        raise HTTPException(status_code=400, detail="Add at least one YARA rule")
+    return _job("yara", {"rules": [(r.name, r.content) for r in req.rules], "paths": req.paths, "recursive": req.recursive, "max_files": req.max_files,
+                         "max_size": req.max_size_mb * 1024 * 1024, "extensions": req.extensions}, "Files scanned", ", ".join(req.paths))
+
+
+@router.post("/hunt/jobs/procs")
+def hunt_job_procs(req: ProcessScanRequest, request: Request):
+    _local_only(request)
+    if not req.rules:
+        raise HTTPException(status_code=400, detail="Add at least one YARA rule")
+    return _job("procs", {"rules": [(r.name, r.content) for r in req.rules], "pids": req.pids}, "Processes scanned",
+                f"{len(req.pids)} processes" if req.pids else "every running process")
+
+
+@router.get("/hunt/jobs/{kind}")
+def hunt_job_get(kind: str, request: Request):
+    from app.core.huntjobs import get
+
+    _local_only(request)
+    job = get(kind)
+    if not job:
+        raise HTTPException(status_code=404, detail="No scan yet")
+    return job
+
+
+@router.post("/hunt/jobs/{kind}/cancel")
+def hunt_job_cancel(kind: str, request: Request):
+    from app.core.huntjobs import JobError, cancel
+
+    _local_only(request)
+    try:
+        return cancel(kind)
+    except JobError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@router.delete("/hunt/jobs/{kind}")
+def hunt_job_clear(kind: str, request: Request):
+    from app.core.huntjobs import JobError, clear
+
+    _local_only(request)
+    try:
+        clear(kind)
+    except JobError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return {"cleared": kind}
 
 
 @router.get("/config")

@@ -63,7 +63,7 @@ export function renderYaraScan(out, res, label = "Files scanned") {
       ${matched.length
         ? `<ul class="list">${matched
             .map(
-              (f, i) => `<li class="list__item"><div class="list__main"><div class="list__title mono yara__path" title="${esc(f.name)}">${esc(f.name)}</div><div class="list__meta">${esc(size(f.size || 0))}</div></div><div class="tags">${f.matches.map((m) => `<span class="badge badge--bad">${esc(m.rule)}</span>`).join("")}</div><button class="btn btn--sm" type="button" data-yhit="${i}">Details</button></li>`
+              (f, i) => `<li class="list__item yara__hit"><div class="list__main"><div class="list__title mono yara__path" title="${esc(f.name)}">${esc(f.name)}</div><div class="list__meta">${esc(size(f.size || 0))}</div></div><div class="tags">${f.matches.map((m) => `<span class="badge badge--bad">${esc(m.rule)}</span>`).join("")}</div><button class="btn btn--sm" type="button" data-yhit="${i}">Details</button></li>`
             )
             .join("")}</ul>`
         : '<div class="card__body"><div class="notice notice--ok">No rule matched any file.</div></div>'}

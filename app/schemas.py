@@ -98,6 +98,7 @@ class GitFetchRequest(BaseModel):
     repo: str = Field(max_length=300)
     ref: str = Field(default="", max_length=120)
     path: str = Field(default="", max_length=300)
+    kind: str = Field(default="sigma", pattern="^(sigma|yara)$")
 
 
 class ErrorResponse(BaseModel):
@@ -280,3 +281,7 @@ class CtiRequest(BaseModel):
 class ResponseRequest(BaseModel):
     content: str = Field(max_length=500000)
     steps: Optional[List[str]] = Field(default=None, max_length=30)
+
+
+class YaraLibRequest(BaseModel):
+    names: List[str] = Field(min_length=1, max_length=500)

@@ -6,13 +6,10 @@ import { $, hideSplash, initDrawer, plural, splashText } from "./ui.js";
 import { workspaceView } from "./views/workspace.js";
 import { convertView } from "./views/convert.js";
 import { coverageView } from "./views/coverage.js";
-import { rulesView } from "./views/rules.js";
-import { editorView } from "./views/editor.js";
 import { compareView } from "./views/compare.js";
 import { testView } from "./views/test.js";
 import { libraryView } from "./views/library.js";
 import { mappingsView } from "./views/mappings.js";
-import { yaraView } from "./views/yara.js";
 import { huntView } from "./views/hunt.js";
 import { purpleView } from "./views/purple.js";
 import { inventoryView } from "./views/inventory.js";
@@ -24,6 +21,7 @@ import { teamView } from "./views/teamadmin.js";
 import { cases } from "./localdata.js";
 import { loadTeam, paintUserBox, patchFetch, showLogin, teamState } from "./team.js";
 import { notFoundView } from "./views/notfound.js";
+import { rulesHub } from "./views/ruleshub.js";
 
 const THEME_KEY = "sigma-forge-theme";
 
@@ -137,13 +135,13 @@ async function boot() {
 route("/", "workspace", workspaceView);
 route("/convert", "convert", convertView);
 route("/coverage", "coverage", coverageView);
-route("/rules", "rules", rulesView);
-route("/editor", "editor", editorView);
+route("/rules", "rules", rulesHub("sigma"));
+route("/editor", "editor", rulesHub("sigma", "files"));
 route("/compare", "compare", compareView);
 route("/test", "test", testView);
 route("/library", "library", libraryView);
 route("/mappings", "mappings", mappingsView);
-route("/yara", "yara", yaraView);
+route("/yara", "yara", rulesHub("yara"));
 route("/hunt", "hunt", huntView);
 route("/purple", "purple", purpleView);
 route("/inventory", "inventory", inventoryView);

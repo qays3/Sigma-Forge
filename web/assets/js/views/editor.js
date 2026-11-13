@@ -209,16 +209,16 @@ function severityBadge(sev) {
   return `<span class="badge ${cls ? `badge--${cls}` : ""}">${esc(sev)}</span>`;
 }
 
-export async function editorView(root, route) {
+export async function editorView(root, route, opts = {}) {
   root.innerHTML = `
-    <section class="view">
-      <div class="page-head">
+    <section class="${opts.embedded ? "editor-embed" : "view"}">
+      ${opts.embedded ? "" : `<div class="page-head">
         <div>
           <div class="page-head__eyebrow">Editor</div>
           <h1>Write a rule and watch it convert</h1>
           <p>Checks, ATT&amp;CK mapping and the query for any platform update as you type.</p>
         </div>
-      </div>
+      </div>`}
       <div class="editor">
         <div class="card editor__main">
           <div class="editor__bar">
@@ -300,6 +300,7 @@ export async function editorView(root, route) {
 
   function saveDraft() {
     writeJson(DRAFT_KEY, { name: nameInput.value, content: text.value, openedId });
+    opts.onChange?.(openedId, nameInput.value);
   }
 
   function paintGutter() {
@@ -542,6 +543,7 @@ export async function editorView(root, route) {
     e.target.value = "";
     paintGutter();
     refresh();
+    saveDraft();
   });
 
   function setText(value) {
@@ -647,6 +649,7 @@ export async function editorView(root, route) {
         nameInput.value = r.name;
         text.value = r.content;
         trackState({ file: r.name });
+        opts.onChange?.(openedId, r.name);
         document.querySelector("#drawer [data-close]")?.click();
         paintGutter();
         refresh();
@@ -667,6 +670,7 @@ export async function editorView(root, route) {
     paintHistCount();
     paintTestCount();
     refresh();
+    saveDraft();
   }
 
   $("#edHistory", root).addEventListener("click", () => {
@@ -917,10 +921,19 @@ export async function editorView(root, route) {
   }
   if (route.tab) $(`#edTabs [data-tab="${route.tab}"]`, root)?.click();
   refresh();
+  opts.onChange?.(openedId, nameInput.value);
   return {
     destroy() {
       saveDraft();
       offReview();
     },
+    async open(f) {
+      if (f.id === openedId && f.name === nameInput.value) return;
+      const before = (await state.rules()).find((r) => r.id === openedId);
+      if (text.value.trim() && (!before || before.content !== text.value)) pushHistory(file().name, text.value, "unsaved, before opening another file");
+      loadText(f.name, f.content, f.id);
+      trackState({ file: f.name });
+    },
+    current: () => ({ id: openedId, name: nameInput.value }),
   };
 }

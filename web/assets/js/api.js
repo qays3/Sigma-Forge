@@ -129,7 +129,7 @@ export const api = {
   report: (rules, title, group, collected) => fetchFile("/api/report", { rules: strip(rules), title, group, collected }, "sigma-forge-report.html"),
   deployKinds: () => request("/api/deploy/kinds"),
   deploy: (rules, kind, target, settings, options, mapping, dryRun) => request("/api/deploy", { method: "POST", body: { rules: strip(rules), kind, target, settings, options, field_mapping: mapping, dry_run: dryRun, allowlist: allow() } }),
-  gitFetch: (repo, ref, path) => request("/api/git/fetch", { method: "POST", body: { repo, ref, path } }),
+  gitFetch: (repo, ref, path, kind = "sigma") => request("/api/git/fetch", { method: "POST", body: { repo, ref, path, kind } }),
   yara: {
     status: () => request("/api/yara/status"),
     samples: () => request("/api/samples/yara"),
@@ -150,6 +150,22 @@ export const api = {
     saveSchedule: (body) => request("/api/hunt/schedule", { method: "POST", body: { ...body, rules: body.rules ? strip(body.rules) : null } }),
     runSchedule: () => request("/api/hunt/schedule/run", { method: "POST" }),
     testWebhook: () => request("/api/hunt/schedule/test", { method: "POST" }),
+    jobs: () => request("/api/hunt/jobs"),
+    job: (kind) => request(`/api/hunt/jobs/${kind}`),
+    cancel: (kind) => request(`/api/hunt/jobs/${kind}/cancel`, { method: "POST" }),
+    clear: (kind) => request(`/api/hunt/jobs/${kind}`, { method: "DELETE" }),
+    startLive: (rules, channels, hours, maxEvents, mode, mapping = {}) => request("/api/hunt/jobs/live", { method: "POST", body: { rules: strip(rules), channels, hours, max_events: maxEvents, mode, field_mapping: mapping, allowlist: allow() } }),
+    startYara: (rules, paths, recursive, maxFiles, maxSizeMb, extensions) => request("/api/hunt/jobs/yara", { method: "POST", body: { rules: strip(rules), paths, recursive, max_files: maxFiles, max_size_mb: maxSizeMb, extensions } }),
+    startProcs: (rules, pids = []) => request("/api/hunt/jobs/procs", { method: "POST", body: { rules: strip(rules), pids } }),
+    startEvtx(rules, files, mode, mapping = {}) {
+      const form = new FormData();
+      form.append("rules", JSON.stringify(strip(rules)));
+      form.append("mode", mode);
+      form.append("field_mapping", JSON.stringify(mapping));
+      form.append("allowlist", JSON.stringify(allow()));
+      files.forEach((f) => form.append("files", f, f.name));
+      return upload("/api/hunt/jobs/evtx", form);
+    },
     yara: (rules, paths, recursive, maxFiles, maxSizeMb, extensions) => request("/api/hunt/yara", { method: "POST", body: { rules: strip(rules), paths, recursive, max_files: maxFiles, max_size_mb: maxSizeMb, extensions } }),
   },
   test(rules, files, mode, mapping = {}) {
@@ -176,6 +192,17 @@ export const api = {
   explain: (rules) => request("/api/rules/explain", { method: "POST", body: { rules: strip(rules) } }),
   autofix: (content, name = "") => request("/api/rules/autofix", { method: "POST", body: { content, name } }),
   libraryUpdates: (rules) => request("/api/library/updates", { method: "POST", body: { rules: strip(rules) } }),
+  yaraLib: {
+    status: () => request("/api/yaralib/status"),
+    sync: (pkg) => request(`/api/yaralib/sync?package=${encodeURIComponent(pkg)}`, { method: "POST" }),
+    upload(file) {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      return upload("/api/yaralib/upload", form);
+    },
+    search: (params) => request(`/api/yaralib/search?${query(params)}`),
+    rules: (names) => request("/api/yaralib/rules", { method: "POST", body: { names } }),
+  },
   library: {
     status: () => request("/api/library/status"),
     sync: () => request("/api/library/sync", { method: "POST" }),

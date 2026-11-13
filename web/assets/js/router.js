@@ -38,7 +38,7 @@ async function render() {
   if (current?.destroy) current.destroy();
   closeDrawer();
   $$(".nav__link").forEach((a) => {
-    const active = a.dataset.route === entry.name;
+    const active = a.dataset.route === entry.name || (a.dataset.also || "").split(" ").includes(entry.name);
     a.classList.toggle("is-active", active);
     if (active) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");

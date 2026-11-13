@@ -9,8 +9,9 @@ import { renderYaraScan, yaraStore } from "./yarakit.js";
 const PREF_KEY = "sigma-forge-hunt";
 const HOURS = [[1, "Last hour"], [6, "Last 6 hours"], [24, "Last 24 hours"], [72, "Last 3 days"], [168, "Last 7 days"], [720, "Last 30 days"]];
 
+const JOB_KINDS = ["live", "evtx", "yara", "procs"];
+const RUN_BTN = { live: "#liveRun", evtx: "#evtxRun", yara: "#yRun", procs: "#procRun" };
 let evtxFiles = [];
-let last = null;
 
 export async function huntView(root) {
   root.innerHTML = `
@@ -53,10 +54,14 @@ export async function huntView(root) {
           <label class="inline-field"><span class="field__label">Field mapping</span><select class="select" id="huntMap"></select></label>
         </div>
       </div>
-      <div id="huntOut" class="mt-5"></div>
+      <div class="mt-5" id="huntOuts">${JOB_KINDS.map((k) => `<div data-hout="${k}" hidden></div>`).join("")}</div>
     </section>`;
 
-  const out = $("#huntOut", root);
+  const outFor = (k) => $(`[data-hout="${k}"]`, root);
+  const jobs = {};
+  const shown = {};
+  let pollTimer = null;
+  let alive = true;
   const prefs = readJson(PREF_KEY, {});
   const rules = await state.rules();
   let selected = new Set(rules.map((r) => r.id));
@@ -72,6 +77,7 @@ export async function huntView(root) {
     if (!tab) return;
     $$("#huntTabs .tab", root).forEach((t) => t.classList.toggle("is-active", t === tab));
     $$("[data-hpane]", root).forEach((p) => (p.hidden = p.dataset.hpane !== tab.dataset.hunt));
+    $$("[data-hout]", root).forEach((p) => (p.hidden = p.dataset.hout !== tab.dataset.hunt));
     prefs.tab = tab.dataset.hunt;
     writeJson(PREF_KEY, prefs);
   });
@@ -145,18 +151,7 @@ export async function huntView(root) {
     const max = Number($("#liveMax", root).value);
     Object.assign(prefs, { channels: [...chosenChannels], hours, max });
     writeJson(PREF_KEY, prefs);
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    out.innerHTML = `${forging(`Reading ${plural(channels.length, "event log")} and running ${plural(list.length, "rule")}`)}${skeleton.stats(4)}${skeleton.rows(8)}`;
-    try {
-      const res = await api.hunt.events(list, channels, hours, max, "auto", mappings.get($("#huntMap", root).value)?.map || {});
-      last = { kind: "sigma", res, scope: `${channels.join(", ")}, last ${HOURS.find(([h]) => h === hours)?.[1].toLowerCase().replace("last ", "") || `${hours} hours`}` };
-      paintLast();
-    } catch (err) {
-      out.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
-    } finally {
-      btn.disabled = false;
-    }
+    startJob("live", () => api.hunt.startLive(list, channels, hours, max, "auto", mappings.get($("#huntMap", root).value)?.map || {}));
   }
 
   function channelHeader(res) {
@@ -166,14 +161,111 @@ export async function huntView(root) {
       .join("")}</ul></div>`;
   }
 
-  function paintLast() {
-    if (!last) {
-      out.innerHTML = `<div class="card">${emptyState("Ready to hunt", "Pick a scan above. Results show here with the same noise checks and event details as the Test page.")}</div>`;
+  const EMPTY = {
+    live: ["No live scan yet", "Pick the event logs and press Scan now. The scan keeps running on the server if you switch tabs, leave the page or reload."],
+    evtx: ["No upload scan yet", "Drop .evtx files and press Scan with Sigma."],
+    yara: ["No folder scan yet", "Add folders and press Scan folders."],
+    procs: ["No process scan yet", "Press Scan processes to scan the memory of running processes."],
+  };
+  const since = (t) => {
+    const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+  };
+  const when = (t) => (t ? new Date(t * 1000).toLocaleString() : "");
+  function paintJob(kind) {
+    const box = outFor(kind);
+    const job = jobs[kind];
+    const btn = $(RUN_BTN[kind], root);
+    if (btn) btn.disabled = job?.status === "running" || btn.dataset.noRules === "1";
+    if (!job) {
+      shown[kind] = null;
+      box.innerHTML = `<div class="card">${emptyState(...EMPTY[kind])}</div>`;
       return;
     }
-    if (last.kind === "yara") renderYaraScan(out, last.res, last.label || "Files scanned");
-    else renderResults(out, last.res, channelHeader(last.res), { title: `Hunt on ${status.host || "this machine"}`, scope: last.scope || "" });
+    if (job.status === "running") {
+      shown[kind] = null;
+      const t = $("[data-elapsed]", box);
+      if (t && box.dataset.job === job.id) {
+        t.textContent = since(job.started);
+        $("[data-stage]", box).textContent = job.stage || "Working";
+        return;
+      }
+      box.dataset.job = job.id;
+      box.innerHTML = `<div class="card hjob"><div class="card__body"><div class="hjob__row"><div class="hjob__main">${forging(job.label || "Scanning")}<div class="hjob__meta"><span data-stage>${esc(job.stage || "Working")}</span> · running for <span data-elapsed>${since(job.started)}</span>${job.scope ? ` · <span class="mono">${esc(job.scope)}</span>` : ""}</div></div><button class="btn btn--danger btn--sm" type="button" data-cancel="${kind}">${icons.trash} Cancel scan</button></div><p class="muted mb-0">It runs on the server. You can switch tabs, leave this page or reload, and the result will be here.</p></div></div>${skeleton.rows(4)}`;
+      return;
+    }
+    box.dataset.job = job.id;
+    if (job.status === "cancelled" || job.status === "error") {
+      shown[kind] = null;
+      box.innerHTML = `<div class="card"><div class="card__body"><div class="notice ${job.status === "error" ? "notice--bad" : "notice--warn"}">${job.status === "error" ? esc(job.error || "The scan failed") : "You cancelled this scan."}</div><div class="row mt-4"><span class="muted">${esc(job.label || "")} · ${esc(when(job.finished))}</span><div class="spacer"></div><button class="btn btn--sm btn--ghost" type="button" data-clear="${kind}">Clear</button></div></div></div>`;
+      return;
+    }
+    if (shown[kind] === job.id) return;
+    shown[kind] = job.id;
+    box.innerHTML = `${skeleton.stats(4)}${skeleton.rows(6)}`;
+    api.hunt.job(kind).then((full) => {
+      if (!alive || shown[kind] !== job.id || !full.result) return;
+      const head = `<div class="hjob__done"><span class="muted">${esc(full.label || "")} finished ${esc(when(full.finished))}${full.scope ? ` · <span class="mono">${esc(full.scope)}</span>` : ""}</span><button class="btn btn--sm btn--ghost" type="button" data-clear="${kind}">Clear result</button></div>`;
+      if (kind === "yara" || kind === "procs") {
+        renderYaraScan(box, full.result, full.label || "Files scanned");
+        box.insertAdjacentHTML("afterbegin", head);
+      } else {
+        renderResults(box, full.result, head + channelHeader(full.result), { title: `Hunt on ${status.host || "this machine"}`, scope: full.scope || "" });
+      }
+    }).catch((err) => {
+      box.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
+    });
   }
+  async function syncJobs() {
+    if (!alive) return;
+    try {
+      const all = await api.hunt.jobs();
+      JOB_KINDS.forEach((k) => {
+        jobs[k] = all[k];
+        paintJob(k);
+      });
+    } catch {
+      JOB_KINDS.forEach((k) => paintJob(k));
+    }
+    clearTimeout(pollTimer);
+    if (alive && JOB_KINDS.some((k) => jobs[k]?.status === "running")) pollTimer = setTimeout(syncJobs, 1500);
+  }
+  async function startJob(kind, call) {
+    const btn = $(RUN_BTN[kind], root);
+    if (btn) btn.disabled = true;
+    try {
+      jobs[kind] = await call();
+      paintJob(kind);
+      syncJobs();
+    } catch (err) {
+      toast(err.message, "bad");
+      if (btn) btn.disabled = false;
+    }
+  }
+  $("#huntOuts", root).addEventListener("click", async (e) => {
+    const c = e.target.closest("[data-cancel]");
+    if (c) {
+      c.disabled = true;
+      try {
+        jobs[c.dataset.cancel] = await api.hunt.cancel(c.dataset.cancel);
+        toast("Scan cancelled", "ok");
+      } catch (err) {
+        toast(err.message, "bad");
+      }
+      syncJobs();
+      return;
+    }
+    const cl = e.target.closest("[data-clear]");
+    if (cl) {
+      try {
+        await api.hunt.clear(cl.dataset.clear);
+        jobs[cl.dataset.clear] = null;
+        paintJob(cl.dataset.clear);
+      } catch (err) {
+        toast(err.message, "bad");
+      }
+    }
+  });
 
   function paintEvtx() {
     $("#evtxList", root).innerHTML = fileChips(evtxFiles, "No files yet");
@@ -206,18 +298,7 @@ export async function huntView(root) {
       toast("Add an .evtx file first", "bad");
       return;
     }
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    out.innerHTML = `${forging(`Scanning ${plural(evtxFiles.length, "file")} with ${plural(list.length, "rule")}`)}${skeleton.stats(4)}${skeleton.rows(8)}`;
-    try {
-      const res = await api.test(list, evtxFiles, "auto", mappings.get($("#huntMap", root).value)?.map || {});
-      last = { kind: "sigma", res, scope: evtxFiles.map((f) => f.name).join(", ") };
-      paintLast();
-    } catch (err) {
-      out.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
-    } finally {
-      btn.disabled = false;
-    }
+    startJob("evtx", () => api.hunt.startEvtx(list, evtxFiles, "auto", mappings.get($("#huntMap", root).value)?.map || {}));
   });
 
   function paintYara() {
@@ -244,7 +325,7 @@ export async function huntView(root) {
         <div class="spacer"></div>
         <span class="muted">${yr.length ? esc(plural(yr.length, "YARA file")) : "No YARA rules yet"}</span>
         ${yr.length ? "" : '<a class="btn btn--sm" href="/yara" data-link>Add YARA rules</a>'}
-        <button class="btn btn--primary" type="button" id="yRun" ${yr.length ? "" : "disabled"}>${icons.play} Scan folders</button>
+        <button class="btn btn--primary" type="button" id="yRun" ${yr.length ? "" : 'disabled data-no-rules="1"'}>${icons.play} Scan folders</button>
       </div>`;
     box.onclick = (e) => {
       const chip = e.target.closest("[data-path]");
@@ -269,18 +350,7 @@ export async function huntView(root) {
     const recursive = $("#yRec", root).checked;
     Object.assign(prefs, { paths, ext, maxMb, recursive });
     writeJson(PREF_KEY, prefs);
-    const btn = e.currentTarget;
-    btn.disabled = true;
-    out.innerHTML = `${forging(`Scanning ${plural(paths.length, "path")} with YARA`)}${skeleton.stats(3)}${skeleton.rows(6)}`;
-    try {
-      const res = await api.hunt.yara(yaraStore.all(), paths, recursive, 20000, maxMb, ext);
-      last = { kind: "yara", res, label: "Files scanned" };
-      paintLast();
-    } catch (err) {
-      out.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
-    } finally {
-      btn.disabled = false;
-    }
+    startJob("yara", () => api.hunt.startYara(yaraStore.all(), paths, recursive, 20000, maxMb, ext));
   }
 
   $("#huntRules", root).addEventListener("click", () => {
@@ -332,24 +402,13 @@ export async function huntView(root) {
         <div class="spacer"></div>
         <span class="muted">${yr.length ? esc(plural(yr.length, "YARA file")) : "No YARA rules yet"}</span>
         ${yr.length ? "" : '<a class="btn btn--sm" href="/yara" data-link>Add YARA rules</a>'}
-        <button class="btn btn--primary" type="button" id="procRun" ${yr.length ? "" : "disabled"}>${icons.play} Scan processes</button>
+        <button class="btn btn--primary" type="button" id="procRun" ${yr.length ? "" : 'disabled data-no-rules="1"'}>${icons.play} Scan processes</button>
       </div>`;
     $("#procRun", box)?.addEventListener("click", async (e) => {
       const pids = $("#procPids", box).value.split(/[\s,]+/).map(Number).filter((n) => Number.isInteger(n) && n > 0);
       prefs.pids = $("#procPids", box).value.trim();
       writeJson(PREF_KEY, prefs);
-      const btn = e.currentTarget;
-      btn.disabled = true;
-      out.innerHTML = `${forging(pids.length ? `Scanning ${pids.length} process${pids.length === 1 ? "" : "es"}` : "Scanning every running process")}${skeleton.stats(3)}${skeleton.rows(6)}`;
-      try {
-        const res = await api.hunt.processes(yaraStore.all(), pids);
-        last = { kind: "yara", res, label: "Processes scanned" };
-        paintLast();
-      } catch (err) {
-        out.innerHTML = `<div class="card"><div class="notice notice--bad">${esc(err.message)}</div></div>`;
-      } finally {
-        btn.disabled = false;
-      }
+      startJob("procs", () => api.hunt.startProcs(yaraStore.all(), pids));
     });
   }
 
@@ -454,7 +513,15 @@ export async function huntView(root) {
   paintYara();
   paintProcs();
   paintSchedule();
-  paintLast();
+  const cur = $("#huntTabs .tab.is-active", root)?.dataset.hunt || "live";
+  $$("[data-hout]", root).forEach((p) => (p.hidden = p.dataset.hout !== cur));
+  JOB_KINDS.forEach((k) => paintJob(k));
+  syncJobs();
   if (!rules.length) toast("Add Sigma rules in the workspace to scan event logs", "info", 4200);
-  return null;
+  return {
+    destroy() {
+      alive = false;
+      clearTimeout(pollTimer);
+    },
+  };
 }

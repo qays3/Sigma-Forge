@@ -49,7 +49,9 @@ def default_branch(owner: str, repo: str) -> Optional[str]:
         return None
 
 
-def fetch(repo: str, ref: str = "", path: str = "") -> Dict:
+def fetch(repo: str, ref: str = "", path: str = "", kind: str = "sigma") -> Dict:
+    yara = kind == "yara"
+    exts = (".yar", ".yara") if yara else (".yml", ".yaml")
     spec = parse_repo(repo, ref, path)
     owner, name = spec["owner"], spec["repo"]
     branch = spec["ref"] or default_branch(owner, name) or "main"
@@ -81,7 +83,7 @@ def fetch(repo: str, ref: str = "", path: str = "") -> Dict:
         rel = "/".join(parts)
         if want and not (rel == want or rel.startswith(want + "/")):
             continue
-        if PurePosixPath(rel).suffix.lower() not in (".yml", ".yaml"):
+        if PurePosixPath(rel).suffix.lower() not in exts:
             continue
         if rel.startswith(".github/") or "/.github/" in rel:
             continue
@@ -93,12 +95,15 @@ def fetch(repo: str, ref: str = "", path: str = "") -> Dict:
         except UnicodeDecodeError:
             skipped += 1
             continue
-        if "detection:" not in text and "correlation:" not in text:
+        if yara:
+            if not re.search(r"^\s*(?:private\s+|global\s+)*rule\s+\w+", text, re.M):
+                continue
+        elif "detection:" not in text and "correlation:" not in text:
             continue
         rules.append({"name": f"{prefix}/{rel}", "content": text})
         if len(rules) >= MAX_RULES:
             break
     if not rules:
-        raise GitError("No Sigma rules found in that repository or folder")
+        raise GitError(f"No {'YARA' if yara else 'Sigma'} rules found in that repository or folder")
     return {"owner": owner, "repo": name, "ref": branch, "path": want, "prefix": prefix + "/", "rules": rules, "skipped": skipped,
             "truncated": len(rules) >= MAX_RULES}

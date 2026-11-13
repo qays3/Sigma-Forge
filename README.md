@@ -60,7 +60,7 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 39. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
 40. [Threat report to coverage](#threat-report-to-coverage)
 41. [Cases](#cases)
-42. [SigmaHQ library](#sigmahq-library)
+42. [Sigma and YARA library](#sigma-and-yara-library)
 43. [Field mapping](#field-mapping)
 44. [Export packages](#export-packages)
 45. [API](#api)
@@ -403,8 +403,8 @@ flowchart LR
 1. **Workspace.** Drop rule files or a folder on the drop zone, or click **Load samples** (and **Load error samples** to see how problems are reported). You see how many rules parsed, how many have errors or findings, and a breakdown by level and log source.
 2. **Convert.** Pick a target on the left, choose an output format, select the rules, and press **Convert**. Each rule gets its own card with the query, any notes and a copy button. Tabs above the cards filter them by Converted, Skipped and Failed. **Download** saves all converted rules as one file.
 3. **Coverage.** The heat map shows every ATT&CK Enterprise tactic and technique. Darker purple means more rules. Click a technique to see its sub techniques and the rules that cover it. Use **Covered only** to hide gaps, or keep them visible to find what to write next. **Navigator layer** downloads a JSON layer for [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).
-4. **Rules.** Search and filter by level, status, product, tactic or check state. Click a row to open the detail drawer with metadata, validator findings, the rule source and a quick convert to any target.
-5. **Editor.** Start from a template or open a workspace rule. Checks, the query for the chosen target and the ATT&CK tags refresh as you type. **Save to workspace** (or Ctrl+S) stores it. Your draft is kept in the browser between visits.
+4. **Rules.** One page with two tabs, **Sigma rules** and **YARA rules**, plus a library button that opens the SigmaHQ or YARA Forge library. Both tabs have a file list on the left (folders, search, counts) and the editor on the right. **Add rules** above each list uploads files or whole folders (drop or choose), takes pasted rules, pulls rules from a public GitHub repository (saved sources can be synced again), and loads samples. On Sigma it also opens SIEM import and CTI feeds. Sigma rules also has a **Table** view: search and filter by level, status, product, tactic or check state. Click a row to open the detail drawer with metadata, validator findings, the rule source and a quick convert to any target.
+5. **Editor** (on the Sigma rules tab, next to the file list). Start from a template or open a workspace rule. Checks, the query for the chosen target and the ATT&CK tags refresh as you type. **Save to workspace** (or Ctrl+S) stores it. Your draft is kept in the browser between visits.
 6. **Compare.** Pick one rule and up to four platforms to see their queries next to each other.
 7. **Test.** Drop log files or click **Load sample logs**, choose how strictly log sources must match, and press **Run test**. Tabs split the rules into Fired, Silent, Errors and Skipped. **Details** shows the matching events, correlation alerts and the SQLite query that ran.
 8. **Library.** Click **Sync now** to download the latest SigmaHQ release, then search and add rules. The Coverage page uses it to suggest rules for the techniques you miss.
@@ -412,7 +412,7 @@ flowchart LR
 10. **Export.** On the Convert page, **Export package** builds a zip for the selected target with install steps.
 11. **Deploy.** On the Convert page, **Deploy** sends the selected rules to Splunk, Elastic, Sentinel or Wazuh. Press **Dry run** first to see every request.
 12. **Hunt.** Run Sigma on the live event logs of this machine, scan folders with YARA, or upload `.evtx` files.
-13. **YARA.** Keep YARA rules next to your Sigma rules, check them and scan files.
+13. **YARA** (the YARA rules tab of Rules). Keep YARA rules next to your Sigma rules, check them and scan files.
 
 ## Sample pack
 
@@ -1583,6 +1583,8 @@ The Hunt page scans the computer Sigma Forge is running on. Scans only run when 
 * **YARA processes.** Scans the memory of every running process (or only the PIDs you list) with your YARA rules. This finds payloads that never touch the disk. It needs admin rights on Windows and root on Linux; processes it cannot open are counted and skipped.
 * **Scheduled hunt.** Pick logs, rules, how often (5 minutes to 12 hours) and the lowest level to alert on, and paste a Slack, Microsoft Teams, Discord or any webhook URL. While Sigma Forge runs, it hunts in the background and sends only new hits: each hit is remembered so it is never sent twice. **Send a test message** checks the webhook, **Run now** runs it at once, and the run history shows every run. The settings are saved in `data/hunt_schedule.json`, so the schedule starts again with the server.
 
+**Background scans.** Live logs, Upload .evtx, YARA folders and YARA processes each run their own scan in a separate process on the server. Switch tabs, leave the page or reload: the scan keeps going, the tab shows how long it has run, and the result appears when it is done. **Cancel scan** stops it right away. The last result of each tab is saved in `data/hunt/`, so it is still there after a restart, until you press **Clear result**.
+
 From the command line: `sigma-forge hunt rules/ --channels sysmon security --hours 24` (on Linux: `--channels journal auditd`) and `sigma-forge yara yara_rules/ --scan C:\Users\Public`.
 
 > Live logs need Sigma Forge to run directly on the machine, not in Docker.
@@ -1610,6 +1612,8 @@ Each technique gets **Detected** (a rule tagged with it fired), **Missed** (rule
 ## YARA
 
 The YARA page keeps YARA rules in your browser next to your Sigma rules.
+
+* A file explorer on the left instead of tabs: files are grouped by folder (name a file `folder/name.yar`), each shows how many rules it holds, and the search box finds files by name or by a rule name inside them. Click a rule in the results to jump to it in the editor.
 
 * An editor with line numbers that checks the rule with the real YARA engine ([yara-python](https://github.com/VirusTotal/yara-python)) as you type, and shows each rule and its string count, or the error line.
 * **Load samples** adds five sample rule files (ransom notes, shadow copy deletion, encoded PowerShell, PE (Portable Executable) headers and high entropy blobs, cloud keys). **Load sample files** adds files each rule matches, plus one clean file.
@@ -1775,9 +1779,19 @@ The **Inventory** page puts it together: quality, tests, precision, last fired a
 
 **Create case** on any test or hunt result keeps the hits of the rules you pick. A case has status, severity, owner, summary and notes, and exports as an HTML report.
 
-## SigmaHQ library
+## Sigma and YARA library
 
-**Sync now** downloads `sigma_all_rules.zip` from the latest [SigmaHQ release](https://github.com/SigmaHQ/sigma/releases) and indexes it by title, technique, log source, level and status. The files are stored in `data/sigmahq` (a Docker volume when you use compose). On a machine without internet, download the zip yourself and use **Upload zip**. Rules you add are stored as `sigmahq/<path>` in your workspace, so you can tell them apart from your own.
+The Library page has two sources. Pick one at the top.
+
+**Sigma rules · SigmaHQ.** **Sync now** downloads `sigma_all_rules.zip` from the latest [SigmaHQ release](https://github.com/SigmaHQ/sigma/releases) and indexes it by title, technique, log source, level and status. The files are stored in `data/sigmahq` (a Docker volume when you use compose). On a machine without internet, download the zip yourself and use **Upload zip**. Rules you add are stored as `sigmahq/<path>` in your workspace, so you can tell them apart from your own.
+
+**YARA rules · YARA Forge.** [YARA Forge](https://yarahq.github.io/) collects public YARA rules from many repositories, checks their quality and speed, and ships them as weekly rule packages. Pick a package and press **Sync now**:
+
+* **Core**: high quality rules with few false positives, fast to scan.
+* **Extended**: core plus more threat hunting rules.
+* **Full**: every rule that passed the checks.
+
+Sigma Forge downloads `yara-forge-rules-<package>.zip` from the latest [release](https://github.com/YARAHQ/yara-forge/releases), splits it into single rules and indexes them by name, description, author, repository, tags, score and date. Offline, download the zip yourself and use **Upload zip**. Search, filter by repository, tag and score, sort by score or date, and open any rule to see its meta, license and a link to its source. **Add to YARA** puts each rule on the YARA page as `yaraforge/<repository>/<rule>.yar`, with the `import` lines and any private rules it needs, so every file compiles on its own. The index is stored in `data/yaraforge` (or `SIGMA_FORGE_STATE_DIR/yaraforge`).
 
 ## Field mapping
 
@@ -1832,6 +1846,16 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `POST` | `/api/library/upload` | Load a `sigma_all_rules.zip` you downloaded |
 | `GET` | `/api/library/search` | Search by `q`, `technique`, `product`, `category`, `service`, `level`, `status`, `group` |
 | `POST` | `/api/library/rules` | Get the content of library rules by path |
+| `GET` | `/api/yaralib/status` | YARA Forge library state, package, repositories and tags |
+| `POST` | `/api/yaralib/sync?package=core` | Download a YARA Forge package (core, extended or full) |
+| `POST` | `/api/yaralib/upload` | Load a YARA Forge zip (multipart form) |
+| `GET` | `/api/yaralib/search` | Search YARA rules by text, repository, tag and score |
+| `POST` | `/api/yaralib/rules` | Get YARA rules by name, with imports and needed private rules |
+| `GET` | `/api/hunt/jobs` | State of the background scan on each Hunt tab |
+| `POST` | `/api/hunt/jobs/live`, `/evtx`, `/yara`, `/procs` | Start a background scan for one Hunt tab |
+| `GET` | `/api/hunt/jobs/{kind}` | The scan and its result |
+| `POST` | `/api/hunt/jobs/{kind}/cancel` | Cancel a running scan |
+| `DELETE` | `/api/hunt/jobs/{kind}` | Clear a finished result |
 | `GET` | `/api/groups` | ATT&CK threat groups with their technique counts |
 | `GET` | `/api/atomic/{technique}` | Atomic Red Team tests for a technique and its sub techniques |
 | `POST` | `/api/report` | Standalone HTML coverage report (takes `title`, `group`, `collected`) |
@@ -1843,7 +1867,7 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `POST` | `/api/querygen` | Turn a SIEM query into a Sigma rule |
 | `GET` | `/api/deploy/kinds` | Platforms you can deploy to |
 | `POST` | `/api/deploy` | Deploy rules, or plan the requests with `dry_run` (the default) |
-| `POST` | `/api/git/fetch` | Download Sigma rules from a GitHub repository |
+| `POST` | `/api/git/fetch` | Download Sigma rules (or YARA rules with `"kind": "yara"`) from a GitHub repository |
 | `GET` | `/api/yara/status` | Whether YARA is installed, and its version |
 | `GET` | `/api/samples/yara` | Sample YARA rules and files |
 | `POST` | `/api/yara/check` | Compile YARA rules and list them |
@@ -2069,6 +2093,8 @@ Sigma-Forge/
 │       ├── ciworkflow.py        GitHub Actions workflow for detection as code
 │       ├── ctifeeds.py          MISP and OTX indicators to rules with end dates
 │       ├── response.py          Response steps per rule
+│       ├── yaralib.py           YARA Forge library sync, index and search
+│       ├── huntjobs.py          Background Hunt scans per tab, with cancel
 │       ├── team.py              Users, sessions, roles, audit, reviews, rate limit
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
@@ -2095,7 +2121,7 @@ Sigma-Forge/
 │       │                        compare, test, hunt, purple, yara, library, mappings,
 │       │                        results (shared test results), yarakit, inventory, cases,
 │       │                        builders, editortools, tools (drawers for the new tools), guides, firecheck,
-│       │                        reviews, teamadmin
+│       │                        reviews, teamadmin, yaralib, ruleshub (Sigma and YARA tabs), sigmafiles (Sigma file list and editor)
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups

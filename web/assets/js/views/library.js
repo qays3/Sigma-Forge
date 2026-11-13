@@ -2,6 +2,7 @@ import { api } from "../api.js";
 import { navigate, trackState } from "../router.js";
 import { state } from "../state.js";
 import { store } from "../store.js";
+import { yaraLibrary } from "./yaralib.js";
 import { $, $$, debounce, emptyState, esc, forging, icons, levelBadge, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 
 const PAGE = 50;
@@ -14,12 +15,19 @@ export async function libraryView(root, route) {
       <div class="page-head">
         <div>
           <div class="page-head__eyebrow">Library</div>
-          <h1>SigmaHQ rule library</h1>
-          <p>Pull the full SigmaHQ rule set, search it by technique or log source, and add the rules you need to your workspace.</p>
+          <h1>Sigma and YARA rule library</h1>
+          <p>Pull the SigmaHQ Sigma rules and the YARA Forge YARA rules, search them, and add the ones you need to your workspace or your YARA files.</p>
         </div>
       </div>
-      <div id="libStatus">${skeleton.card(2)}</div>
-      <div id="libBody" class="mt-4"></div>
+      <div class="seg lib__src" id="libSrc" role="tablist">
+        <button class="seg__btn" type="button" data-src="sigma">Sigma rules · SigmaHQ</button>
+        <button class="seg__btn" type="button" data-src="yara">YARA rules · YARA Forge</button>
+      </div>
+      <div data-srcpane="sigma" class="mt-4">
+        <div id="libStatus">${skeleton.card(2)}</div>
+        <div id="libBody" class="mt-4"></div>
+      </div>
+      <div data-srcpane="yara" class="mt-4" hidden></div>
     </section>`;
 
   let status;
@@ -30,6 +38,33 @@ export async function libraryView(root, route) {
   let picked = new Set();
   let poll = null;
   let haveNames = new Set((await state.rules()).map((r) => r.name));
+  let yl = null;
+  const SRC_KEY = "sigma-forge-library-source";
+  const showSrc = (src) => {
+    $$("#libSrc [data-src]", root).forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.src === src);
+      b.setAttribute("aria-selected", String(b.dataset.src === src));
+    });
+    $$("[data-srcpane]", root).forEach((p) => (p.hidden = p.dataset.srcpane !== src));
+    if (src === "yara" && !yl) yl = yaraLibrary($('[data-srcpane="yara"]', root));
+    try {
+      localStorage.setItem(SRC_KEY, src);
+    } catch {}
+    trackState({ source: src });
+  };
+  $("#libSrc", root).addEventListener("click", (e) => {
+    const b = e.target.closest("[data-src]");
+    if (b) showSrc(b.dataset.src);
+  });
+  let startSrc = route.source || (route.filters ? "sigma" : "");
+  if (!startSrc) {
+    try {
+      startSrc = localStorage.getItem(SRC_KEY) || "sigma";
+    } catch {
+      startSrc = "sigma";
+    }
+  }
+  showSrc(startSrc);
 
   function statusCard() {
     const box = $("#libStatus", root);
@@ -330,6 +365,7 @@ export async function libraryView(root, route) {
   return {
     destroy() {
       clearTimeout(poll);
+      yl?.destroy();
     },
   };
 }

@@ -19,3 +19,5 @@ dist/
 *.spec
 .venv/
 data/sigmahq/
+data/hunt/
+data/yaraforge/

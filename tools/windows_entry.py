@@ -13,6 +13,9 @@ def _open():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+
+    multiprocessing.freeze_support()
     import uvicorn
 
     from app.main import app
