@@ -478,6 +478,15 @@ def _sample(event: Dict[str, Any], idx: int = -1, procs=None) -> Dict[str, Any]:
     return out
 
 
+def response_steps(rule) -> List[str]:
+    if rule is None:
+        return []
+    raw = (getattr(rule, "custom_attributes", None) or {}).get("response")
+    if isinstance(raw, str):
+        raw = [raw]
+    return [str(x)[:500] for x in raw or [] if str(x).strip()][:30]
+
+
 def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", max_samples: int = 5, options=None, keep_rows: bool = False) -> Dict[str, Any]:
     if mode not in ("auto", "strict", "off"):
         mode = "auto"
@@ -582,6 +591,7 @@ def run_test(rule_inputs, files: List[Tuple[str, bytes]], mode: str = "auto", ma
         tids, tactics = rule_attack(parsed.rule if parsed else None)
         entry["techniques"] = tids
         entry["tactics"] = tactics
+        entry["response"] = response_steps(parsed.rule if parsed else None)
         if idx_rows and not is_corr:
             timeline_hits.append({"key": row["key"], "title": row["title"], "level": row["level"], "rows": idx_rows[:400], "tactics": tactics, "techniques": tids})
         if hit_rows and not is_corr:

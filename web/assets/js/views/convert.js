@@ -390,7 +390,7 @@ export async function convertView(root, route) {
       <div id="dpFields"></div>
       <label class="check"><input type="checkbox" id="dpTls" checked> <span>Check the TLS certificate</span></label>
       <label class="check"><input type="checkbox" id="dpEnable"> <span>Turn the rules on after upload</span></label>
-      <div class="row mt-4"><button class="btn" type="button" id="dpDry">${icons.play} Dry run</button><div class="spacer"></div><button class="btn btn--primary" type="button" id="dpGo">${icons.upload} Deploy now</button></div>
+      <div class="row mt-4"><button class="btn" type="button" id="dpDry">${icons.play} Dry run</button><button class="btn" type="button" id="dpDrift" title="Compare what runs on the platform with these rules">${icons.grid} Check drift</button><div class="spacer"></div><button class="btn btn--primary" type="button" id="dpGo">${icons.upload} Deploy now</button></div>
       <div id="dpOut" class="mt-4"></div>`;
     const FIELDS = {
       splunk: [["url", "Management URL", "https://splunk.lab:8089"], ["token", "Token", "", "password"], ["username", "Or username", ""], ["password", "Password", "", "password"], ["app", "App", "search"], ["owner", "Owner", "nobody"], ["prefix", "Name prefix", "Sigma - "], ["cron", "Schedule (cron)", "*/15 * * * *"], ["earliest", "Search window", "-15m@m"]],
@@ -455,6 +455,27 @@ export async function convertView(root, route) {
           btn.disabled = false;
         }
       };
+      $("#dpDrift", panel).addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const k = kindSel.value;
+        const st = collect();
+        remember(k, st);
+        btn.disabled = true;
+        $("#dpOut", panel).innerHTML = forging(`Reading the rules on ${kinds[k].name}`);
+        try {
+          const res = await api.drift({ rules: chosen, kind: k, target: $("#dpTarget", panel).value, settings: st, options: currentOptions(), field_mapping: currentMap() });
+          const c = res.counts;
+          const LABEL = { changed: ["Changed on the platform", "warn"], missing: ["Not on the platform", "bad"], extra: ["Only on the platform", "accent"], same: ["Same", "ok"] };
+          $("#dpOut", panel).innerHTML = `
+            <div class="notice ${res.in_sync ? "notice--ok" : "notice--warn"}">${res.in_sync ? `In sync. ${esc(plural(c.same || 0, "rule"))} match what runs on ${esc(res.name)}.` : `${c.changed || 0} changed, ${c.missing || 0} missing, ${c.extra || 0} only on the platform, ${c.same || 0} the same.`}${res.disabled ? ` ${esc(plural(res.disabled, "rule"))} turned off on the platform.` : ""}</div>
+            <div class="card mt-4"><ul class="list">${res.rows.map((r) => `<li class="list__item deploy__row"><div class="list__main"><div class="list__title">${esc(r.title)}</div>${r.updated || r.author ? `<div class="list__meta">${esc([r.updated && `changed ${r.updated}`, r.author && `by ${r.author}`].filter(Boolean).join(" "))}</div>` : ""}${r.enabled === false ? '<div class="list__meta">Turned off on the platform</div>' : ""}${(r.diff || []).length ? `<details><summary class="muted">What changed</summary><pre class="code drift__diff">${r.diff.map((l) => `<span class="${l.startsWith("+") ? "drift__add" : l.startsWith("-") ? "drift__del" : ""}">${esc(l)}</span>`).join("\n")}</pre></details>` : ""}${r.state === "extra" ? `<details><summary class="muted">Query on the platform</summary><pre class="code">${esc(r.live || "")}</pre></details>` : ""}</div><span class="badge badge--${LABEL[r.state][1]}">${esc(LABEL[r.state][0])}</span></li>`).join("")}</ul></div>
+            ${c.changed || c.missing ? '<p class="muted mt-4">Deploy now puts the workspace version back on the platform. If the platform change was on purpose, copy it into the rule first.</p>' : ""}`;
+        } catch (err) {
+          $("#dpOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
       $("#dpDry", panel).addEventListener("click", (e) => go(true, e.currentTarget));
       $("#dpGo", panel).addEventListener("click", (e) => go(false, e.currentTarget));
     });

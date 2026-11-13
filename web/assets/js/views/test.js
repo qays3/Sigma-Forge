@@ -2,7 +2,7 @@ import { api } from "../api.js";
 import { mappingOptions, mappings } from "../mappings.js";
 import { trackState } from "../router.js";
 import { state } from "../state.js";
-import { fileChips } from "../shared.js";
+import { fileChips, ruleTechniques } from "../shared.js";
 import { $, debounce, emptyState, esc, forging, icons, logo, openDrawer, plural, skeleton, toast } from "../ui.js";
 import { renderResults } from "./results.js";
 import { siemSendDrawer } from "./tools.js";
@@ -37,6 +37,7 @@ export async function testView(root, route) {
             <button class="btn btn--sm" type="button" id="sampleLogs">${icons.spark} Sample logs</button>
             <button class="btn btn--sm" type="button" id="baselineLogs" title="A normal week of Sysmon events with known noise">${icons.box} Baseline week</button>
             <button class="btn btn--sm" type="button" id="genEvents" title="Build events that each selected rule should catch">${icons.play} Generate test events</button>
+            <button class="btn btn--sm" type="button" id="attackLogs" title="Realistic Sysmon and Security events for the ATT&amp;CK techniques of the selected rules">${icons.spark} Attack logs</button>
             <button class="btn btn--sm" type="button" id="sendSiem" title="Replay these logs into Splunk, Elastic or a syslog collector">${icons.send} Send to SIEM</button>
             <button class="btn btn--sm btn--ghost" type="button" id="clearLogs">${icons.trash} Clear</button>
           </div>
@@ -127,6 +128,24 @@ export async function testView(root, route) {
   $("#clearLogs", root).addEventListener("click", () => {
     files = [];
     paintFiles();
+  });
+  $("#attackLogs", root).addEventListener("click", async (e) => {
+    const tids = ruleTechniques(rules.filter((r) => selected.has(r.id)));
+    if (!tids.length) {
+      toast("The selected rules have no ATT&CK technique tags", "bad");
+      return;
+    }
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const res = await api.attackLogs(tids);
+      addFiles([new File([res.jsonl], "attack_logs.jsonl", { type: "application/json" })]);
+      toast(`Built ${plural(res.events, "event")} for ${plural(res.techniques.length, "technique")}${res.missing.length ? `. No logs yet for ${res.missing.slice(0, 4).join(", ")}${res.missing.length > 4 ? "..." : ""}` : ""}`, "ok", 5000);
+    } catch (err) {
+      toast(err.message, "bad");
+    } finally {
+      btn.disabled = false;
+    }
   });
   $("#sampleLogs", root).addEventListener("click", async (e) => {
     const btn = e.currentTarget;

@@ -207,3 +207,76 @@ class ThreatReportRequest(BaseModel):
 
 class CaseReportRequest(BaseModel):
     case: Dict[str, Any]
+
+
+class AttackLogsRequest(BaseModel):
+    techniques: List[str] = Field(default_factory=list, max_length=300)
+    host: str = Field(default="FIN-WS07", max_length=60)
+    user: str = Field(default="CORP\\dana", max_length=80)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=60)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class PasswordRequest(BaseModel):
+    current: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=2, max_length=40)
+    password: str = Field(min_length=1, max_length=200)
+    role: str = "editor"
+
+
+class UserUpdate(BaseModel):
+    role: Optional[str] = None
+    disabled: Optional[bool] = None
+    password: Optional[str] = Field(default=None, max_length=200)
+
+
+class TeamRulesRequest(BaseModel):
+    files: List[RuleInput] = Field(default_factory=list, max_length=5000)
+
+
+class TeamRuleReplace(BaseModel):
+    old_id: str = Field(default="", max_length=64)
+    name: str = Field(min_length=1, max_length=300)
+    content: str = Field(max_length=500000)
+
+
+class TeamRemoveRequest(BaseModel):
+    ids: List[str] = Field(default_factory=list, max_length=5000)
+
+
+class ReviewRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    content: str = Field(max_length=500000)
+    note: str = Field(default="", max_length=2000)
+
+
+class ReviewDecision(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    decision: str = Field(max_length=20)
+    note: str = Field(default="", max_length=2000)
+
+
+class ReviewComment(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class CaseSaveRequest(BaseModel):
+    case: Dict[str, Any]
+
+
+class CtiRequest(BaseModel):
+    source: str = Field(max_length=20)
+    settings: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ResponseRequest(BaseModel):
+    content: str = Field(max_length=500000)
+    steps: Optional[List[str]] = Field(default=None, max_length=30)

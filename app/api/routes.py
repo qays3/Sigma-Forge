@@ -368,8 +368,13 @@ def deploy_kinds():
 
 @router.post("/deploy")
 def deploy_rules(req: DeployRequest):
+    from app.core import team
     from app.core.deploy import DeployError, deploy
 
+    if team.AUTH and team.REQUIRE_REVIEW and not (req.dry_run or DEMO):
+        waiting = team.unapproved(req.rules)
+        if waiting:
+            raise HTTPException(status_code=400, detail=f"{len(waiting)} rules are not approved yet: " + ", ".join(waiting[:8]) + (" and more" if len(waiting) > 8 else ""))
     try:
         return deploy(_allow(req.rules, req.allowlist), req.kind, req.target, req.settings, req.options, req.field_mapping, req.dry_run or DEMO)
     except InputLimitError as exc:

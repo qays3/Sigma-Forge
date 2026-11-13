@@ -11,3 +11,11 @@ __pycache__
 tests
 media
 data/hunt_schedule.json
+data/firecheck/
+data/team/
+build/
+dist/
+*.egg-info/
+*.spec
+.venv/
+data/sigmahq/

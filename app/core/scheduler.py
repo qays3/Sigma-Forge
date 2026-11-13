@@ -7,9 +7,9 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from app.config import APP_NAME, DATA_DIR
+from app.config import APP_NAME, STATE_DIR
 
-FILE = DATA_DIR / "hunt_schedule.json"
+FILE = STATE_DIR / "hunt_schedule.json"
 LEVELS = {"informational": 1, "low": 2, "medium": 3, "high": 4, "critical": 5}
 KINDS = ("slack", "teams", "discord", "webhook")
 MAX_SEEN = 20000

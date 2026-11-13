@@ -37,6 +37,9 @@ function build(files, analysis) {
     if (st && st.runs >= 3 && !st.fired_runs) reasons.push(["warn", `Silent in ${st.runs} runs`]);
     if (!st) reasons.push(["", "Never tested on logs"]);
     if (a.status === "deprecated") reasons.push(["warn", "Deprecated"]);
+    const exp = (f.content || "").match(/^sf_expires:\s*'?(\d{4}-\d{2}-\d{2})/m);
+    if (exp && exp[1] < new Date().toISOString().slice(0, 10)) reasons.push(["bad", "Expired IOC rule"]);
+    if (!/^response\s*:/m.test(f.content || "") && ["high", "critical"].includes(a.level)) reasons.push(["", "No response steps"]);
     const serious = reasons.filter((r) => r[0]).length;
     return { file: f, a, st, tests, testCount, prec, reasons, serious };
   });

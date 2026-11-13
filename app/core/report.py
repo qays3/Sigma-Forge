@@ -186,6 +186,11 @@ def build_hunt_report(result: Dict, title: str = "", scope: str = "") -> str:
             parts.append(f'<tr><td>{_e(r["title"])}<div class="note mono">{_e(r["key"])}</div></td><td><span class="pill {LEVEL_CLASS.get(r.get("level") or "", "")}">{_e(r.get("level"))}</span></td>'
                          f'<td>{r["hits"]}</td><td class="mono">{_e(", ".join(r.get("techniques") or []))}</td><td>{_e(noise)}</td></tr>')
         parts.append("</tbody></table>")
+        planned = [r for r in fired if r.get("response")]
+        if planned:
+            parts.append("<h2>Response steps</h2>")
+            for r in planned:
+                parts.append(f'<p><b>{_e(r["title"])}</b></p><ol>' + "".join(f"<li>{_e(x)}</li>" for x in r["response"]) + "</ol>")
         items = tl.get("items", [])
         parts.append(f'<h2>Timeline</h2><p class="note">{len(items)} hits in time order{", cut at the limit" if tl.get("truncated") else ""}.</p>')
         parts.append("<table><thead><tr><th>Time</th><th>Host</th><th>Rule</th><th>Tactic</th><th>Detail</th></tr></thead><tbody>")
@@ -222,6 +227,14 @@ def build_case_report(case: Dict) -> str:
             parts.append(f'<tr><td class="mono">{_e(h.get("ts", ""))}</td><td class="mono">{_e(h.get("host", ""))}</td><td>{_e(h.get("rule", ""))}</td>'
                          f'<td><span class="pill {LEVEL_CLASS.get(h.get("level") or "", "")}">{_e(h.get("level", ""))}</span></td><td class="mono">{_e(h.get("summary", ""))}</td></tr>')
         parts.append("</tbody></table>")
+    plans: Dict[str, List[str]] = {}
+    for h in hits:
+        if h.get("response") and h.get("rule") not in plans:
+            plans[h["rule"]] = h["response"]
+    if plans:
+        parts.append("<h2>Response steps</h2>")
+        for rule, steps in plans.items():
+            parts.append(f"<p><b>{_e(rule)}</b></p><ol>" + "".join(f"<li>{_e(x)}</li>" for x in steps[:30]) + "</ol>")
     if notes:
         parts.append("<h2>Notes</h2><table><thead><tr><th>Time</th><th>Note</th></tr></thead><tbody>")
         for n in notes[:500]:

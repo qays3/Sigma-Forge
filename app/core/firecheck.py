@@ -22,7 +22,9 @@ PLATFORMS = {
     "elastic": {"name": "Elasticsearch", "targets": ["elastic_lucene", "elastic_esql", "elastic_eql"], "live": True, "replay": True},
     "opensearch": {"name": "OpenSearch", "targets": ["opensearch_lucene"], "live": True, "replay": True},
     "wazuh": {"name": "Wazuh manager", "targets": ["wazuh"], "live": False, "replay": True},
+    "sentinel": {"name": "Microsoft Sentinel", "targets": ["sentinel_asim", "azure_monitor"], "live": True, "replay": True},
 }
+SLOW_MS = 3000
 TIMEOUT = 60
 MAX_RULES = 500
 MAX_EVENTS = 20000
@@ -238,9 +240,12 @@ def query_fields(language: str, query: str) -> List[str]:
         found = re.findall(r'([A-Za-z_@][\w.@]*)\s*(?:==|!=|<=|>=|<|>|:|\s+(?:like~?|in~?|regex~?)\b)', body)
     elif language == "xml":
         found = re.findall(r'<field name="([^"]+)"', query)
+    elif language == "kql":
+        body = re.sub(r"^\s*[A-Za-z_]\w*\s*\|", "", q)
+        found = re.findall(r'([A-Za-z_][\w.]*)\s*(?:==|!=|=~|!~|<=|>=|<|>|\s+(?:!?endswith|!?startswith|!?contains|!?has|has_any|has_all|in~?|!in~?|matches regex|contains_cs|endswith_cs|startswith_cs|has_cs)\b)', body)
     out = []
     for f in found:
-        if f.startswith("_") or f.lower() in SPL_SKIP or f.lower() in ("where", "from", "metadata", "_id", "_index", "_version", "any", "true", "false", "null"):
+        if f.startswith("_") or f.lower() in SPL_SKIP or f.lower() in ("where", "from", "metadata", "_id", "_index", "_version", "any", "true", "false", "null", "tostring", "toint", "tolower"):
             continue
         if f not in out:
             out.append(f)
@@ -253,6 +258,8 @@ def literal_terms(language: str, query: str) -> List[Tuple[str, str]]:
                [(f, v) for f, v in re.findall(r'(?<![\w."])([A-Za-z_][\w.{}\-]*)\s*=\s*([^\s"()*]+)(?=[\s)]|$)', query)]
     if language == "esql":
         return re.findall(r'([A-Za-z_@][\w.@]*)\s*==\s*"([^"*]*)"', query)
+    if language == "kql":
+        return re.findall(r'([A-Za-z_][\w.]*)\s*(?:==|=~)\s*"([^"*]*)"', query)
     if language == "eql":
         return re.findall(r'([A-Za-z_@][\w.@]*)\s*(?:==|:)\s*"([^"*]*)"', query)
     return []
@@ -488,6 +495,168 @@ class Elastic:
         return out
 
 
+class ElasticRules(Elastic):
+    def __init__(self, s: Dict[str, Any]):
+        super().__init__(s, False)
+        self.kibana = _base(s.get("kibana_url"))
+        space = (s.get("space") or "").strip()
+        self.space = f"/s/{urllib.parse.quote(space)}" if space and space != "default" else ""
+
+    def count(self, query: str, language: str, run: Optional[str], hours: float) -> Tuple[Optional[int], str]:
+        kind = {"lucene": "query", "eql": "eql", "esql": "esql"}.get(language)
+        if not kind:
+            return None, f"{language} rules are not previewed"
+        index = self.index if run else self.live_index
+        body: Dict[str, Any] = {"type": kind, "language": {"query": "lucene", "eql": "eql", "esql": "esql"}[kind], "name": "Sigma Forge fire check",
+                                "description": "Sigma Forge fire check preview", "risk_score": 21, "severity": "low", "interval": "5m",
+                                "from": f"now-{max(int(hours * 60), 60 * 24 * 30) if run else int(hours * 60)}m", "invocationCount": 1,
+                                "timeframeEnd": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+        if kind == "esql":
+            q = re.sub(r"^\s*from\s+\S+(\s+metadata[^|]*)?", f"from {index} metadata _id, _index, _version", query.strip(), flags=re.I)
+            body["query"] = q + (f' | where sf_run.keyword == "{run}"' if run else "")
+        else:
+            body["query"] = query
+            body["index"] = index.split(",")
+            if run:
+                body["filters"] = [{"meta": {"disabled": False, "negate": False}, "query": {"match_phrase": {"sf_run": run}}}]
+        headers = {**self._h(), "kbn-xsrf": "true", "elastic-api-version": "2023-10-31"}
+        code, data = _http("POST", f"{self.kibana}{self.space}/api/detection_engine/rules/preview", headers, json.dumps(body).encode(), self.verify, timeout=120)
+        if code >= 300:
+            return None, f"Kibana rule preview said {code}: {_msg(data)}"
+        errs = [e for log in (data.get("logs") or []) for e in (log.get("errors") or [])] if isinstance(data, dict) else []
+        if errs:
+            return None, "Rule preview error: " + "; ".join(map(str, errs))[:400]
+        pid = data.get("previewId")
+        if not pid:
+            return None, "Kibana did not return a preview id"
+        cbody = {"query": {"term": {"kibana.alert.rule.uuid": pid}}}
+        code, data = _http("POST", f"{self.url}/.preview.alerts-security.alerts-*/_count", self._h(), json.dumps(cbody).encode(), self.verify)
+        if code >= 300:
+            return None, f"Could not count preview alerts ({code}): {_msg(data)}"
+        return int(data.get("count", 0)), ""
+
+
+class Sentinel:
+    def __init__(self, s: Dict[str, Any]):
+        self.workspace = (s.get("workspace_id") or "").strip()
+        if not re.match(r"^[0-9a-fA-F-]{36}$", self.workspace):
+            raise FireError("Add the Log Analytics workspace id (a GUID)")
+        self.verify = True
+        self.tenant = (s.get("tenant_id") or "").strip()
+        self.client = (s.get("client_id") or "").strip()
+        self.secret = s.get("client_secret") or ""
+        self.query_token = (s.get("query_token") or "").strip()
+        self.ingest_token = (s.get("ingest_token") or "").strip()
+        self.dce = (s.get("dce") or "").strip().rstrip("/")
+        self.dcr = (s.get("dcr_id") or "").strip()
+        self.stream = (s.get("stream") or "Custom-SigmaForge_CL").strip()
+        self.table = (s.get("table") or "SigmaForge_CL").strip()
+        self.live_table = (s.get("live_table") or "SecurityEvent").strip()
+        for t in (self.table, self.live_table, self.stream):
+            if not re.match(r"^[\w\-]+$", t):
+                raise FireError(f"Bad table or stream name: {t}")
+        if not self.query_token and not (self.tenant and self.client and self.secret):
+            raise FireError("Add an app registration (tenant, client id, secret) or paste access tokens")
+
+    def _token(self, scope: str) -> str:
+        code, data = _http("POST", f"https://login.microsoftonline.com/{urllib.parse.quote(self.tenant)}/oauth2/v2.0/token",
+                           {"Content-Type": "application/x-www-form-urlencoded"},
+                           urllib.parse.urlencode({"grant_type": "client_credentials", "client_id": self.client, "client_secret": self.secret, "scope": scope}).encode(), True)
+        if code >= 300 or not isinstance(data, dict) or "access_token" not in data:
+            raise FireError(f"Azure sign in failed ({code}): {_msg(data)}")
+        return data["access_token"]
+
+    def _q(self, kql: str, timespan: str = "P30D") -> Tuple[Optional[Dict[str, Any]], str]:
+        if not self.query_token:
+            self.query_token = self._token("https://api.loganalytics.io/.default")
+        code, data = _http("POST", f"https://api.loganalytics.io/v1/workspaces/{self.workspace}/query",
+                           {"Authorization": f"Bearer {self.query_token}", "Content-Type": "application/json"}, json.dumps({"query": kql, "timespan": timespan}).encode(), True, timeout=120)
+        if code >= 300:
+            return None, f"Log Analytics said {code}: {_msg(data)}"
+        tables = (data or {}).get("tables") or []
+        if not tables:
+            return None, "Log Analytics returned no table"
+        t = tables[0]
+        cols = [c["name"] for c in t.get("columns", [])]
+        return {"columns": cols, "rows": t.get("rows", [])}, ""
+
+    def check(self) -> str:
+        res, err = self._q("print ok = 1", "PT1H")
+        return err
+
+    def send(self, recs: List[Dict[str, Any]], run: str) -> int:
+        if not self.dce or not self.dcr:
+            raise FireError("Add the data collection endpoint and the DCR immutable id to send events")
+        if not self.ingest_token:
+            self.ingest_token = self._token("https://monitor.azure.com/.default")
+        url = f"{_base(self.dce)}/dataCollectionRules/{urllib.parse.quote(self.dcr)}/streams/{urllib.parse.quote(self.stream)}?api-version=2023-01-01"
+        rows = []
+        for r in recs:
+            raw = r["raw"]
+            if _is_windows(raw):
+                sysflat, dflat = _windows_parts(raw)
+                row = {k[0].upper() + k[1:]: v for k, v in dflat.items()}
+                row.update({"EventID": sysflat.get("eventID"), "Computer": sysflat.get("computer"), "Channel": sysflat.get("channel"), "Provider": sysflat.get("providerName")})
+            else:
+                row = flatten(raw)
+            row["sf_run"] = run
+            row["TimeGenerated"] = datetime.fromtimestamp(r.get("epoch") or time.time(), tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            rows.append(row)
+        sent = 0
+        for i in range(0, len(rows), 300):
+            chunk = rows[i:i + 300]
+            code, data = _http("POST", url, {"Authorization": f"Bearer {self.ingest_token}", "Content-Type": "application/json"}, json.dumps(chunk, default=str).encode(), True)
+            if code >= 300:
+                raise FireError(f"Logs Ingestion API said {code}: {_msg(data)}")
+            sent += len(chunk)
+        return sent
+
+    def wait(self, run: str, n: int, limit: int = 600) -> int:
+        end = time.monotonic() + limit
+        got = 0
+        while time.monotonic() < end:
+            res, err = self._q(f'{self.table} | where sf_run == "{run}" | count', "P1D")
+            if err:
+                raise FireError(err)
+            got = int((res["rows"] or [[0]])[0][0] or 0)
+            if got >= n:
+                return got
+            time.sleep(15)
+        return got
+
+    def _wrap(self, query: str, run: Optional[str], hours: float) -> str:
+        q = query.strip()
+        table = self.table if run else self.live_table
+        m = re.match(r"^([A-Za-z_]\w*)\s*\|(.*)$", q, flags=re.S)
+        if m:
+            body = f"{table if run else m.group(1)} |{m.group(2)}"
+        else:
+            body = f"{table} | where {q}"
+        body += f' | where sf_run == "{run}"' if run else f" | where TimeGenerated > ago({int(hours * 60)}m)"
+        return body
+
+    def count(self, query: str, run: Optional[str], hours: float) -> Tuple[Optional[int], str]:
+        res, err = self._q(self._wrap(query, run, hours) + " | count", "P30D" if run else f"PT{max(1, int(hours))}H")
+        if err:
+            return None, err
+        return int((res["rows"] or [[0]])[0][0] or 0), ""
+
+    def inventory(self, run: Optional[str], hours: float) -> Dict[str, List[str]]:
+        kql = f'{self.table} | where sf_run == "{run}" | take 500' if run else f"{self.live_table} | where TimeGenerated > ago({int(hours * 60)}m) | take 500"
+        res, err = self._q(kql)
+        if err:
+            raise FireError(err)
+        out: Dict[str, List[str]] = {c: [] for c in res["columns"]}
+        for row in res["rows"]:
+            for c, v in zip(res["columns"], row):
+                if v in (None, ""):
+                    continue
+                vals = out[c]
+                if len(vals) < 60 and str(v) not in vals:
+                    vals.append(str(v))
+        return out
+
+
 class Wazuh:
     def __init__(self, s: Dict[str, Any]):
         self.url = _base(s.get("url"))
@@ -552,14 +721,35 @@ def _epoch(ts: Optional[str]) -> Optional[float]:
         return None
 
 
+def resolve(settings: Dict[str, Any]) -> Dict[str, Any]:
+    out = {}
+    for k, v in (settings or {}).items():
+        if isinstance(v, str) and v.startswith("env:"):
+            name = v[4:].strip()
+            if not re.match(r"^[A-Z_][A-Z0-9_]*$", name):
+                raise FireError(f"Bad environment variable name for {k}")
+            val = os.environ.get(name)
+            if val is None:
+                raise FireError(f"Environment variable {name} for {k} is not set")
+            out[k] = val
+        else:
+            out[k] = v
+    return out
+
+
 def _client(platform: str, settings: Dict[str, Any]):
+    settings = resolve(settings)
     if platform == "splunk":
         return Splunk(settings)
+    if platform == "elastic" and (settings.get("kibana_url") or "").strip() and settings.get("use_rules"):
+        return ElasticRules(settings)
     if platform in ("elastic", "opensearch"):
         return Elastic(settings, platform == "opensearch")
+    if platform == "sentinel":
+        return Sentinel(settings)
     if platform == "wazuh":
         return Wazuh(settings)
-    raise FireError("Pick Splunk, Elasticsearch, OpenSearch or Wazuh")
+    raise FireError("Pick Splunk, Elasticsearch, OpenSearch, Sentinel or Wazuh")
 
 
 def _rule_values(rule, events: List[Dict[str, Any]], rows: List[int]) -> Dict[str, List[str]]:
@@ -710,7 +900,7 @@ def run(job: Dict[str, Any]) -> None:
     p = job["params"]
     platform, target, mode = p["platform"], p["target"], p["mode"]
     items, settings, mapping, hours = p["rules"], p["settings"], p.get("mapping") or {}, float(p.get("hours") or 24)
-    files = p.get("files") or []
+    files = list(p.get("files") or [])
 
     def stage(text, done=0, total=0):
         job.update(stage=text, done=done, total=total)
@@ -731,7 +921,21 @@ def run(job: Dict[str, Any]) -> None:
         events: List[Dict[str, Any]] = []
         run_id = None
         sent = 0
+        if mode == "replay" and p.get("attack"):
+            from app.core.attack import split_attack_tags
+            from app.core.attacklogs import generate
+
+            tids = []
+            for pr in parsed.values():
+                if pr.rule is not None:
+                    tids.extend(split_attack_tags(pr.rule.tags)[0])
+            gen = generate(sorted(set(tids)) if p["attack"] == "rules" else p["attack"])
+            if gen["events"]:
+                files.append(("attack_logs.jsonl", gen["jsonl"].encode()))
+                job["attack_techniques"] = gen["techniques"]
         if mode == "replay":
+            if not files:
+                raise FireError("No logs to replay. None of these rules use a technique that has built in attack logs.")
             stage("Reading the logs")
             recs = load_records(files)
             stage("Running the Sigma rules locally on the same logs")
@@ -805,8 +1009,9 @@ def run(job: Dict[str, Any]) -> None:
                     continue
                 got_total = 0
                 errors = []
+                started = time.monotonic()
                 for q in row["queries"]:
-                    if platform == "splunk":
+                    if platform in ("splunk", "sentinel"):
                         got, e = client.count(q, run_id, hours)
                     else:
                         got, e = client.count(q, lang, run_id, hours)
@@ -815,6 +1020,7 @@ def run(job: Dict[str, Any]) -> None:
                     else:
                         got_total += got or 0
                 entry = _entry(row, lang, len(exp) if mode == "replay" else None, None if errors and not got_total else got_total, errors[0] if errors and not got_total else "")
+                entry["ms"] = int((time.monotonic() - started) * 1000)
                 if entry["verdict"] in ("silent", "partial", "no_data"):
                     pr = parsed.get(row["key"])
                     entry["diagnosis"] = diagnose(lang, row["queries"][0], inventory, _rule_values(pr.rule if pr else None, events, exp) if mode == "replay" else {}, target, _ls(pr), mapping)
@@ -833,6 +1039,11 @@ def run(job: Dict[str, Any]) -> None:
                 merged.setdefault(k, v)
             for k, v in ((r.get("diagnosis") or {}).get("aliases") or {}).items():
                 aliases.setdefault(k, v)
+        times = sorted(r["ms"] for r in results if r.get("ms") is not None)
+        slow_at = max(SLOW_MS, times[int(len(times) * 0.9)] if len(times) >= 10 else SLOW_MS)
+        for r in results:
+            if r.get("ms") is not None and r["ms"] >= slow_at:
+                r["slow"] = True
         source_fix = ""
         if platform == "splunk":
             for r in results:
@@ -851,6 +1062,7 @@ def run(job: Dict[str, Any]) -> None:
                 "events": sent, "indexed": job.get("indexed"), "results": results, "counts": counts,
                 "score": round(good * 100 / should) if should else None, "should_fire": should, "fired": good,
                 "mapping": merged, "aliases": aliases, "alias_config": alias_config(platform, aliases, job.get("stanza") or settings.get("sourcetype") or "XmlWinEventLog"), "fields_seen": len(inventory), "source_fix": source_fix,
+                "slow": sum(1 for r in results if r.get("slow")), "attack_techniques": job.get("attack_techniques", []), "median_ms": times[len(times) // 2] if times else None,
             },
         )
     except FireError as exc:
@@ -896,7 +1108,7 @@ def alias_config(platform: str, aliases: Dict[str, str], stanza: str = "XmlWinEv
 
 def start(params: Dict[str, Any]) -> str:
     if params.get("platform") not in PLATFORMS:
-        raise FireError("Pick Splunk, Elasticsearch, OpenSearch or Wazuh")
+        raise FireError("Pick Splunk, Elasticsearch, OpenSearch, Sentinel or Wazuh")
     spec = PLATFORMS[params["platform"]]
     if params.get("target") not in spec["targets"]:
         params["target"] = spec["targets"][0]
@@ -904,7 +1116,7 @@ def start(params: Dict[str, Any]) -> str:
         raise FireError("Pick replay or live")
     if params["mode"] == "live" and not spec["live"]:
         raise FireError(f"{spec['name']} is checked with replay")
-    if params["mode"] == "replay" and not params.get("files"):
+    if params["mode"] == "replay" and not params.get("files") and not params.get("attack"):
         raise FireError("Add log files to replay")
     if not params.get("rules"):
         raise FireError("Add at least one rule")

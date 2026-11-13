@@ -1,7 +1,7 @@
 import { api } from "../api.js";
 import { unitTests } from "../localdata.js";
 import { pretty } from "../shared.js";
-import { $, esc, icons, plural, toast } from "../ui.js";
+import { $, $$, esc, icons, plural, toast } from "../ui.js";
 
 const LEVEL_CLASS = { error: "bad", warn: "warn", info: "" };
 
@@ -189,4 +189,53 @@ export function sigmahqPane(host, getFile, onFix) {
     }
   });
   return { run };
+}
+
+export function responsePane(host, getFile, onApply) {
+  const read = () => {
+    const m = getFile().content.match(/^response\s*:\s*\n((?:[ \t]+-.*\n?|[ \t]*\n)+)/m);
+    if (!m) return [];
+    return m[1].split("\n").map((l) => l.replace(/^\s*-\s*/, "").trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+  };
+  const paint = (steps = read()) => {
+    host.innerHTML = `
+      <p class="muted">What the analyst does when this rule fires. The steps are saved in the rule as <span class="mono">response:</span> and show up in test results, cases and hunt reports.</p>
+      <ol class="rsp__list" id="rspList">${steps.map((s, i) => `<li class="rsp__item"><input class="input" data-i="${i}" value="${esc(s)}" aria-label="Step ${i + 1}"><button class="btn btn--sm btn--ghost" type="button" data-rm="${i}" aria-label="Remove">${icons.trash}</button></li>`).join("")}</ol>
+      ${steps.length ? "" : '<p class="muted">No steps yet.</p>'}
+      <div class="row mt-4"><button class="btn btn--sm" type="button" data-rsp="add">Add a step</button><button class="btn btn--sm" type="button" data-rsp="suggest">${icons.spark} Suggest from ATT&amp;CK</button><div class="spacer"></div><button class="btn btn--sm btn--primary" type="button" data-rsp="save">Put in the rule</button></div>`;
+  };
+  const current = () => $$("#rspList [data-i]", host).map((i) => i.value.trim()).filter(Boolean);
+  host.addEventListener("click", async (e) => {
+    const rm = e.target.closest("[data-rm]");
+    if (rm) {
+      const s = current();
+      s.splice(Number(rm.dataset.rm), 1);
+      paint(s);
+      return;
+    }
+    const act = e.target.closest("[data-rsp]")?.dataset.rsp;
+    if (act === "add") {
+      paint([...current(), ""]);
+      $$("#rspList [data-i]", host).pop()?.focus();
+    }
+    if (act === "suggest") {
+      try {
+        const res = await api.response(getFile().content);
+        const have = current();
+        paint([...have, ...res.steps.filter((s) => !have.includes(s))]);
+      } catch (err) {
+        toast(err.message, "bad");
+      }
+    }
+    if (act === "save") {
+      try {
+        const res = await api.response(getFile().content, current());
+        onApply(res.content);
+        toast("Steps added to the rule. Save it to keep them.", "ok");
+      } catch (err) {
+        toast(err.message, "bad");
+      }
+    }
+  });
+  return { paint };
 }

@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { mappingOptions, mappings } from "../mappings.js";
-import { fileChips, readJson, writeJson } from "../shared.js";
+import { fileChips, readJson, ruleTechniques, writeJson } from "../shared.js";
 import { state } from "../state.js";
 import { $, emptyState, esc, forging, icons, levelBadge, logo, plural, skeleton, toast } from "../ui.js";
 import { renderResults } from "./results.js";
@@ -41,7 +41,7 @@ export async function purpleView(root) {
             <span class="dropzone__body"><span class="dropzone__title">Drop the logs here</span><span class="dropzone__text">.evtx, .json, .jsonl or a .zip, up to 64 MB</span></span>
             <input class="hidden-input" type="file" id="ppInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.zip">
           </label>
-          <div class="setup__actions"><button class="btn btn--sm" type="button" id="ppSample">${icons.spark} Sample attack chain logs</button></div>
+          <div class="setup__actions"><button class="btn btn--sm" type="button" id="ppSample">${icons.spark} Sample attack chain logs</button><button class="btn btn--sm" type="button" id="ppAttack" title="No lab yet? Sigma Forge builds Sysmon and Security events for the techniques above">${icons.play} Built in attack logs</button></div>
           <ul class="filechips" id="ppFiles"></ul>
         </div>
         <div class="setup__side">
@@ -146,6 +146,21 @@ export async function purpleView(root) {
     if (!b) return;
     logFiles.splice(Number(b.dataset.drop), 1);
     paintFiles();
+  });
+  $("#ppAttack", root).addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const list = techniques.length ? techniques : ruleTechniques(rules);
+      const res = await api.attackLogs(list);
+      addFiles([new File([res.jsonl], "attack_logs.jsonl", { type: "application/json" })]);
+      if (!techniques.length) add(res.techniques);
+      toast(`Built ${plural(res.events, "event")} for ${plural(res.techniques.length, "technique")}${res.missing.length ? `, ${res.missing.length} have no built in logs` : ""}`, "ok", 4500);
+    } catch (err) {
+      toast(err.message, "bad");
+    } finally {
+      btn.disabled = false;
+    }
   });
   $("#ppSample", root).addEventListener("click", async () => {
     try {

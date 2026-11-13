@@ -19,6 +19,10 @@ import { inventoryView } from "./views/inventory.js";
 import { casesView } from "./views/cases.js";
 import { guidesView } from "./views/guides.js";
 import { fireCheckView } from "./views/firecheck.js";
+import { reviewsView } from "./views/reviews.js";
+import { teamView } from "./views/teamadmin.js";
+import { cases } from "./localdata.js";
+import { loadTeam, paintUserBox, patchFetch, showLogin, teamState } from "./team.js";
 import { notFoundView } from "./views/notfound.js";
 
 const THEME_KEY = "sigma-forge-theme";
@@ -112,6 +116,18 @@ async function checkDemo() {
 
 async function boot() {
   const started = Date.now();
+  patchFetch();
+  await loadTeam();
+  if (teamState.auth && !teamState.user) {
+    showLogin($("#main"));
+    setTimeout(hideSplash, 300);
+    return;
+  }
+  if (teamState.auth) {
+    store.useRemote();
+    await cases.useRemote();
+    paintUserBox();
+  }
   await Promise.all([checkEngine(), updateCount(), checkDemo()]);
   startRouter($("#main"));
   const wait = Math.max(0, 900 - (Date.now() - started));
@@ -134,6 +150,8 @@ route("/inventory", "inventory", inventoryView);
 route("/cases", "cases", casesView);
 route("/guides", "guides", guidesView);
 route("/firecheck", "firecheck", fireCheckView);
+route("/reviews", "reviews", reviewsView);
+route("/team", "team", teamView);
 route("*", "notfound", notFoundView);
 
 initTheme();

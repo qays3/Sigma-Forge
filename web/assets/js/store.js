@@ -4,7 +4,25 @@ const STORE = "rules";
 
 let dbPromise = null;
 let memory = null;
+let remote = false;
+let remoteVersion = -1;
+let reviewStates = {};
 const listeners = new Set();
+
+async function api(method, path, body) {
+  const res = await fetch(path, { method, headers: { "Content-Type": "application/json", Accept: "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+  return data;
+}
+
+async function pull() {
+  const data = await api("GET", "/api/team/rules");
+  remoteVersion = data.version;
+  reviewStates = data.reviews || {};
+  memory = (data.rules || []).map((r) => ({ id: r.id, name: r.name, content: r.content, size: r.size, added: r.added, by: r.by, updated: r.updated }));
+  return memory;
+}
 
 function openDb() {
   if (dbPromise) return dbPromise;
@@ -56,6 +74,37 @@ function emit() {
 }
 
 export const store = {
+  useRemote() {
+    remote = true;
+    memory = null;
+    const refresh = async () => {
+      try {
+        const before = remoteVersion;
+        await pull();
+        if (remoteVersion !== before) emit();
+      } catch {
+        return;
+      }
+    };
+    setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+  },
+
+  isRemote() {
+    return remote;
+  },
+
+  review(name) {
+    return reviewStates[name] || { status: "none" };
+  },
+
+  async refresh() {
+    if (!remote) return this.all();
+    await pull();
+    emit();
+    return memory;
+  },
+
   onChange(fn) {
     listeners.add(fn);
     return () => listeners.delete(fn);
@@ -63,6 +112,7 @@ export const store = {
 
   async all() {
     if (memory) return memory;
+    if (remote) return pull();
     const db = await openDb();
     if (!db) {
       memory = [];
@@ -84,6 +134,12 @@ export const store = {
   },
 
   async add(files) {
+    if (remote) {
+      const res = await api("POST", "/api/team/rules", { files: files.map((f) => ({ name: f.name, content: f.content })) });
+      await pull();
+      emit();
+      return res.added;
+    }
     const current = await this.all();
     const byId = new Map(current.map((r) => [r.id, r]));
     const byContent = new Map(current.map((r) => [r.content, r]));
@@ -114,6 +170,12 @@ export const store = {
   },
 
   async replace(oldId, file) {
+    if (remote) {
+      const item = await api("PUT", "/api/team/rules", { old_id: oldId || "", name: file.name, content: file.content });
+      await pull();
+      emit();
+      return memory.find((r) => r.id === item.id) || null;
+    }
     const db = await openDb();
     if (oldId) {
       if (db) await wrap(tx(db, "readwrite").delete(oldId));
@@ -125,6 +187,12 @@ export const store = {
   },
 
   async remove(id) {
+    if (remote) {
+      await api("POST", "/api/team/rules/remove", { ids: [id] });
+      await pull();
+      emit();
+      return;
+    }
     const db = await openDb();
     if (db) await wrap(tx(db, "readwrite").delete(id));
     memory = (memory || []).filter((r) => r.id !== id);
@@ -135,6 +203,12 @@ export const store = {
     const items = await this.all();
     const gone = items.filter(test);
     if (!gone.length) return 0;
+    if (remote) {
+      await api("POST", "/api/team/rules/remove", { ids: gone.map((r) => r.id) });
+      await pull();
+      emit();
+      return gone.length;
+    }
     const db = await openDb();
     if (db) {
       const os = tx(db, "readwrite");
@@ -147,6 +221,12 @@ export const store = {
   },
 
   async clear() {
+    if (remote) {
+      await api("POST", "/api/team/rules/clear");
+      await pull();
+      emit();
+      return;
+    }
     const db = await openDb();
     if (db) await wrap(tx(db, "readwrite").clear());
     memory = [];

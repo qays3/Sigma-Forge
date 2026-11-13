@@ -3,7 +3,7 @@ import { $$, closeDrawer } from "./ui.js";
 const routes = new Map();
 const GUIDE_FOR = {
   workspace: "workspace", convert: "convert", coverage: "coverage", rules: "rules", editor: "editor", compare: "compare", test: "test-logs",
-  library: "library", mappings: "mappings", yara: "yara", hunt: "hunt-live", purple: "purple", inventory: "inventory", cases: "cases", firecheck: "fire-check",
+  library: "library", mappings: "mappings", yara: "yara", hunt: "hunt-live", purple: "purple", inventory: "inventory", cases: "cases", firecheck: "fire-check", reviews: "reviews", team: "team",
 };
 const GUIDE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h6M8 11h6"/></svg>';
 

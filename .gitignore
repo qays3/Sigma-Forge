@@ -17,3 +17,9 @@ data/sigmahq/
 data/sigmahq.new/
 data/sigmahq.old/
 data/hunt_schedule.json
+data/firecheck/
+data/team/
+build/
+dist/
+*.egg-info/
+*.spec

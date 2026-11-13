@@ -71,6 +71,7 @@ export async function casesView(root) {
         <div class="card__head"><span class="card__title">Hits</span><span class="card__sub">${esc(plural(c.hits.length, "hit"))}</span></div>
         ${c.hits.length ? `<ul class="tline case__hits">${c.hits.slice(0, 300).map((h, i) => `<li class="tline__item tline__item--${esc(h.level || "none")}"><span class="tline__time">${esc((h.ts || "").slice(11, 19) || "no time")}</span><span class="tline__dot" aria-hidden="true"></span><div class="tline__body"><div class="tline__title"><span>${esc(h.rule)}</span>${levelBadge(h.level)}<button class="link-btn" type="button" data-rule="${i}">Open rule</button></div><div class="tline__meta"><span class="chip">${esc(h.host || "unknown host")}</span>${h.user ? `<span class="muted">${esc(h.user)}</span>` : ""}<span class="muted mono">${esc((h.ts || "").slice(0, 10))}</span></div>${h.summary ? `<div class="tline__sum">${esc(h.summary)}</div>` : ""}</div></li>`).join("")}</ul>` : '<div class="card__body"><p class="muted">No hits in this case.</p></div>'}
       </div>
+      ${steps(c).length ? `<div class="card mt-4"><div class="card__head"><span class="card__title">Response steps</span><span class="card__sub">from the rules that fired</span></div><div class="card__body">${steps(c).map(([rule, list]) => `<div class="field__label">${esc(rule)}</div><ol class="rsp__steps">${list.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>`).join("")}</div></div>` : ""}
       <div class="card mt-4">
         <div class="card__head"><span class="card__title">Notes</span></div>
         <div class="card__body">
@@ -158,4 +159,12 @@ export async function casesView(root) {
     $("#cTitle", root)?.select();
   });
   return null;
+}
+
+function steps(c) {
+  const seen = new Map();
+  (c.hits || []).forEach((h) => {
+    if ((h.response || []).length && !seen.has(h.rule)) seen.set(h.rule, h.response);
+  });
+  return [...seen.entries()];
 }

@@ -186,8 +186,23 @@ function uid() {
   return `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
+let remoteCases = null;
+
+function sendCase(method, path, body) {
+  return fetch(path, { method, headers: { "Content-Type": "application/json", Accept: "application/json" }, body: body ? JSON.stringify(body) : undefined }).catch(() => null);
+}
+
 export const cases = {
+  async useRemote() {
+    try {
+      const res = await fetch("/api/team/cases", { headers: { Accept: "application/json" } });
+      remoteCases = res.ok ? (await res.json()).cases || [] : [];
+    } catch {
+      remoteCases = [];
+    }
+  },
   all() {
+    if (remoteCases) return remoteCases;
     const list = readJson(CASES, []);
     return Array.isArray(list) ? list : [];
   },
@@ -207,10 +222,20 @@ export const cases = {
     const i = list.findIndex((x) => x.id === c.id);
     if (i >= 0) list[i] = c;
     else list.unshift(c);
+    if (remoteCases) {
+      remoteCases = list;
+      sendCase("PUT", "/api/team/cases", { case: c });
+      return c;
+    }
     writeJson(CASES, list);
     return c;
   },
   remove(id) {
+    if (remoteCases) {
+      remoteCases = remoteCases.filter((c) => c.id !== id);
+      sendCase("DELETE", `/api/team/cases/${encodeURIComponent(id)}`);
+      return;
+    }
     writeJson(CASES, this.all().filter((c) => c.id !== id));
   },
   hitsFrom(res, keys = null) {
@@ -219,6 +244,6 @@ export const cases = {
     return items
       .filter((it) => !keys || keys.includes(it.key))
       .slice(0, 500)
-      .map((it) => ({ ts: it.ts, host: it.host, user: it.user || "", rule: it.rule, level: it.level, summary: it.summary || "", key: it.key, techniques: byKey.get(it.key)?.techniques || [] }));
+      .map((it) => ({ ts: it.ts, host: it.host, user: it.user || "", rule: it.rule, level: it.level, summary: it.summary || "", key: it.key, techniques: byKey.get(it.key)?.techniques || [], response: byKey.get(it.key)?.response || [] }));
   },
 };

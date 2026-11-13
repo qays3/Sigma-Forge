@@ -48,22 +48,28 @@ Convert Sigma rules to 31 SIEM, EDR and log platforms, test and tune them on rea
 27. [GitHub sync](#github-sync)
 28. [Command line and GitHub Action](#command-line-and-github-action)
 29. [Fire check: prove rules fire on the platform](#fire-check-prove-rules-fire-on-the-platform)
-30. [Logging setup and log health](#logging-setup-and-log-health)
-31. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
-32. [Wizard and correlation builder](#wizard-and-correlation-builder)
-33. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
-34. [Threat report to coverage](#threat-report-to-coverage)
-35. [Cases](#cases)
-36. [SigmaHQ library](#sigmahq-library)
-37. [Field mapping](#field-mapping)
-38. [Export packages](#export-packages)
-39. [API](#api)
-40. [Configuration](#configuration)
-41. [Architecture](#architecture)
-42. [Project layout](#project-layout)
-43. [Development](#development)
-44. [Known limits](#known-limits)
-45. [Credits](#credits)
+30. [Built in attack logs](#built-in-attack-logs)
+31. [Drift check](#drift-check)
+32. [Detection as code CI](#detection-as-code-ci)
+33. [Threat intel feeds](#threat-intel-feeds)
+34. [Response steps](#response-steps)
+35. [Team mode and safe hosting](#team-mode-and-safe-hosting)
+36. [Logging setup and log health](#logging-setup-and-log-health)
+37. [Unit tests, verdicts and the inventory](#unit-tests-verdicts-and-the-inventory)
+38. [Wizard and correlation builder](#wizard-and-correlation-builder)
+39. [SIEM import, send and GitHub push](#siem-import-send-and-github-push)
+40. [Threat report to coverage](#threat-report-to-coverage)
+41. [Cases](#cases)
+42. [SigmaHQ library](#sigmahq-library)
+43. [Field mapping](#field-mapping)
+44. [Export packages](#export-packages)
+45. [API](#api)
+46. [Configuration](#configuration)
+47. [Architecture](#architecture)
+48. [Project layout](#project-layout)
+49. [Development](#development)
+50. [Known limits](#known-limits)
+51. [Credits](#credits)
 
 ## What is Sigma Forge
 
@@ -123,7 +129,15 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Query cost** | Each converted query is rated fast, ok or slow, with the reasons. |
 | **Workspace sharing** | One file with rules, YARA, mappings, allow list and settings for a teammate. |
 | **Demo mode** | `SIGMA_FORGE_DEMO=1` turns off machine and network actions for a public demo site. |
-| **Fire check** | Replays your logs into Splunk, Elasticsearch, OpenSearch or Wazuh, runs every converted query there, and compares the hits with what the Sigma rule matched. Silent rules show the missing fields, the wrong values and where the data really is, with a one click mapping fix or field aliases for the platform. |
+| **Fire check** | Replays your logs into Splunk, Elasticsearch, OpenSearch, Wazuh or Microsoft Sentinel (or runs as Elastic Security rule previews), runs every converted query there, and compares the hits with what the Sigma rule matched. Silent rules show the missing fields, the wrong values and where the data really is, with a one click mapping fix or field aliases for the platform. |
+| **Nightly fire check** | The fire check runs on a timer and alerts you when a rule that used to fire stops firing. |
+| **Query speed** | Fire check times every query on the platform and marks the slow ones. |
+| **Built in attack logs** | Sysmon and Security events for about 55 ATT&CK techniques, to test without a lab. |
+| **Drift check** | Find rules changed, turned off or removed on the platform, and rules that live only there. |
+| **Detection as code CI** | A GitHub Actions workflow that checks, tests, fire checks and deploys the rules in your repository. |
+| **Threat intel feeds** | MISP and OTX indicators turned into Sigma and YARA rules with an end date. |
+| **Response steps** | What to do when a rule fires, kept in the rule and shown in results, cases and reports. |
+| **Team mode** | Logins, roles, a shared workspace, reviews before deploy and an audit log, with rate limits and CSRF protection. |
 | **Logging setup** | A Sysmon config built from your rules (only the events they read), plus the `auditpol` and registry commands for Security audit, command line and PowerShell logging. |
 | **Mapping from logs** | Drop a sample of your own logs. Field names and values are matched to the fields your rules use, and saved as a mapping profile. |
 | **Log health watch** | The scheduled hunt alerts when a log that used to send events goes quiet, and again when it comes back. |
@@ -141,7 +155,7 @@ Everything runs on your machine. Rules are kept in your browser (IndexedDB) and 
 | **Triage zips** | Every log upload takes a `.zip` of EVTX and JSON files, with zip bomb guards. |
 | **Guides** | A Guides page in the app with step by step guides for every page and tool, searchable, with a button that opens the tool. |
 | **Review** | Sortable and filterable rule table with a quality grade column and a detail drawer: metadata, findings, quality checks, source and a one click convert to any target. |
-| **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, or Docker with a hardened compose file. |
+| **Run anywhere** | One setup script for Linux and macOS (`setup.sh`), one for Windows (`setup.ps1`), both using a Python venv, `pip install .`, Docker with a hardened compose file, or a Windows build. |
 | **UI** | SPA with clean URLs, the animated Sigma Forge logo on the splash screen, header, loading panels and empty states, dark and light themes, skeleton loading while data loads, keyboard support and a mobile layout. |
 
 ## Demo video
@@ -290,6 +304,37 @@ docker compose up -d --build
 Then open **http://127.0.0.1:8000** and click **Load samples** to load the [sample pack](#sample-pack).
 
 The setup scripts create a virtual environment in `.venv`, install the packages from `requirements.txt`, check the ATT&CK data and print the command to start the server. Run them again any time. They only change what is needed.
+
+### pip
+
+```bash
+pip install .
+sigma-forge-server              # the web app on http://127.0.0.1:8000
+sigma-forge validate rules/     # the command line
+```
+
+The package carries the web app, the sample pack and the ATT&CK data. When it runs from a pip install, workspace data for team mode, schedules and the SigmaHQ library goes to `~/.sigma-forge` (set `SIGMA_FORGE_STATE_DIR` to move it).
+
+### Docker image
+
+The `Dockerfile` carries the labels GitHub Container Registry (GHCR) needs, so you can build and push it under your account:
+
+```bash
+docker build -t ghcr.io/<you>/sigma-forge:latest .
+docker push ghcr.io/<you>/sigma-forge:latest
+docker run -p 127.0.0.1:8000:8000 -v sigma-forge-state:/app/state -e SIGMA_FORGE_STATE_DIR=/app/state ghcr.io/<you>/sigma-forge:latest
+```
+
+`docker-compose.yml` runs the container read only, so team data and schedules go to the `state` volume.
+
+### Windows build
+
+```powershell
+.\build_windows.ps1            # dist\SigmaForge\SigmaForge.exe
+.\build_windows.ps1 -OneFile   # dist\SigmaForge.exe
+```
+
+It uses PyInstaller. Copy the `dist\SigmaForge` folder to any Windows machine and run `SigmaForge.exe`. The browser opens on its own. Data goes to `%USERPROFILE%\.sigma-forge`.
 
 ### Manual setup
 
@@ -1643,7 +1688,7 @@ It validates the rules, fails a pull request when a rule can never fire on its o
 
 A rule can convert cleanly and still match nothing, because the platform names fields differently or filters on a source your data does not have. **Fire check** finds these rules before an attacker does.
 
-1. Pick Splunk, Elasticsearch, OpenSearch or Wazuh and connect to a lab or test index.
+1. Pick Splunk, Elasticsearch, OpenSearch, Wazuh or Microsoft Sentinel and connect to a lab or test index.
 2. **Replay my logs** sends logs that look like production with a run tag. `.evtx` files go to Splunk as `XmlWinEventLog`, the way the Splunk add on for Windows indexes them. For Elastic you can name the ingest pipeline your agents use.
 3. Sigma Forge runs the Sigma rules locally on the same logs, then runs each converted query on the platform, limited to the run tag, and compares the counts.
 4. Each rule is **Fires**, **Partly**, **Silent**, **Extra hits** or **Error**. Wazuh goes through `logtest` with the rules you deployed.
@@ -1652,7 +1697,49 @@ A rule can convert cleanly and still match nothing, because the platform names f
 
 **Live data already there** runs every query on the data the platform holds now and checks the fields exist, without sending anything.
 
-Passwords and tokens are never saved, and fire check is off in demo mode. Microsoft Sentinel is not supported yet.
+No lab logs? Tick **Add attack logs for my rules' techniques**. Sigma Forge builds Sysmon and Security events for about 55 ATT&CK techniques (see [built in attack logs](#built-in-attack-logs)) and replays them with the rest.
+
+**Microsoft Sentinel** uses an app registration (tenant, client id, secret) with Log Analytics Reader on the workspace. To replay, add a data collection endpoint (DCE), a data collection rule (DCR) with a stream into a custom table such as `SigmaForge_CL`, and give the app Monitoring Metrics Publisher on the DCR. Events go in with the Logs Ingestion API, and the KQL queries are pointed at the custom table and the run tag.
+
+**Elastic Security rule preview.** Add the Kibana URL and tick **Check with Elastic Security rule preview**. Each query then runs as a real detection rule through `/api/detection_engine/rules/preview`, and the preview alerts are counted. This shows what the detection engine itself would alert on, not only what a search finds.
+
+**Query speed.** Each rule shows how long its query took on the platform. The median is on top, and queries far slower than the rest (over 3 seconds, or in the slowest 10%) get a **Slow** badge with the usual causes.
+
+**Nightly fire check.** At the bottom of the page, save the current setup to run every 6, 12 or 24 hours or every 7 days. When a rule that used to fire stops firing, you get a Slack, Teams, Discord or webhook alert, and another one when it fires again. Last runs keeps the history. Secrets typed in the boxes are saved on the server in a file only the server user can read. Type `env:NAME` in a password box to read it from an environment variable instead.
+
+Passwords and tokens are not saved in the browser, and fire check is off in demo mode.
+
+## Built in attack logs
+
+`app/core/attacklogs.py` builds realistic Sysmon (process, network, registry, file, process access, remote thread, image load, pipe, DNS, WMI) and Windows Security, PowerShell 4104 and service 7045 events for about 55 ATT&CK techniques, on one host and one user in time order. Use them on the Test page (**Attack logs**, for the techniques of the picked rules), on Purple (**Built in attack logs**), in Fire check, and with `sigma-forge firecheck --attack`. The full set makes 41 of the sample rules fire. They help you start, they do not replace a real lab with Atomic Red Team.
+
+## Drift check
+
+In the **Deploy** drawer on Convert, **Check drift** reads what runs on the platform and compares it with what your workspace makes now. Each rule is **Same**, **Changed on the platform** (with a line diff), **Not on the platform** or **Only on the platform**, and rules turned off there are counted. Splunk saved searches are matched by the name prefix, Elastic rules by their `sigma` tag, Sentinel analytics rules by name and Wazuh by the rules file.
+
+## Detection as code CI
+
+On the Workspace GitHub tab, **Make a CI workflow** writes `.github/workflows/sigma-forge.yml` for the repository that holds your rules. On every pull request it can run the rule checks, the SigmaHQ style check, unit tests, generated events and the ATT&CK coverage report, then a fire check on a lab platform. A push to the main branch can deploy. Each platform gets a settings file with `env:` names only, and the drawer lists the repository secrets to add. Download the files or open a pull request with them (the token needs Contents, Pull requests and Workflows write).
+
+## Threat intel feeds
+
+**CTI feeds** on the Workspace pulls indicators from MISP (`/attributes/restSearch`, with optional tags) or AlienVault OTX (the pulses you follow) for the last N days. They become Sigma rules under `cti/<feed>/` and a YARA file. Every rule gets `sf_expires: 'YYYY-MM-DD'` and `sf_feed`. **Remove expired** deletes rules past their date, and the inventory flags them as **Expired IOC rule**.
+
+## Response steps
+
+The editor **Response** tab keeps what the analyst does when the rule fires, as a `response:` list in the rule. **Suggest from ATT&CK** fills steps for the rule's techniques. The steps show in test result details, in cases and in hunt and case reports. pySigma ignores the field, so queries do not change. The inventory flags high and critical rules with no steps.
+
+## Team mode and safe hosting
+
+Start the server with `SIGMA_FORGE_AUTH=1` to put Sigma Forge on a shared server.
+
+* **Logins and roles.** The first visit makes the admin. Admins add users with a role: viewer (read and run checks), editor (change rules and cases), reviewer (also approve), admin (also manage users). Passwords are PBKDF2 hashes. The session cookie is signed, HttpOnly and SameSite=Strict.
+* **Shared workspace.** Rules and cases live on the server, so the team sees the same workspace.
+* **Reviews.** **Request review** in the editor sends the rule to the **Reviews** page. A reviewer approves it or asks for changes, with comments. An approval is tied to the exact rule text. With `SIGMA_FORGE_REQUIRE_REVIEW=1`, deploys skip rules that are not approved.
+* **Audit log.** Every write call is logged with the user, action and address, on the **Users** page.
+* **CSRF protection.** Write calls need the `X-Sigma-Forge` header and a same origin `Origin`, so another site cannot act for a logged in user.
+* **Rate limits.** `SIGMA_FORGE_RATE_LIMIT` requests per minute per address, 240 by default in team and demo mode.
+* Put it behind a reverse proxy with HTTPS. Live hunts on the server machine stay local only.
 
 ## Logging setup and log health
 
@@ -1787,6 +1874,22 @@ All endpoints take and return JSON, except `/api/test`, `/api/yara/scan` and `/a
 | `GET` | `/api/firecheck/platforms` | Platforms the fire check can use |
 | `POST` | `/api/firecheck/start` | Start a fire check (multipart form), returns a job id |
 | `GET` | `/api/firecheck/{id}` | Progress and results of a fire check |
+| `GET` `POST` | `/api/firecheck/schedule` | Read or save the nightly fire check (multipart form) |
+| `POST` | `/api/firecheck/schedule/run` | Run the nightly fire check now |
+| `GET` | `/api/attacklogs/techniques` | Techniques with built in attack logs |
+| `POST` | `/api/attacklogs` | Attack logs for techniques, as JSON lines |
+| `POST` | `/api/drift` | Compare deployed rules with the workspace |
+| `POST` | `/api/ci/workflow` | Make the CI workflow files |
+| `POST` | `/api/cti/pull` | Pull MISP or OTX indicators as rules |
+| `POST` | `/api/cti/expired` | Names of rules past their end date |
+| `POST` | `/api/rules/response` | Suggest response steps, or write them into a rule |
+| `GET` | `/api/auth/me` | Team mode state and the signed in user |
+| `POST` | `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/password` | Make the admin, sign in and out, change password |
+| `GET` `POST` `PUT` `DELETE` | `/api/team/users` | Manage users (admin) |
+| `GET` | `/api/team/audit` | Audit log (admin) |
+| `GET` `POST` `PUT` | `/api/team/rules` | Shared workspace rules |
+| `GET` `POST` | `/api/team/reviews` | Reviews: request, decide, comment |
+| `GET` `PUT` `DELETE` | `/api/team/cases` | Shared cases |
 | `POST` | `/api/rules/ioc` | Sigma and YARA rules from a list of IOCs |
 | `POST` | `/api/rules/explain` | Plain sentences for each rule |
 | `POST` | `/api/rules/autofix` | Fix common problems in a rule |
@@ -1843,6 +1946,11 @@ Set these as environment variables. See [`.env.example`](.env.example).
 | `SIGMA_FORGE_SIGMAHQ_URL` | latest release zip | Where **Sync now** downloads the library from |
 | `SIGMA_FORGE_ALLOW_REMOTE_HUNT` | off | Set to `1` to let other machines start Hunt scans on this server |
 | `SIGMA_FORGE_DEMO` | off | Set to `1` for a public demo: machine scans, live deploys, GitHub sync and library sync are turned off |
+| `SIGMA_FORGE_AUTH` | off | Set to `1` for team mode: logins, roles, a shared workspace and the audit log |
+| `SIGMA_FORGE_REQUIRE_REVIEW` | off | Set to `1` so only approved rules deploy (team mode) |
+| `SIGMA_FORGE_RATE_LIMIT` | `240` in team and demo mode, else off | Requests per minute per address. `0` turns it off |
+| `SIGMA_FORGE_SESSION_HOURS` | `12` | How long a login lasts |
+| `SIGMA_FORGE_STATE_DIR` | `data` (source), `~/.sigma-forge` (pip, Windows build) | Where team data, schedules and saved logs go |
 | `WAZUH_API_URL` | `https://127.0.0.1:55000` | Used by `wazuh_check.py` |
 | `WAZUH_API_USER` | `wazuh` | Used by `wazuh_check.py` |
 | `WAZUH_API_PASSWORD` | none | Used by `wazuh_check.py` |
@@ -1918,7 +2026,8 @@ Sigma-Forge/
 │   ├── cli.py                   sigma-forge command line
 │   ├── api/
 │   │   ├── routes.py            /api endpoints
-│   │   └── extra.py             Logging setup, import, push, tests, builders, cases
+│   │   ├── extra.py             Logging setup, import, push, tests, builders, cases, fire check, drift, CI, CTI
+│   │   └── team.py              Logins, users, audit, shared rules, reviews and cases
 │   └── core/
 │       ├── parsing.py           Load YAML into pySigma rules
 │       ├── analyzer.py          Metadata and validators
@@ -1954,6 +2063,13 @@ Sigma-Forge/
 │       ├── builders.py          Rule wizard and correlation builder
 │       ├── threatreport.py      Threat report to techniques, IOCs and coverage
 │       ├── firecheck.py         Replay logs, run converted queries on the platform, diagnose silent rules
+│       ├── fcschedule.py        Nightly fire check and stopped firing alerts
+│       ├── attacklogs.py        Built in Sysmon and Security events per ATT&CK technique
+│       ├── drift.py             Deployed rules compared with the workspace
+│       ├── ciworkflow.py        GitHub Actions workflow for detection as code
+│       ├── ctifeeds.py          MISP and OTX indicators to rules with end dates
+│       ├── response.py          Response steps per rule
+│       ├── team.py              Users, sessions, roles, audit, reviews, rate limit
 │       └── wazuh/
 │           ├── backend.py       Sigma to Wazuh XML
 │           └── mapping.py       Log source and field mapping
@@ -1974,10 +2090,12 @@ Sigma-Forge/
 │       │   ├── shared.js        History, diff, quality and editor helpers
 │       │   ├── localdata.js     Unit tests, verdicts, run stats and cases in the browser
 │       │   ├── guides-data.js   Text of the in app Guides page
+│       │   ├── team.js          Login, user box and the CSRF header
 │       │   └── views/           workspace, convert, coverage, rules, editor,
 │       │                        compare, test, hunt, purple, yara, library, mappings,
 │       │                        results (shared test results), yarakit, inventory, cases,
-│       │                        builders, editortools, tools (drawers for the new tools), guides, firecheck
+│       │                        builders, editortools, tools (drawers for the new tools), guides, firecheck,
+│       │                        reviews, teamadmin
 │       └── img/                 Animated logo (logo.gif), logo, banners, screenshots
 ├── data/
 │   ├── attack/                  Compact ATT&CK Enterprise data and threat groups
@@ -1997,10 +2115,13 @@ Sigma-Forge/
 ├── tools/
 │   ├── fetch_attack.py          Build attack.json and groups.json from MITRE STIX
 │   ├── fetch_atomic.py          Build the Atomic Red Team index
+│   ├── windows_entry.py         Entry point of the Windows build
 │   └── wazuh_check.py           Upload and test rules on a Wazuh manager
 ├── tests/                       pytest suite
 ├── setup.sh                     Linux and macOS setup
 ├── setup.ps1                    Windows setup
+├── build_windows.ps1            Windows build with PyInstaller
+├── pyproject.toml               pip package with the sigma-forge commands
 ├── sigma-forge, sigma-forge.ps1 Command line wrappers
 ├── action.yml                   GitHub Action
 ├── Dockerfile
@@ -2036,7 +2157,9 @@ Adding a sample rule is as simple as dropping a `.yml` file anywhere under `samp
 * **SIEM import** uses the query to rule converter, so searches with `stats`, joins or macros keep only their filters. Check each imported rule.
 * **The Sysmon config** includes events, it does not filter noise out. Merge it with your own excludes before you roll it out.
 * **Verdicts, unit tests, inventory stats and cases** live in the browser. Use workspace sharing to move them.
-* **Fire check** needs a lab or test platform you can write to. Wazuh logtest shows one rule per event, so a rule can be hidden by another rule that matches the same event.
+* **Fire check** needs a lab or test platform you can write to. Wazuh logtest shows one rule per event, so a rule can be hidden by another rule that matches the same event. Sentinel ingestion can take a few minutes before the events are searchable.
+* **Platform clients** for Sentinel, Elastic rule preview, drift, MISP and OTX were built from the public API docs and tested against mocks. Try them on a lab first.
+* **The nightly fire check** only runs while the server runs, like scheduled hunts.
 * **Deploy** was built against the public API docs of each platform. Try a dry run and a small set of rules first on your version.
 * **Elastic Lucene** regex is not PCRE (Perl Compatible Regular Expressions), so rules with complex `re` values may need a manual check.
 

@@ -1,4 +1,5 @@
 import json
+import re
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -7,10 +8,14 @@ from app.api.routes import _no_demo, _parse
 from app.core.logtest import LogInputError
 from app.core.parsing import InputLimitError
 from app.schemas import (
+    AttackLogsRequest,
     AutofixRequest,
     CaseReportRequest,
     ConvertOptions,
     CorrelationRequest,
+    CtiRequest,
+    ResponseRequest,
+    DeployRequest,
     GithubPushRequest,
     RuleInput,
     RulesRequest,
@@ -224,30 +229,175 @@ async def firecheck_start(
     settings: str = Form("{}"),
     field_mapping: str = Form("{}"),
     sample: str = Form(""),
+    attack: str = Form(""),
     files: list[UploadFile] = File(default=[]),
 ):
-    from app.config import BASE_DIR
-    from app.core.fieldmap import MappingError, clean_mapping
     from app.core.firecheck import FireError, start
 
     _no_demo("The fire check")
+    params = _fire_params(rules, platform, target, mode, hours, settings, field_mapping, sample, attack, await _blobs(files))
+    try:
+        jid = start(params)
+    except FireError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"id": jid}
+
+
+
+
+@router.get("/attacklogs/techniques")
+def attacklogs_catalog():
+    from app.core.attacklogs import catalog
+
+    return {"techniques": catalog()}
+
+
+@router.post("/attacklogs")
+def attacklogs_generate(req: AttackLogsRequest):
+    from app.core.attacklogs import generate
+
+    res = generate(req.techniques or None, req.host, req.user)
+    if not res["events"]:
+        raise HTTPException(status_code=400, detail="None of these techniques have built in attack logs yet")
+    return res
+
+
+def _fire_params(rules, platform, target, mode, hours, settings, field_mapping, sample, attack, blobs, keep_sample=False):
+    from app.config import BASE_DIR
+    from app.core.fieldmap import MappingError, clean_mapping
+
     items = _rules(rules)
     try:
         conf = json.loads(settings or "{}")
         mapping = clean_mapping(json.loads(field_mapping or "{}"))
     except (ValueError, MappingError) as exc:
         raise HTTPException(status_code=400, detail=f"Bad request: {exc}")
-    blobs = await _blobs(files)
-    if sample:
+    if sample and not keep_sample:
         path = BASE_DIR / "sample" / "logs" / "attack_chain_sysmon.jsonl"
         blobs.append((path.name, path.read_bytes()))
+    _parse(items)
+    return {"rules": items, "platform": platform, "target": target, "mode": mode, "hours": max(0.1, min(hours, 720)),
+            "settings": conf if isinstance(conf, dict) else {}, "mapping": mapping, "files": blobs,
+            "attack": "rules" if attack == "rules" else [t for t in re.split(r"[\s,]+", attack) if t][:200]}
+
+
+@router.get("/firecheck/schedule")
+def firecheck_schedule_get():
+    from app.core.fcschedule import public
+
+    return public()
+
+
+@router.post("/firecheck/schedule")
+async def firecheck_schedule_set(
+    enabled: bool = Form(...),
+    every_hours: int = Form(24),
+    kind: str = Form("slack"),
+    url: str = Form(""),
+    replace: bool = Form(False),
+    rules: str = Form("[]"),
+    platform: str = Form("splunk"),
+    target: str = Form(""),
+    mode: str = Form("replay"),
+    hours: float = Form(24),
+    settings: str = Form("{}"),
+    field_mapping: str = Form("{}"),
+    sample: str = Form(""),
+    attack: str = Form(""),
+    files: list[UploadFile] = File(default=[]),
+):
+    from app.core.fcschedule import update
+    from app.core.firecheck import PLATFORMS, FireError, _client
+
+    _no_demo("Scheduled fire checks")
+    params = None
+    if replace:
+        params = _fire_params(rules, platform, target, mode, hours, settings, field_mapping, sample, attack, await _blobs(files), keep_sample=True)
+        params["sample"] = bool(sample)
+        if platform not in PLATFORMS:
+            raise HTTPException(status_code=400, detail="Unknown platform")
+        try:
+            _client(platform, params["settings"])
+        except FireError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
     try:
-        _parse(items)
-        jid = start({"rules": items, "platform": platform, "target": target, "mode": mode, "hours": max(0.1, min(hours, 720)),
-                     "settings": conf if isinstance(conf, dict) else {}, "mapping": mapping, "files": blobs})
-    except FireError as exc:
+        return update(enabled, every_hours, params, kind, url or None)
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"id": jid}
+
+
+@router.post("/firecheck/schedule/run")
+def firecheck_schedule_run():
+    import threading
+
+    from app.core import fcschedule
+
+    _no_demo("Scheduled fire checks")
+    if not fcschedule.load().get("params"):
+        raise HTTPException(status_code=400, detail="Nothing scheduled yet")
+    if fcschedule._running:
+        raise HTTPException(status_code=409, detail="It is already running")
+    threading.Thread(target=fcschedule.run_once, daemon=True).start()
+    return {"started": True}
+
+
+@router.post("/drift")
+def drift_check(req: DeployRequest):
+    from app.api.routes import _allow
+    from app.core.converter import ConversionRequestError
+    from app.core.deploy import DeployError
+    from app.core.drift import check
+
+    _no_demo("The drift check")
+    try:
+        return check(_allow(req.rules, req.allowlist), req.kind, req.target, req.settings, req.options, req.field_mapping)
+    except (DeployError, ConversionRequestError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=400, detail=f"Unexpected answer from the platform: {exc}")
+
+
+@router.post("/ci/workflow")
+def ci_workflow(req: WizardRequest):
+    from app.core.ciworkflow import generate
+
+    try:
+        return generate(req.spec)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/cti/pull")
+def cti_pull(req: CtiRequest):
+    from app.core.ctifeeds import FeedError, pull
+
+    _no_demo("Pulling threat intel feeds")
+    try:
+        return pull(req.source, req.settings)
+    except FeedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/cti/expired")
+def cti_expired(req: RulesRequest):
+    from app.core.ctifeeds import expired
+
+    return {"expired": expired(req.rules)}
+
+
+@router.post("/rules/response")
+def rules_response(req: ResponseRequest):
+    from app.core.response import set_steps, suggest
+
+    if req.steps is None:
+        return {"steps": suggest(req.content)}
+    out = set_steps(req.content, req.steps)
+    from app.core.parsing import parse_file
+
+    errs = [p.error for p in parse_file("rule.yml", out) if p.error]
+    if errs:
+        raise HTTPException(status_code=400, detail=errs[0])
+    return {"content": out}
 
 
 @router.get("/firecheck/{jid}")

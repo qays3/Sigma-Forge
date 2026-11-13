@@ -1,5 +1,9 @@
 FROM python:3.12-slim AS base
 
+LABEL org.opencontainers.image.title="Sigma Forge" \
+      org.opencontainers.image.source="https://github.com/qays3/Sigma-Forge" \
+      org.opencontainers.image.description="Write, check, convert, test and ship Sigma detection rules"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -25,7 +29,7 @@ COPY tools ./tools
 ARG REFRESH_ATTACK=false
 RUN if [ "$REFRESH_ATTACK" = "true" ]; then python tools/fetch_attack.py; fi
 
-RUN useradd --create-home --uid 10001 forge && mkdir -p /app/library && chown -R forge:forge /app
+RUN useradd --create-home --uid 10001 forge && mkdir -p /app/library /app/state && chown -R forge:forge /app
 USER forge
 
 EXPOSE 8000

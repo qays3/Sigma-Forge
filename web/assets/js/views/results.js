@@ -322,6 +322,7 @@ export function showDetails(r) {
     </dl>
     ${r.message ? `<div class="card"><div class="notice notice--bad">${esc(r.message)}</div></div>` : ""}
     ${(r.warnings || []).length ? `<div class="card mt-4">${r.warnings.map((w) => `<div class="notice notice--warn">${esc(w)}</div>`).join("")}</div>` : ""}
+    ${(r.response || []).length ? `<h3 class="section-title">Response steps</h3><div class="card"><div class="card__body"><ol class="rsp__steps">${r.response.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div></div>` : ""}
     ${noiseSection(r)}
     <div data-role="precision">${precisionSection(file)}</div>
     ${alerts.length ? `<h3 class="section-title">Alerts</h3>${alerts.map((a) => `<div class="card"><pre class="code">${esc(pretty(a))}</pre></div>`).join("")}` : ""}

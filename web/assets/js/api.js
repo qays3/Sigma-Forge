@@ -219,6 +219,13 @@ export const api = {
     files.forEach((f) => form.append("files", f, f.name));
     return upload("/api/siem/send", form);
   },
+  response: (content, steps = null) => request("/api/rules/response", { method: "POST", body: { content, steps } }),
+  attackCatalog: () => request("/api/attacklogs/techniques"),
+  attackLogs: (techniques, host, user) => request("/api/attacklogs", { method: "POST", body: { techniques, host, user } }),
+  drift: (body) => request("/api/drift", { method: "POST", body: { ...body, rules: strip(body.rules), allowlist: allow() } }),
+  ciWorkflow: (spec) => request("/api/ci/workflow", { method: "POST", body: { spec } }),
+  ctiPull: (source, settings) => request("/api/cti/pull", { method: "POST", body: { source, settings } }),
+  ctiExpired: (rules) => request("/api/cti/expired", { method: "POST", body: { rules: strip(rules) } }),
   caseReport: (c) => fetchFile("/api/cases/report", { case: c }, "case-report.html"),
   fire: {
     platforms: () => request("/api/firecheck/platforms"),
@@ -230,5 +237,14 @@ export const api = {
       return upload("/api/firecheck/start", form);
     },
     status: (id) => request(`/api/firecheck/${encodeURIComponent(id)}`),
+    schedule: () => request("/api/firecheck/schedule"),
+    setSchedule(rules, fields, files) {
+      const form = new FormData();
+      form.append("rules", JSON.stringify(strip(rules)));
+      Object.entries(fields).forEach(([k, v]) => form.append(k, typeof v === "string" ? v : JSON.stringify(v)));
+      files.forEach((f) => form.append("files", f, f.name));
+      return upload("/api/firecheck/schedule", form);
+    },
+    runSchedule: () => request("/api/firecheck/schedule/run", { method: "POST", body: {} }),
   },
 };

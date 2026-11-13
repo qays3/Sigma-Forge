@@ -7,8 +7,9 @@ import { takeIncoming, clearHistory, diffHtml, diffStats, fmtTime, lineDiff, pai
 import { $, $$, closeDrawer, copyText, debounce, download, esc, forging, icons, levelBadge, openDrawer, plural, setDrawerBody, toast } from "../ui.js";
 import { ruleFromEvent } from "./results.js";
 import { correlationPane, wizardPane } from "./builders.js";
-import { sigmahqPane, testsPane } from "./editortools.js";
+import { responsePane, sigmahqPane, testsPane } from "./editortools.js";
 import { unitTests } from "../localdata.js";
+import { can, teamApi, teamState } from "../team.js";
 
 const DRAFT_KEY = "sigma-forge-draft";
 const PREF_KEY = "sigma-forge-editor";
@@ -231,6 +232,7 @@ export async function editorView(root, route) {
             <button class="btn btn--sm" type="button" id="edFix" title="Fix common problems the checks find">${icons.check || icons.spark} Auto fix</button>
             <button class="btn btn--sm" type="button" id="edHistory" title="Saved versions of this file">${icons.grid} History <span class="badge" id="edHistCount">0</span></button>
             <button class="btn btn--sm" type="button" id="edDownload">${icons.download} Download</button>
+            <button class="btn btn--sm" type="button" id="edReview" hidden title="Ask a teammate to check this rule before it goes live">${icons.check} Request review <span class="badge" id="edReviewState"></span></button>
             <button class="btn btn--sm btn--primary" type="button" id="edSave">${icons.file} Save to workspace</button>
           </div>
           <div class="editor__area">
@@ -246,6 +248,7 @@ export async function editorView(root, route) {
             <button class="tab" type="button" data-tab="attack">ATT&amp;CK</button>
             <button class="tab" type="button" data-tab="tests">Tests <span class="tab__count" id="edTestCount">0</span></button>
             <button class="tab" type="button" data-tab="sigmahq">SigmaHQ</button>
+            <button class="tab" type="button" data-tab="response">Response</button>
           </div>
           <div class="editor__pane" data-pane="checks" id="edChecks"></div>
           <div class="editor__pane" data-pane="query" id="edQuery" hidden>
@@ -258,6 +261,7 @@ export async function editorView(root, route) {
           </div>
           <div class="editor__pane" data-pane="attack" id="edAttack" hidden></div>
           <div class="editor__pane" data-pane="tests" id="edTests" hidden></div>
+          <div class="editor__pane" data-pane="response" id="edRsp" hidden></div>
           <div class="editor__pane" data-pane="sigmahq" id="edShq" hidden></div>
         </div>
       </div>
@@ -473,6 +477,14 @@ export async function editorView(root, route) {
     trackState({ tab: tab.dataset.tab });
     if (tab.dataset.tab === "tests") tests.paint();
     if (tab.dataset.tab === "sigmahq") shq.run();
+    if (tab.dataset.tab === "response") rsp.paint();
+  });
+  const rsp = responsePane($("#edRsp", root), () => file(), (content) => {
+    pushHistory(file().name, text.value, "Response steps");
+    setText(content);
+    paintGutter();
+    paintHistCount();
+    refresh();
   });
   const tests = testsPane($("#edTests", root), () => file(), () => paintTestCount());
   const shq = sigmahqPane($("#edShq", root), () => file(), (change) => {
@@ -571,6 +583,41 @@ export async function editorView(root, route) {
     }
   }
   $("#edSave", root).addEventListener("click", saveToWorkspace);
+  const REVIEW_LABEL = { none: ["", ""], pending: ["waiting", "warn"], approved: ["approved", "ok"], changes: ["changes asked", "bad"], outdated: ["edited since", "warn"] };
+  const paintReview = () => {
+    const btn = $("#edReview", root);
+    btn.hidden = !teamState.auth || !can("write");
+    if (btn.hidden) return;
+    const st = store.review(file().name);
+    const saved = st.status !== "none";
+    const [label, cls] = REVIEW_LABEL[st.status] || ["", ""];
+    const badge = $("#edReviewState", root);
+    badge.textContent = label;
+    badge.className = `badge ${cls ? `badge--${cls}` : ""}`;
+    badge.hidden = !saved;
+  };
+  paintReview();
+  const offReview = store.onChange(paintReview);
+  nameInput.addEventListener("input", paintReview);
+  $("#edReview", root).addEventListener("click", () => {
+    openDrawer("Request a review", `
+      <p class="muted">Save first so the team sees the same version. A reviewer gets it in the Reviews page.</p>
+      <label class="field"><span class="field__label">What changed and why</span><textarea class="textarea" id="rqNote" rows="4" placeholder="Added a filter for the backup agent, tested on last week's logs"></textarea></label>
+      <div class="row"><div class="spacer"></div><button class="btn btn--primary" type="button" id="rqGo">${icons.check} Send for review</button></div>`, (panel) => {
+      $("#rqGo", panel).addEventListener("click", async () => {
+        try {
+          await saveToWorkspace();
+          const f = file();
+          await teamApi.post("/api/team/reviews", { name: f.name, content: f.content, note: $("#rqNote", panel).value.trim() });
+          await store.refresh();
+          closeDrawer();
+          toast("Sent for review", "ok");
+        } catch (err) {
+          toast(err.message, "bad");
+        }
+      });
+    });
+  });
 
   $("#edOpen", root).addEventListener("click", async () => {
     const list = await state.rules();
@@ -873,6 +920,7 @@ export async function editorView(root, route) {
   return {
     destroy() {
       saveDraft();
+      offReview();
     },
   };
 }

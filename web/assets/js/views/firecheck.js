@@ -23,7 +23,10 @@ const PLATFORM_TARGETS = {
   elastic: [["elastic_lucene", "Lucene (Kibana)"], ["elastic_esql", "ES|QL"], ["elastic_eql", "EQL"]],
   opensearch: [["opensearch_lucene", "Lucene"]],
   wazuh: [["wazuh", "Wazuh rules"]],
+  sentinel: [["sentinel_asim", "KQL (ASIM)"], ["azure_monitor", "KQL (Azure Monitor)"]],
 };
+const PLATFORM_NAMES = { splunk: "Splunk", elastic: "Elasticsearch", opensearch: "OpenSearch", wazuh: "Wazuh", sentinel: "Sentinel" };
+const SECRETS = ["password", "token", "hec_token", "client_secret", "query_token", "ingest_token"];
 let files = [];
 let last = null;
 
@@ -58,8 +61,25 @@ function connFields(p, s) {
         <label class="field" data-replay><span class="field__label">Index for replayed events</span><input class="input mono" data-k="index" value="${v("index", "sigma-forge-firecheck")}"></label>
         <label class="field" data-replay><span class="field__label">Ingest pipeline (optional)</span><input class="input mono" data-k="pipeline" value="${v("pipeline")}" placeholder="the pipeline your agents use"></label>
         <label class="field" data-live><span class="field__label">Indices with your live data</span><input class="input mono" data-k="live_index" value="${v("live_index", "logs-*,winlogbeat-*")}"></label>
+        ${p === "elastic" ? `<label class="field"><span class="field__label">Kibana URL (for rule preview)</span><input class="input mono" data-k="kibana_url" value="${v("kibana_url")}" placeholder="https://kibana.lab:5601"></label>
+        <label class="field"><span class="field__label">Kibana space</span><input class="input mono" data-k="space" value="${v("space")}" placeholder="default"></label>` : ""}
       </div>
-      <div class="row">${tls}</div>`;
+      <div class="row">${tls}${p === "elastic" ? `<label class="check mb-0" title="Runs each query as a real Elastic Security detection rule through the rule preview API, so you see what the detection engine itself would alert on"><input type="checkbox" data-k="use_rules" ${s.use_rules ? "checked" : ""}> Check with Elastic Security rule preview</label>` : ""}</div>`;
+  }
+  if (p === "sentinel") {
+    return `
+      <div class="fc__grid">
+        <label class="field"><span class="field__label">Log Analytics workspace ID</span><input class="input mono" data-k="workspace_id" value="${v("workspace_id")}" placeholder="00000000-0000-0000-0000-000000000000"></label>
+        <label class="field"><span class="field__label">Tenant ID</span><input class="input mono" data-k="tenant_id" value="${v("tenant_id")}"></label>
+        <label class="field"><span class="field__label">App (client) ID</span><input class="input mono" data-k="client_id" value="${v("client_id")}" autocomplete="off"></label>
+        <label class="field"><span class="field__label">Client secret</span><input class="input mono" data-k="client_secret" type="password" autocomplete="off" data-secret></label>
+        <label class="field" data-replay><span class="field__label">Data collection endpoint (DCE)</span><input class="input mono" data-k="dce" value="${v("dce")}" placeholder="https://name.region.ingest.monitor.azure.com"></label>
+        <label class="field" data-replay><span class="field__label">Data collection rule ID (DCR)</span><input class="input mono" data-k="dcr_id" value="${v("dcr_id")}" placeholder="dcr-..."></label>
+        <label class="field" data-replay><span class="field__label">Stream</span><input class="input mono" data-k="stream" value="${v("stream", "Custom-SigmaForge_CL")}"></label>
+        <label class="field" data-replay><span class="field__label">Custom table</span><input class="input mono" data-k="table" value="${v("table", "SigmaForge_CL")}"></label>
+        <label class="field" data-live><span class="field__label">Table with your live data</span><input class="input mono" data-k="live_table" value="${v("live_table", "SecurityEvent")}"></label>
+      </div>
+      <p class="muted">The app needs Log Analytics Reader on the workspace, and Monitoring Metrics Publisher on the DCR to send events. Replayed events go to the custom table, and the queries are pointed at it.</p>`;
   }
   return `
     <div class="fc__grid">
@@ -89,7 +109,7 @@ export async function fireCheckView(root) {
       <div class="card setup fc__setup">
         <div class="setup__main">
           <div class="field__label">1. Platform</div>
-          <div class="seg" id="fcPlat">${Object.entries({ splunk: "Splunk", elastic: "Elasticsearch", opensearch: "OpenSearch", wazuh: "Wazuh" }).map(([k, l]) => `<button class="seg__btn ${k === platform ? "is-active" : ""}" type="button" data-p="${k}">${l}</button>`).join("")}</div>
+          <div class="seg" id="fcPlat">${Object.entries(PLATFORM_NAMES).map(([k, l]) => `<button class="seg__btn ${k === platform ? "is-active" : ""}" type="button" data-p="${k}">${l}</button>`).join("")}</div>
           <div id="fcConn" class="mt-4"></div>
           <div class="field__label mt-4">2. Events</div>
           <div class="seg" id="fcMode"><button class="seg__btn" type="button" data-m="replay">Replay my logs</button><button class="seg__btn" type="button" data-m="live">Live data already there</button></div>
@@ -99,7 +119,7 @@ export async function fireCheckView(root) {
               <span class="dropzone__body"><span class="dropzone__title">Drop logs that look like production</span><span class="dropzone__text">.evtx, .json, .jsonl or a .zip, up to 64 MB. They are sent to the platform with a run tag.</span></span>
               <input class="hidden-input" type="file" id="fcInput" multiple accept=".evtx,.json,.jsonl,.ndjson,.zip">
             </label>
-            <div class="setup__actions"><label class="check mb-0"><input type="checkbox" id="fcSample"> Add the sample attack chain logs</label></div>
+            <div class="setup__actions"><label class="check mb-0"><input type="checkbox" id="fcSample"> Add the sample attack chain logs</label><label class="check mb-0" title="Sigma Forge makes Sysmon and Security events for each ATT&amp;CK technique tagged in the chosen rules"><input type="checkbox" id="fcAttack" ${prefs.attack ? "checked" : ""}> Add attack logs for my rules' techniques</label></div>
             <ul class="filechips" id="fcFiles"></ul>
           </div>
           <div id="fcLive" class="mt-4" hidden>
@@ -116,6 +136,7 @@ export async function fireCheckView(root) {
               <li>Each rule: fires, partly, silent or error.</li>
               <li>For silent rules: fields the platform does not have and where the value really is.</li>
               <li>A fix for the rules (mapping profile) or for the platform (field aliases).</li>
+              <li>How long each query took, with slow ones marked.</li>
             </ol>
           </div>
           <div class="setup__run">
@@ -125,6 +146,7 @@ export async function fireCheckView(root) {
         </div>
       </div>
       <div id="fcOut" class="mt-5"></div>
+      <div class="card mt-5" id="fcSched"><div class="card__body">${forging("Loading the nightly check")}</div></div>
     </section>`;
 
   const rules = await state.rules();
@@ -143,10 +165,10 @@ export async function fireCheckView(root) {
     const s = readConn();
     const keep = {};
     Object.entries(s).forEach(([k, v]) => {
-      if (!["password", "token", "hec_token"].includes(k)) keep[k] = v;
+      if (!SECRETS.includes(k)) keep[k] = v;
     });
     all[platform] = keep;
-    writeJson(KEY, { platform, mode, hours: Number($("#fcHours", root).value), settings: all, target: { ...(prefs.target || {}), [platform]: $("#fcTarget", root).value } });
+    writeJson(KEY, { platform, mode, attack: $("#fcAttack", root).checked, hours: Number($("#fcHours", root).value), settings: all, target: { ...(prefs.target || {}), [platform]: $("#fcTarget", root).value } });
   };
   const paint = () => {
     $$("#fcPlat [data-p]", root).forEach((b) => b.classList.toggle("is-active", b.dataset.p === platform));
@@ -238,8 +260,9 @@ export async function fireCheckView(root) {
       return;
     }
     const sample = $("#fcSample", root).checked;
-    if (mode === "replay" && !files.length && !sample) {
-      toast("Add log files, or tick the sample logs", "bad");
+    const attack = $("#fcAttack", root).checked;
+    if (mode === "replay" && !files.length && !sample && !attack) {
+      toast("Add log files, or tick the sample or attack logs", "bad");
       return;
     }
     save();
@@ -248,7 +271,7 @@ export async function fireCheckView(root) {
     $("#fcRun", root).disabled = true;
     out.innerHTML = `<div class="card"><div class="card__body">${forging("Starting the fire check")}<div class="fc__progress"><div class="fc__stage" id="fcStage">Starting</div><div class="meter"><span class="meter__fill" id="fcBar"></span></div></div></div></div>`;
     try {
-      const { id } = await api.fire.start(chosen, { platform, target: $("#fcTarget", root).value, mode, hours: $("#fcHours", root).value, settings, field_mapping: map, sample: sample ? "1" : "" }, mode === "replay" ? files : []);
+      const { id } = await api.fire.start(chosen, { platform, target: $("#fcTarget", root).value, mode, hours: $("#fcHours", root).value, settings, field_mapping: map, sample: sample ? "1" : "", attack: attack && mode === "replay" ? "rules" : "" }, mode === "replay" ? files : []);
       for (;;) {
         await new Promise((r) => setTimeout(r, 1200));
         const s = await api.fire.status(id);
@@ -286,19 +309,20 @@ export async function fireCheckView(root) {
         <div class="stat"><div class="stat__label">Fire score</div><div class="stat__value ${res.score === 100 ? "stat__value--ok" : res.score === null ? "" : "stat__value--warn"}">${res.score === null ? "none" : `${res.score}%`}</div><div class="stat__hint">${res.mode === "replay" ? `${res.fired} of ${res.should_fire} rules that should fire` : "live data"}</div></div>
         <div class="stat"><div class="stat__label">Silent</div><div class="stat__value ${silent ? "stat__value--bad" : "stat__value--ok"}">${silent}</div><div class="stat__hint">${c.error || 0} errors</div></div>
         <div class="stat"><div class="stat__label">Events</div><div class="stat__value stat__value--accent">${res.events || 0}</div><div class="stat__hint">${res.indexed != null ? `${res.indexed} searchable` : esc(res.platform_name)}</div></div>
-        <div class="stat"><div class="stat__label">Fields seen</div><div class="stat__value">${res.fields_seen}</div><div class="stat__hint">on ${esc(res.platform_name)}</div></div>
+        <div class="stat"><div class="stat__label">Query speed</div><div class="stat__value ${res.slow ? "stat__value--warn" : ""}">${res.median_ms == null ? "none" : ms(res.median_ms)}</div><div class="stat__hint">median · ${res.slow ? `${res.slow} slow` : "none slow"} · ${res.fields_seen} fields seen</div></div>
       </div>
+      ${(res.attack_techniques || []).length ? `<p class="muted">Attack logs added for ${esc(res.attack_techniques.join(", "))}.</p>` : ""}
       ${fixes.length ? `<div class="card"><div class="card__head"><span class="card__title">How to fix the silent rules</span></div><div class="card__body fc__fixes">${fixes.join("")}</div></div>` : silent ? "" : res.mode === "replay" && res.should_fire ? '<div class="card"><div class="notice notice--ok">Every rule that should fire on these logs fires on the platform.</div></div>' : ""}
-      <div class="toolbar mt-4"><div class="tabs tabs--inline" id="fcTabs">${(res.mode === "replay" ? ["tested"] : []).concat(["silent", "partial", "error", "hidden", "extra", "fires", "hits", "untested", "no_data", "skipped", "all"]).filter((k) => k === "all" || k === "tested" || c[k]).map((k, i) => `<button class="tab ${i === 0 ? "is-active" : ""}" type="button" data-f="${k}">${k === "all" ? "All" : k === "tested" ? "Should fire" : VERDICT[k][0]} <span class="tab__count">${k === "all" ? res.results.length : k === "tested" ? tested : c[k]}</span></button>`).join("")}</div></div>
+      <div class="toolbar mt-4"><div class="tabs tabs--inline" id="fcTabs">${(res.mode === "replay" ? ["tested"] : []).concat(["silent", "partial", "error", "hidden", "extra", "fires", "hits", "untested", "no_data", "skipped", "slow", "all"]).filter((k) => k === "all" || k === "tested" || (k === "slow" ? res.slow : c[k])).map((k, i) => `<button class="tab ${i === 0 ? "is-active" : ""}" type="button" data-f="${k}">${k === "all" ? "All" : k === "tested" ? "Should fire" : k === "slow" ? "Slow" : VERDICT[k][0]} <span class="tab__count">${k === "all" ? res.results.length : k === "tested" ? tested : k === "slow" ? res.slow : c[k]}</span></button>`).join("")}</div></div>
       <div class="card"><ul class="list" id="fcList">${res.results
-        .map((r, i) => `<li class="list__item" data-v="${r.verdict}" data-t="${isTested(r) ? "1" : ""}" ${res.mode === "replay" && !isTested(r) ? "hidden" : ""}><div class="list__main"><div class="list__title">${esc(r.title)}</div><div class="list__meta">${r.expected != null ? `should hit ${r.expected} · ` : ""}${r.got != null ? `platform found ${r.got}` : esc(r.error.slice(0, 120))}${r.diagnosis?.missing?.length ? ` · missing ${esc(r.diagnosis.missing.slice(0, 3).join(", "))}` : ""}${r.note ? ` · ${esc(r.note)}` : ""}</div></div>${levelBadge(r.level)}<span class="badge badge--${VERDICT[r.verdict][1]}">${esc(VERDICT[r.verdict][0])}</span><button class="btn btn--sm" type="button" data-show="${i}">Details</button></li>`)
+        .map((r, i) => `<li class="list__item" data-v="${r.verdict}" data-slow="${r.slow ? "1" : ""}" data-t="${isTested(r) ? "1" : ""}" ${res.mode === "replay" && !isTested(r) ? "hidden" : ""}><div class="list__main"><div class="list__title">${esc(r.title)}</div><div class="list__meta">${r.expected != null ? `should hit ${r.expected} · ` : ""}${r.got != null ? `platform found ${r.got}` : esc(r.error.slice(0, 120))}${r.diagnosis?.missing?.length ? ` · missing ${esc(r.diagnosis.missing.slice(0, 3).join(", "))}` : ""}${r.note ? ` · ${esc(r.note)}` : ""}${r.ms != null ? ` · ${ms(r.ms)}` : ""}</div></div>${r.slow ? '<span class="badge badge--warn" title="This query took much longer than the others">Slow</span>' : ""}${levelBadge(r.level)}<span class="badge badge--${VERDICT[r.verdict][1]}">${esc(VERDICT[r.verdict][0])}</span><button class="btn btn--sm" type="button" data-show="${i}">Details</button></li>`)
         .join("")}</ul></div>`;
     $("#fcTabs", out).addEventListener("click", (e) => {
       const t = e.target.closest("[data-f]");
       if (!t) return;
       $$("#fcTabs .tab", out).forEach((x) => x.classList.toggle("is-active", x === t));
       const f = t.dataset.f;
-      $$("#fcList [data-v]", out).forEach((li) => (li.hidden = f === "tested" ? !li.dataset.t : f !== "all" && li.dataset.v !== f));
+      $$("#fcList [data-v]", out).forEach((li) => (li.hidden = f === "tested" ? !li.dataset.t : f === "slow" ? !li.dataset.slow : f !== "all" && li.dataset.v !== f));
     });
     out.onclick = async (e) => {
       const show = e.target.closest("[data-show]");
@@ -335,10 +359,12 @@ export async function fireCheckView(root) {
       <dl class="meta mt-4">
         ${r.expected != null ? `<dt>Sigma matched</dt><dd>${esc(plural(r.expected, "event"))}</dd>` : ""}
         <dt>Platform found</dt><dd>${r.got != null ? r.got : "no answer"}</dd>
+        ${r.ms != null ? `<dt>Query time</dt><dd>${ms(r.ms)}${r.slow ? ' <span class="badge badge--warn">Slow</span>' : ""}</dd>` : ""}
         ${r.wazuh_ids ? `<dt>Wazuh rule ids</dt><dd class="mono">${esc(r.wazuh_ids.join(", ") || "none")}</dd>` : ""}
       </dl>
       ${r.error ? `<div class="notice notice--bad mt-4">${esc(r.error)}</div>` : ""}
       ${r.note ? `<div class="notice notice--warn mt-4">${esc(r.note)}</div>` : ""}
+      ${r.slow ? '<div class="notice notice--warn mt-4">This query is slow. Common causes: a leading wildcard (contains or endswith on a big field), many OR values, or no index or log source filter. Narrow the log source or use a field the platform indexes.</div>' : ""}
       ${d ? `
         ${d.missing.length ? `<h3 class="section-title">Fields the platform does not have</h3><div class="chips">${d.missing.map((f) => `<span class="chip chip--bad mono">${esc(f)}</span>`).join("")}</div>` : ""}
         ${d.case.length ? `<h3 class="section-title">Wrong letter case</h3><ul class="list">${d.case.map((x) => `<li class="list__item"><div class="list__main mono">${esc(x.field)} is ${esc(x.seen)} on the platform</div></li>`).join("")}</ul>` : ""}
@@ -351,6 +377,70 @@ export async function fireCheckView(root) {
     });
   }
 
+  const sched = $("#fcSched", root);
+  const paintSched = (cur) => {
+    const hist = cur.history || [];
+    const kinds = [["slack", "Slack"], ["teams", "Teams"], ["discord", "Discord"], ["webhook", "Any webhook (JSON)"]];
+    sched.innerHTML = `
+      <div class="card__head"><span class="card__title">Nightly fire check</span><span class="card__sub">${cur.enabled ? `on · every ${esc(plural(cur.every_hours, "hour"))}${cur.next_run ? ` · next ${esc(new Date(cur.next_run * 1000).toLocaleString())}` : ""}` : "off"}</span></div>
+      <div class="card__body">
+        <p class="muted">Runs the fire check again on a timer and alerts you when a rule that used to fire stops firing, for example after an agent update or a field change. It uses the platform, rules, logs and options above at the moment you save.</p>
+        ${cur.platform ? `<p class="muted">Saved: ${esc(PLATFORM_NAMES[cur.platform] || cur.platform)}, ${esc(plural(cur.rules, "rule"))}, ${cur.mode === "live" ? "live data" : esc([...(cur.logs || []), cur.sample ? "sample logs" : "", cur.attack ? "attack logs" : ""].filter(Boolean).join(", ") || "no logs")}.</p>` : ""}
+        ${(cur.stored_secrets || []).length ? `<div class="notice notice--warn">Secrets saved on this server: ${esc(cur.stored_secrets.join(", "))}. The file is readable only by the server user. To keep them out of the file, type <span class="mono">env:NAME</span> in a password box and set that environment variable on the server.</div>` : ""}
+        <div class="fc__grid mt-4">
+          <label class="field"><span class="field__label">Every</span><select class="select" id="fsEvery">${[[6, "6 hours"], [12, "12 hours"], [24, "24 hours"], [168, "7 days"]].map(([h, l]) => `<option value="${h}" ${h === (cur.every_hours || 24) ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+          <label class="field"><span class="field__label">Alert to</span><select class="select" id="fsKind">${kinds.map(([k, l]) => `<option value="${k}" ${k === cur.webhook?.kind ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+          <label class="field fc__wide"><span class="field__label">Webhook URL ${cur.webhook?.set ? "(saved, leave empty to keep)" : ""}</span><input class="input mono" id="fsUrl" type="password" autocomplete="off" placeholder="https://hooks.slack.com/services/..."></label>
+        </div>
+        <div class="row mt-4">
+          <button class="btn btn--primary btn--sm" type="button" data-fs="save">${icons.check} Save with the settings above</button>
+          ${cur.platform ? `<button class="btn btn--sm" type="button" data-fs="run" ${cur.running ? "disabled" : ""}>${icons.play} ${cur.running ? "Running" : "Run now"}</button>` : ""}
+          ${cur.enabled ? '<button class="btn btn--sm btn--ghost" type="button" data-fs="off">Turn off</button>' : ""}
+        </div>
+        ${hist.length ? `<h3 class="section-title">Last runs</h3><ul class="list">${hist.map((h) => `<li class="list__item"><div class="list__main"><div class="list__title">${esc(h.time)}</div><div class="list__meta">${h.status === "ok" ? `score ${h.score == null ? "none" : `${h.score}%`} · ${h.fired} of ${h.should} fire · ${h.silent} silent · ${h.errors} errors${h.slow ? ` · ${h.slow} slow` : ""}${(h.broke || []).length ? ` · stopped: ${esc(h.broke.slice(0, 3).join(", "))}` : ""}` : esc(h.error || "failed")}${h.sent ? ` · alert ${h.sent === "ok" ? "sent" : esc(h.sent)}` : ""}</div></div><span class="badge badge--${h.status !== "ok" ? "bad" : (h.broke || []).length ? "warn" : "ok"}">${h.status !== "ok" ? "Error" : (h.broke || []).length ? "Changed" : "Same"}</span></li>`).join("")}</ul>` : ""}
+      </div>`;
+  };
+  const loadSched = async () => {
+    try {
+      paintSched(await api.fire.schedule());
+    } catch (err) {
+      sched.innerHTML = `<div class="card__head"><span class="card__title">Nightly fire check</span></div><div class="card__body"><p class="muted">${esc(err.message)}</p></div>`;
+    }
+  };
+  sched.addEventListener("click", async (e) => {
+    const act = e.target.closest("[data-fs]")?.dataset.fs;
+    if (!act) return;
+    const btn = e.target.closest("button");
+    btn.disabled = true;
+    try {
+      if (act === "run") {
+        await api.fire.runSchedule();
+        toast("Started. The result shows up in Last runs.", "ok");
+        setTimeout(loadSched, 4000);
+        return;
+      }
+      const base = { every_hours: $("#fsEvery", sched).value, kind: $("#fsKind", sched).value, url: $("#fsUrl", sched).value.trim() };
+      if (act === "off") {
+        paintSched(await api.fire.setSchedule([], { ...base, enabled: "false", replace: "false" }, []));
+        toast("Nightly check turned off", "ok");
+        return;
+      }
+      const chosen = rules.filter((r) => selected.has(r.id));
+      if (!chosen.length) throw new Error("Pick at least one rule");
+      const sample = $("#fcSample", root).checked;
+      const attack = $("#fcAttack", root).checked;
+      if (mode === "replay" && !files.length && !sample && !attack) throw new Error("Add log files, or tick the sample or attack logs");
+      save();
+      paintSched(await api.fire.setSchedule(chosen, { ...base, enabled: "true", replace: "true", platform, target: $("#fcTarget", root).value, mode, hours: $("#fcHours", root).value, settings: readConn(), field_mapping: mappings.get($("#fcMap", root).value)?.map || {}, sample: sample ? "1" : "", attack: attack && mode === "replay" ? "rules" : "" }, mode === "replay" ? files : []));
+      toast("Nightly fire check saved", "ok");
+    } catch (err) {
+      toast(err.message, "bad");
+    } finally {
+      if (document.body.contains(btn)) btn.disabled = false;
+    }
+  });
+  loadSched();
+
   if (!rules.length) {
     out.innerHTML = emptyState("No rules yet", "Add rules in the workspace first.", '<a class="btn btn--primary" href="/" data-link>Go to workspace</a>');
     $("#fcRun", root).disabled = true;
@@ -358,4 +448,8 @@ export async function fireCheckView(root) {
     render();
   }
   return null;
+}
+
+function ms(n) {
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)} s` : `${n} ms`;
 }

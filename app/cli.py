@@ -263,6 +263,79 @@ def cmd_import(args) -> int:
     return 1 if res["failed"] or res["errors"] else 0
 
 
+def _logs(paths):
+    out = []
+    for raw in paths or []:
+        p = Path(raw)
+        files = sorted(f for f in p.rglob("*") if f.is_file() and f.suffix.lower() in (".evtx", ".json", ".jsonl", ".ndjson", ".zip")) if p.is_dir() else [p]
+        out.extend((f.name, f.read_bytes()) for f in files)
+    return out
+
+
+def cmd_firecheck(args) -> int:
+    from app.core.firecheck import PLATFORMS, run
+
+    if args.platform not in PLATFORMS:
+        print(f"Unknown platform. Use one of: {', '.join(PLATFORMS)}", file=sys.stderr)
+        return 2
+    settings = json.loads(Path(args.settings).read_text(encoding="utf-8")) if args.settings else {}
+    mapping = json.loads(Path(args.mapping).read_text(encoding="utf-8")) if args.mapping else {}
+    files = _logs(args.logs)
+    if args.sample:
+        sample = Path(__file__).resolve().parent.parent / "sample" / "logs" / "attack_chain_sysmon.jsonl"
+        files.append((sample.name, sample.read_bytes()))
+    params = {"rules": _collect(args.paths), "platform": args.platform, "target": args.target or PLATFORMS[args.platform]["targets"][0],
+              "mode": args.mode, "hours": args.hours, "settings": settings, "mapping": mapping, "files": files, "attack": "rules" if args.attack else []}
+    job = {"status": "running", "params": params, "stage": "", "done": 0, "total": 0, "error": "", "result": None}
+    run(job)
+    if job["status"] != "done":
+        print(f"Fire check failed: {job['error']}", file=sys.stderr)
+        return 2
+    res = job["result"]
+    for r in res["results"]:
+        if r["verdict"] in ("untested", "skipped") and not args.verbose:
+            continue
+        miss = ", ".join((r.get("diagnosis") or {}).get("missing", [])[:4])
+        print(f"{r['verdict'].upper():<9} {str(r.get('expected', '')):>4} {str(r.get('got', '')):>5}  {r['title']}" + (f"  missing: {miss}" if miss else "") + (f"  {r['error'][:100]}" if r["error"] else ""))
+    score = res["score"]
+    print(f"\nFire score {score if score is not None else 'none'}% on {res['platform_name']}: {res['fired']} of {res['should_fire']} rules fire. {res['counts'].get('silent', 0)} silent, {res['counts'].get('error', 0)} errors.")
+    if res.get("alias_config"):
+        print("\nField aliases that would fix the platform:\n" + res["alias_config"])
+    if res.get("mapping"):
+        print("\nMapping that would fix the rules:\n" + json.dumps(res["mapping"], indent=2))
+    _summary(args.summary, [f"## {APP_NAME} fire check on {res['platform_name']}", "", f"Fire score **{score}%**: {res['fired']} of {res['should_fire']} rules fire."]
+             + [f"* {r['verdict']}: {r['title']}" for r in res["results"] if r["verdict"] in ("silent", "partial", "error")][:100])
+    if score is not None and score < args.min_score:
+        return 1
+    return 0
+
+
+def cmd_deploy(args) -> int:
+    from app.core.deploy import DeployError, deploy
+    from app.core.firecheck import FireError, resolve
+    from app.schemas import ConvertOptions
+
+    try:
+        settings = resolve(json.loads(Path(args.settings).read_text(encoding="utf-8")) if args.settings else {})
+    except FireError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    mapping = json.loads(Path(args.mapping).read_text(encoding="utf-8")) if args.mapping else {}
+    opts = ConvertOptions(splunk_windows_source=settings.pop("splunk_windows_source", "") or "")
+    try:
+        res = deploy(_collect(args.paths), args.kind, args.target, settings, opts, mapping, args.dry_run)
+    except DeployError as exc:
+        print(f"Deploy failed: {exc}", file=sys.stderr)
+        return 2
+    bad = 0
+    for st in res.get("results", []):
+        if st.get("status") == "failed":
+            bad += 1
+        print(f"{st.get('status', ''):<8} {st.get('title', '')}" + (f"  {st.get('message', '')}" if st.get("message") else ""))
+    print(f"\n{len(res.get('results', []))} steps, {bad} failed{' (dry run)' if res.get('dry_run') else ''}.")
+    return 1 if bad else 0
+
+
 def cmd_from_query(args) -> int:
     from app.core.querygen import convert_query
 
@@ -411,6 +484,29 @@ def main(argv=None) -> int:
     p.add_argument("--fail-on-hit", action="store_true", help="Exit 1 when any file matches")
     p.add_argument("--summary", default="")
     p.set_defaults(func=cmd_yara)
+
+    p = sub.add_parser("firecheck", help="Replay logs into a platform, run the converted queries there and score them")
+    common(p)
+    p.add_argument("--platform", required=True, help="splunk, elastic, opensearch, wazuh or sentinel")
+    p.add_argument("--target", default="")
+    p.add_argument("--settings", default="", help="JSON file with the connection settings. Values like env:SPLUNK_TOKEN read environment variables.")
+    p.add_argument("--mapping", default="", help="JSON file with a field mapping")
+    p.add_argument("--logs", nargs="*", help="Log files or folders to replay")
+    p.add_argument("--attack", action="store_true", help="Also replay built in attack logs for the techniques of your rules")
+    p.add_argument("--sample", action="store_true", help="Also replay the sample attack chain")
+    p.add_argument("--mode", default="replay", choices=["replay", "live"])
+    p.add_argument("--hours", type=float, default=24)
+    p.add_argument("--min-score", type=int, default=100, help="Fail when the fire score is below this")
+    p.set_defaults(func=cmd_firecheck)
+
+    p = sub.add_parser("deploy", help="Deploy rules to Splunk, Elastic, Sentinel or Wazuh")
+    common(p)
+    p.add_argument("--kind", required=True, choices=["splunk", "elastic", "sentinel", "wazuh"])
+    p.add_argument("--target", default="")
+    p.add_argument("--settings", default="", help="JSON file with the connection settings. Values like env:SPLUNK_TOKEN read environment variables.")
+    p.add_argument("--mapping", default="")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(func=cmd_deploy)
 
     p = sub.add_parser("unit", help="Run rule unit tests from <rule>.tests.json files")
     p.add_argument("paths", nargs="+", help="Rule files or folders")

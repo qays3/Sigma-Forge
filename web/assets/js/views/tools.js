@@ -405,3 +405,162 @@ export function suggestMappingDrawer(rules, onSaved) {
     });
   });
 }
+
+const CI_KEY = "sigma-forge-ci";
+
+export function ciWorkflowDrawer(getRules) {
+  const p = readJson(CI_KEY, { rules: "rules", branch: "main", fail_on: "high", min_quality: 0, min_coverage: 0, checks: ["validate", "sigmahq", "unit", "generated", "coverage"], fire: "", deploy: "", repo: "" });
+  const CHECKS = [["validate", "Rule checks and quality"], ["sigmahq", "SigmaHQ style"], ["unit", "Rule unit tests"], ["generated", "Every rule fires on generated events"], ["coverage", "ATT&CK coverage report"]];
+  const PLAT = [["", "None"], ["splunk", "Splunk"], ["elastic", "Elasticsearch"], ["opensearch", "OpenSearch"], ["wazuh", "Wazuh"], ["sentinel", "Sentinel"]];
+  const DEP = [["", "None"], ["splunk", "Splunk"], ["elastic", "Elastic Security"], ["sentinel", "Sentinel"], ["wazuh", "Wazuh"]];
+  const opt = (list, v) => list.map(([k, l]) => `<option value="${k}" ${k === v ? "selected" : ""}>${esc(l)}</option>`).join("");
+  openDrawer("Detection as code: CI workflow", `
+    <p class="muted">Makes a GitHub Actions workflow for the repository that holds your rules. Every pull request runs the checks you pick, and a push to the branch can deploy. Platform secrets are read from the repository secrets, never from the files.</p>
+    <div class="grid grid--2">
+      <label class="field"><span class="field__label">Rules folder in the repo</span><input class="input mono" id="ciRules" value="${esc(p.rules)}"></label>
+      <label class="field"><span class="field__label">Main branch</span><input class="input mono" id="ciBranch" value="${esc(p.branch)}"></label>
+      <label class="field"><span class="field__label">Fail on issues from</span><select class="select" id="ciFail">${opt([["low", "Low"], ["medium", "Medium"], ["high", "High"], ["critical", "Critical"], ["never", "Never fail"]], p.fail_on)}</select></label>
+      <label class="field"><span class="field__label">Lowest quality score</span><input class="input" id="ciQual" type="number" min="0" max="100" value="${esc(p.min_quality)}"></label>
+    </div>
+    <div class="field__label">Checks on every pull request</div>
+    <div class="ci__checks">${CHECKS.map(([k, l]) => `<label class="check"><input type="checkbox" data-ck="${k}" ${p.checks.includes(k) ? "checked" : ""}> ${esc(l)}</label>`).join("")}</div>
+    <label class="field"><span class="field__label">Lowest ATT&amp;CK coverage, 0 to skip</span><input class="input" id="ciCov" type="number" min="0" max="100" value="${esc(p.min_coverage)}"></label>
+    <div class="grid grid--2">
+      <label class="field"><span class="field__label">Fire check on a lab platform</span><select class="select" id="ciFire">${opt(PLAT, p.fire)}</select></label>
+      <label class="field"><span class="field__label">Deploy on push to the branch</span><select class="select" id="ciDeploy">${opt(DEP, p.deploy)}</select></label>
+    </div>
+    <div class="row"><button class="btn btn--primary" type="button" id="ciMake">${icons.spark} Make the workflow</button></div>
+    <div id="ciOut" class="mt-4"></div>`, (panel) => {
+    let made = null;
+    const spec = () => ({
+      rules: $("#ciRules", panel).value.trim() || "rules",
+      branch: $("#ciBranch", panel).value.trim() || "main",
+      fail_on: $("#ciFail", panel).value,
+      min_quality: Number($("#ciQual", panel).value) || 0,
+      min_coverage: Number($("#ciCov", panel).value) || 0,
+      checks: $$("[data-ck]", panel).filter((c) => c.checked).map((c) => c.dataset.ck),
+      firecheck: $("#ciFire", panel).value ? { platform: $("#ciFire", panel).value, attack: true } : {},
+      deploy: $("#ciDeploy", panel).value ? { kind: $("#ciDeploy", panel).value } : {},
+    });
+    $("#ciMake", panel).addEventListener("click", async () => {
+      const s = spec();
+      writeJson(CI_KEY, { ...p, rules: s.rules, branch: s.branch, fail_on: s.fail_on, min_quality: s.min_quality, min_coverage: s.min_coverage, checks: s.checks, fire: s.firecheck.platform || "", deploy: s.deploy.kind || "" });
+      try {
+        made = await api.ciWorkflow(s);
+      } catch (err) {
+        $("#ciOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+        return;
+      }
+      $("#ciOut", panel).innerHTML = `
+        ${made.secrets.length ? `<div class="notice notice--warn">Add these repository secrets in GitHub, Settings, Secrets and variables, Actions: <span class="mono">${esc(made.secrets.join(", "))}</span></div>` : ""}
+        ${made.files.map((f, i) => `<div class="card mt-4"><div class="card__head"><span class="card__sub mono">${esc(f.name)}</span><span class="row"><button class="btn btn--sm btn--ghost" type="button" data-cicopy="${i}">${icons.copy} Copy</button><button class="btn btn--sm btn--ghost" type="button" data-cidl="${i}">${icons.download} Download</button></span></div><pre class="code">${esc(f.content)}</pre></div>`).join("")}
+        <h3 class="section-title">Open a pull request with these files</h3>
+        <div class="grid grid--2">
+          <label class="field"><span class="field__label">Repository</span><input class="input mono" id="ciRepo" placeholder="owner/detections" value="${esc(p.repo || readJson(GH_KEY, {}).repo || "")}"></label>
+          <label class="field"><span class="field__label">Token</span><input class="input mono" id="ciToken" type="password" autocomplete="off" placeholder="Contents, Pull requests and Workflows: write"></label>
+        </div>
+        <div class="row"><span class="muted">GitHub asks for the Workflows permission to add a file in .github/workflows.</span><div class="spacer"></div><button class="btn btn--primary" type="button" id="ciPush">${icons.push} Push and open PR</button></div>
+        <div id="ciPushOut" class="mt-4"></div>`;
+    });
+    panel.addEventListener("click", async (e) => {
+      const cp = e.target.closest("[data-cicopy]");
+      if (cp) copyText(made.files[Number(cp.dataset.cicopy)].content, "Copied");
+      const dl = e.target.closest("[data-cidl]");
+      if (dl) {
+        const f = made.files[Number(dl.dataset.cidl)];
+        download(f.name.split("/").pop(), f.content, "text/yaml");
+      }
+      const push = e.target.closest("#ciPush");
+      if (!push) return;
+      const repo = $("#ciRepo", panel).value.trim();
+      const token = $("#ciToken", panel).value.trim();
+      if (!repo || !token) {
+        toast("Add the repository and a token", "bad");
+        return;
+      }
+      writeJson(CI_KEY, { ...readJson(CI_KEY, p), repo });
+      push.disabled = true;
+      try {
+        const res = await api.githubPush({ token, repo, folder: "", rules: made.files, title: "Add the Sigma Forge CI workflow", message: "Add Sigma Forge CI workflow" });
+        $("#ciPushOut", panel).innerHTML = `<div class="row">${res.pr_url ? `<a class="btn btn--primary" href="${esc(res.pr_url)}" target="_blank" rel="noopener noreferrer">${icons.external} Open pull request #${esc(res.pr_number)}</a>` : '<span class="muted">Nothing changed.</span>'}</div>`;
+      } catch (err) {
+        $("#ciPushOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+      } finally {
+        push.disabled = false;
+      }
+    });
+  });
+}
+
+const CTI_KEY = "sigma-forge-cti";
+
+export function ctiDrawer(onDone) {
+  const p = readJson(CTI_KEY, { source: "misp", url: "", days: 7, expire_days: 30, tags: "", verify_tls: true });
+  openDrawer("Threat intel feeds", `
+    <p class="muted">Pull fresh indicators (IPs, domains, URLs, hashes) from MISP or AlienVault OTX and turn them into Sigma rules and YARA. Every rule gets an end date, so old IOCs do not stay forever. Keys are never saved.</p>
+    <div class="seg" id="ctiSrc"><button class="seg__btn" type="button" data-s="misp">MISP</button><button class="seg__btn" type="button" data-s="otx">OTX</button></div>
+    <div id="ctiFields" class="mt-4"></div>
+    <div class="grid grid--2">
+      <label class="field"><span class="field__label">Indicators from the last (days)</span><input class="input" id="ctiDays" type="number" min="1" max="90" value="${esc(p.days)}"></label>
+      <label class="field"><span class="field__label">Rules end after (days)</span><input class="input" id="ctiExp" type="number" min="1" max="365" value="${esc(p.expire_days)}"></label>
+    </div>
+    <div class="row"><button class="btn" type="button" id="ctiOld" title="Remove CTI rules whose end date has passed">${icons.trash} Remove expired</button><div class="spacer"></div><button class="btn btn--primary" type="button" id="ctiGo">${icons.download} Pull indicators</button></div>
+    <div id="ctiOut" class="mt-4"></div>`, (panel) => {
+    let src = p.source;
+    const paint = () => {
+      $$("#ctiSrc [data-s]", panel).forEach((b) => b.classList.toggle("is-active", b.dataset.s === src));
+      $("#ctiFields", panel).innerHTML = src === "misp"
+        ? `<div class="grid grid--2"><label class="field"><span class="field__label">MISP URL</span><input class="input mono" id="ctiUrl" value="${esc(p.url)}" placeholder="https://misp.lab"></label><label class="field"><span class="field__label">API key</span><input class="input mono" id="ctiKey" type="password" autocomplete="off"></label></div><label class="field"><span class="field__label">Only these tags (comma separated, optional)</span><input class="input mono" id="ctiTags" value="${esc(p.tags)}" placeholder="tlp:white, apt"></label><label class="check"><input type="checkbox" id="ctiTls" ${p.verify_tls === false ? "" : "checked"}> Check the TLS certificate</label>`
+        : '<label class="field"><span class="field__label">OTX API key</span><input class="input mono" id="ctiKey" type="password" autocomplete="off"></label><p class="muted">Reads the pulses you subscribe to.</p>';
+    };
+    paint();
+    $("#ctiSrc", panel).addEventListener("click", (e) => {
+      const b = e.target.closest("[data-s]");
+      if (!b) return;
+      src = b.dataset.s;
+      paint();
+    });
+    $("#ctiGo", panel).addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const settings = { key: $("#ctiKey", panel).value.trim(), days: Number($("#ctiDays", panel).value) || 7, expire_days: Number($("#ctiExp", panel).value) || 30 };
+      if (src === "misp") Object.assign(settings, { url: $("#ctiUrl", panel).value.trim(), tags: $("#ctiTags", panel).value.trim(), verify_tls: $("#ctiTls", panel).checked });
+      if (!settings.key) {
+        toast("Add the API key", "bad");
+        return;
+      }
+      writeJson(CTI_KEY, { source: src, url: settings.url || p.url, days: settings.days, expire_days: settings.expire_days, tags: settings.tags ?? p.tags, verify_tls: settings.verify_tls ?? p.verify_tls });
+      btn.disabled = true;
+      $("#ctiOut", panel).innerHTML = '<div class="skeleton sk-line"></div><div class="skeleton sk-line sk-line--md"></div>';
+      try {
+        const res = await api.ctiPull(src, settings);
+        const added = await store.add(res.sigma);
+        if (res.yara) {
+          const { yaraStore } = await import("./yarakit.js");
+          yaraStore.upsert(res.yara);
+        }
+        $("#ctiOut", panel).innerHTML = `<div class="notice notice--ok">${esc(plural(res.indicators, "indicator"))} turned into ${esc(plural(added, "Sigma rule"))}${res.yara ? " and a YARA file" : ""}. They end on ${esc(res.expires)}.</div>${res.sources.length ? `<details class="mt-4"><summary class="muted">From</summary><ul class="list">${res.sources.map((x) => `<li class="list__item"><div class="list__main">${esc(x)}</div></li>`).join("")}</ul></details>` : ""}`;
+        onDone?.();
+      } catch (err) {
+        $("#ctiOut", panel).innerHTML = `<div class="notice notice--bad">${esc(err.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $("#ctiOld", panel).addEventListener("click", async () => {
+      try {
+        const all = await store.all();
+        const res = await api.ctiExpired(all);
+        if (!res.expired.length) {
+          toast("No expired rules", "ok");
+          return;
+        }
+        const names = new Set(res.expired);
+        for (const r of all.filter((x) => names.has(x.name))) await store.remove(r.id);
+        toast(`Removed ${plural(res.expired.length, "expired rule")}`, "ok");
+        onDone?.();
+      } catch (err) {
+        toast(err.message, "bad");
+      }
+    });
+  });
+}
